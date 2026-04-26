@@ -1,0 +1,947 @@
+{
+  "received_at": "2026-04-24 04:01:43",
+  "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+  "machine": "Banban",
+  "message": "",
+  "logs": [
+    {
+      "ts": "2026-04-23T03:03:44",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Login successful",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "instance_url": "https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com"
+    },
+    {
+      "ts": "2026-04-23T03:04:06",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-23T03:04:06",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Using UI-flow adapter plan",
+      "steps": 2
+    },
+    {
+      "ts": "2026-04-23T03:04:06",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 2
+    },
+    {
+      "ts": "2026-04-23T03:06:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-23T03:09:13",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM plan ready \u2014 4 step(s)"
+    },
+    {
+      "ts": "2026-04-23T03:09:14",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4
+    },
+    {
+      "ts": "2026-04-23T03:09:14",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 1 failed: $step1.id referenced before step 1 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 135, in execute\n    soql = _resolve_refs(soql, results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step1.id referenced before step 1 ran",
+      "step": 1,
+      "object": "Opportunity",
+      "action": "query"
+    },
+    {
+      "ts": "2026-04-23T03:09:14",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 2 failed: $step1.id referenced before step 1 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 135, in execute\n    soql = _resolve_refs(soql, results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step1.id referenced before step 1 ran",
+      "step": 2,
+      "object": "Opportunity",
+      "action": "query"
+    },
+    {
+      "ts": "2026-04-23T03:09:14",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 3 failed: $step1.id referenced before step 1 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 91, in execute\n    record_id = _resolve_refs(op.get(\"record_id\", \"\"), results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step1.id referenced before step 1 ran",
+      "step": 3,
+      "object": "Opportunity",
+      "action": "update"
+    },
+    {
+      "ts": "2026-04-23T03:09:41",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Log report sent via relay",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com"
+    },
+    {
+      "ts": "2026-04-23T03:14:49",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "System prompt updated by user",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "length": 5293
+    },
+    {
+      "ts": "2026-04-23T03:14:51",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Update apply requested",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "url": "https://mayflower-gossip-unmanned.ngrok-free.dev/update/patch"
+    },
+    {
+      "ts": "2026-04-23T03:14:52",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Patch applied",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "files": [
+        "sf_app.py",
+        "sf_client.py",
+        "sf_executor.py",
+        "llm_planner.py",
+        "templates/qa.html"
+      ]
+    },
+    {
+      "ts": "2026-04-23T03:16:05",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Login successful",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "instance_url": "https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com"
+    },
+    {
+      "ts": "2026-04-23T03:16:19",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Run test received",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "6fdc7dba8372",
+      "script_len": 278,
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n\u00a0\u00a0- Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n \u00a0\u00a0- Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-23T03:16:19",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-23T03:19:26",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM plan ready \u2014 4 step(s)"
+    },
+    {
+      "ts": "2026-04-23T03:19:27",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "6fdc7dba8372",
+      "plan_steps": 4,
+      "planning_ms": 187475
+    },
+    {
+      "ts": "2026-04-23T03:19:27",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4,
+      "script_hash": "6fdc7dba8372"
+    },
+    {
+      "ts": "2026-04-23T03:19:27",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 2 failed: $step1.id referenced before step 1 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 136, in execute\n    soql = _resolve_refs(soql, results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step1.id referenced before step 1 ran",
+      "step": 2,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "6fdc7dba8372",
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n\u00a0\u00a0- Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n \u00a0\u00a0- Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-23T03:19:27",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 3 failed: $step2.id referenced before step 2 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 92, in execute\n    record_id = _resolve_refs(op.get(\"record_id\", \"\"), results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step2.id referenced before step 2 ran",
+      "step": 3,
+      "object": "Opportunity",
+      "action": "update",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "6fdc7dba8372",
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n\u00a0\u00a0- Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n \u00a0\u00a0- Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-23T03:19:27",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Test run completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "6fdc7dba8372",
+      "execution_ms": 21
+    },
+    {
+      "ts": "2026-04-23T03:19:44",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Log report sent via relay",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com"
+    },
+    {
+      "ts": "2026-04-24T03:37:23",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Login successful",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "instance_url": "https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com"
+    },
+    {
+      "ts": "2026-04-24T03:37:43",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "System prompt updated by user",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "length": 5293
+    },
+    {
+      "ts": "2026-04-24T03:37:46",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Update apply requested",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "url": "https://mayflower-gossip-unmanned.ngrok-free.dev/update/patch"
+    },
+    {
+      "ts": "2026-04-24T03:37:48",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Patch applied",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "files": [
+        "sf_app.py",
+        "sf_client.py",
+        "sf_executor.py",
+        "llm_planner.py",
+        "templates/qa.html"
+      ]
+    },
+    {
+      "ts": "2026-04-24T03:38:27",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Login successful",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "instance_url": "https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com"
+    },
+    {
+      "ts": "2026-04-24T03:41:20",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Run test received",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "ca2243fb1a2e",
+      "script_len": 277,
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n  - Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-24T03:41:20",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-24T03:44:33",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM plan ready \u2014 4 step(s)"
+    },
+    {
+      "ts": "2026-04-24T03:44:33",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "ca2243fb1a2e",
+      "plan_steps": 4,
+      "planning_ms": 193168
+    },
+    {
+      "ts": "2026-04-24T03:44:33",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4,
+      "script_hash": "ca2243fb1a2e"
+    },
+    {
+      "ts": "2026-04-24T03:44:33",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 2 failed: $step1.id referenced before step 1 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 136, in execute\n    soql = _resolve_refs(soql, results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step1.id referenced before step 1 ran",
+      "step": 2,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "ca2243fb1a2e",
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n  - Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-24T03:44:33",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 3 failed: $step2.id referenced before step 2 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 92, in execute\n    record_id = _resolve_refs(op.get(\"record_id\", \"\"), results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step2.id referenced before step 2 ran",
+      "step": 3,
+      "object": "Opportunity",
+      "action": "update",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "ca2243fb1a2e",
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n  - Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-24T03:44:33",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Test run completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "ca2243fb1a2e",
+      "execution_ms": 13
+    },
+    {
+      "ts": "2026-04-24T03:47:41",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Run test received",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "df6a538be8bd",
+      "script_len": 265,
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n  - Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-24T03:47:41",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-24T03:48:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM plan ready \u2014 4 step(s)"
+    },
+    {
+      "ts": "2026-04-24T03:48:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "df6a538be8bd",
+      "plan_steps": 4,
+      "planning_ms": 44173
+    },
+    {
+      "ts": "2026-04-24T03:48:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4,
+      "script_hash": "df6a538be8bd"
+    },
+    {
+      "ts": "2026-04-24T03:48:25",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 2 failed: $step1.id referenced before step 1 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 136, in execute\n    soql = _resolve_refs(soql, results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step1.id referenced before step 1 ran",
+      "step": 2,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "df6a538be8bd",
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n  - Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-24T03:48:25",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 3 failed: $step1.id referenced before step 1 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 92, in execute\n    record_id = _resolve_refs(op.get(\"record_id\", \"\"), results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step1.id referenced before step 1 ran",
+      "step": 3,
+      "object": "Opportunity",
+      "action": "update",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "df6a538be8bd",
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n  - Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-24T03:48:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Test run completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "df6a538be8bd",
+      "execution_ms": 7
+    },
+    {
+      "ts": "2026-04-24T03:49:17",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Log report sent via relay",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com"
+    },
+    {
+      "ts": "2026-04-24T03:49:56",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Run test received",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "5a4ed9ee1f2d",
+      "script_len": 259,
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Name: Deal Oppty\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n  - Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-24T03:49:56",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-24T03:51:09",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM plan ready \u2014 4 step(s)"
+    },
+    {
+      "ts": "2026-04-24T03:51:09",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "5a4ed9ee1f2d",
+      "plan_steps": 4,
+      "planning_ms": 72809
+    },
+    {
+      "ts": "2026-04-24T03:51:09",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4,
+      "script_hash": "5a4ed9ee1f2d"
+    },
+    {
+      "ts": "2026-04-24T03:51:10",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 3 failed: update action requires a 'record_id' field (e.g. '$step1.id')",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 94, in execute\n    raise ValueError(\"update action requires a 'record_id' field (e.g. '$step1.id')\")\nValueError: update action requires a 'record_id' field (e.g. '$step1.id')",
+      "step": 3,
+      "object": "Opportunity",
+      "action": "update",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "5a4ed9ee1f2d",
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Name: Deal Oppty\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n  - Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-24T03:51:10",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Test run completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "5a4ed9ee1f2d",
+      "execution_ms": 854
+    },
+    {
+      "ts": "2026-04-24T03:54:58",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "System prompt updated by user",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "length": 5293
+    },
+    {
+      "ts": "2026-04-24T03:55:01",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Update apply requested",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "url": "https://mayflower-gossip-unmanned.ngrok-free.dev/update/patch"
+    },
+    {
+      "ts": "2026-04-24T03:55:02",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Patch applied",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "files": [
+        "sf_app.py",
+        "sf_client.py",
+        "sf_executor.py",
+        "llm_planner.py",
+        "templates/qa.html"
+      ]
+    },
+    {
+      "ts": "2026-04-24T03:55:38",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Run test received",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "ca2243fb1a2e",
+      "script_len": 277,
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n  - Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-24T03:55:38",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-24T03:56:17",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Login successful",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "instance_url": "https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com"
+    },
+    {
+      "ts": "2026-04-24T03:56:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Run test received",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "ca2243fb1a2e",
+      "script_len": 277,
+      "script_preview": "TEST: Add Amount to the Opportunity\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Amount field\r\n\r\nSTEP 3: Edit the Amount field of the Opportunity record\r\n  - Amount: 1000\r\n\r\nSTEP 4: Save the update on the Opportunity record"
+    },
+    {
+      "ts": "2026-04-24T03:56:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-24T03:56:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Using direct-ID adapter plan",
+      "steps": 4
+    },
+    {
+      "ts": "2026-04-24T03:56:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "ca2243fb1a2e",
+      "plan_steps": 4,
+      "planning_ms": 3
+    },
+    {
+      "ts": "2026-04-24T03:56:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4,
+      "script_hash": "ca2243fb1a2e"
+    },
+    {
+      "ts": "2026-04-24T03:56:29",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Test run completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "ca2243fb1a2e",
+      "execution_ms": 3887
+    },
+    {
+      "ts": "2026-04-24T03:58:44",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Run test received",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "script_len": 283,
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:58:44",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-24T03:58:44",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Using direct-ID adapter plan",
+      "steps": 4
+    },
+    {
+      "ts": "2026-04-24T03:58:44",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "plan_steps": 4,
+      "planning_ms": 0
+    },
+    {
+      "ts": "2026-04-24T03:58:44",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4,
+      "script_hash": "2ecf1ed5ec91"
+    },
+    {
+      "ts": "2026-04-24T03:58:46",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 1 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+Name%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, Name, OpportunityName FROM Opportunity\\n                 ^\\nERROR at Row:1:Column:18\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 137, in execute\n    records = client.query(soql) if soql else []\n              ~~~~~~~~~~~~^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 147, in query\n    result = self._call_with_retry(sf.query_all, soql)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 669, in query_all\n    all_records = list(records)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 631, in query_all_iter\n    result = self.query(query,\n                        include_deleted=include_deleted,\n                        **kwargs\n                        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 565, in query\n    result = self._call_salesforce('GET',\n                                   url,\n    ...<2 lines>...\n                                   **kwargs\n                                   )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 784, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      name=name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+Name%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, Name, OpportunityName FROM Opportunity\\n                 ^\\nERROR at Row:1:Column:18\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 1,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:58:46",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 2 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, OpportunityName FROM Opportunity\\n           ^\\nERROR at Row:1:Column:12\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 137, in execute\n    records = client.query(soql) if soql else []\n              ~~~~~~~~~~~~^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 147, in query\n    result = self._call_with_retry(sf.query_all, soql)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 669, in query_all\n    all_records = list(records)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 631, in query_all_iter\n    result = self.query(query,\n                        include_deleted=include_deleted,\n                        **kwargs\n                        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 565, in query\n    result = self._call_salesforce('GET',\n                                   url,\n    ...<2 lines>...\n                                   **kwargs\n                                   )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 784, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      name=name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, OpportunityName FROM Opportunity\\n           ^\\nERROR at Row:1:Column:12\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 2,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:58:47",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 3 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/sobjects/Opportunity/006gL00000MURR8QAP. Response content: [{'message': \"No such column 'OpportunityName' on sobject of type Opportunity\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 95, in execute\n    result = client.update_record(obj, record_id, resolved_fields)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 119, in update_record\n    self._call_with_retry(getattr(sf, object_type).update, record_id, fields)\n    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 1137, in update\n    result = self._call_salesforce(\n        method='PATCH',\n    ...<4 lines>...\n        headers=headers\n        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 1276, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      self.name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/sobjects/Opportunity/006gL00000MURR8QAP. Response content: [{'message': \"No such column 'OpportunityName' on sobject of type Opportunity\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 3,
+      "object": "Opportunity",
+      "action": "update",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:58:47",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Test run completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "execution_ms": 2482
+    },
+    {
+      "ts": "2026-04-24T03:59:01",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Run test received",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "script_len": 283,
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:59:01",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-24T03:59:01",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Using direct-ID adapter plan",
+      "steps": 4
+    },
+    {
+      "ts": "2026-04-24T03:59:01",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "plan_steps": 4,
+      "planning_ms": 1
+    },
+    {
+      "ts": "2026-04-24T03:59:01",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4,
+      "script_hash": "2ecf1ed5ec91"
+    },
+    {
+      "ts": "2026-04-24T03:59:03",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 1 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+Name%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, Name, OpportunityName FROM Opportunity\\n                 ^\\nERROR at Row:1:Column:18\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 137, in execute\n    records = client.query(soql) if soql else []\n              ~~~~~~~~~~~~^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 147, in query\n    result = self._call_with_retry(sf.query_all, soql)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 669, in query_all\n    all_records = list(records)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 631, in query_all_iter\n    result = self.query(query,\n                        include_deleted=include_deleted,\n                        **kwargs\n                        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 565, in query\n    result = self._call_salesforce('GET',\n                                   url,\n    ...<2 lines>...\n                                   **kwargs\n                                   )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 784, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      name=name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+Name%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, Name, OpportunityName FROM Opportunity\\n                 ^\\nERROR at Row:1:Column:18\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 1,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:59:05",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 2 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, OpportunityName FROM Opportunity\\n           ^\\nERROR at Row:1:Column:12\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 137, in execute\n    records = client.query(soql) if soql else []\n              ~~~~~~~~~~~~^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 147, in query\n    result = self._call_with_retry(sf.query_all, soql)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 669, in query_all\n    all_records = list(records)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 631, in query_all_iter\n    result = self.query(query,\n                        include_deleted=include_deleted,\n                        **kwargs\n                        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 565, in query\n    result = self._call_salesforce('GET',\n                                   url,\n    ...<2 lines>...\n                                   **kwargs\n                                   )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 784, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      name=name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, OpportunityName FROM Opportunity\\n           ^\\nERROR at Row:1:Column:12\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 2,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:59:06",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 3 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/sobjects/Opportunity/006gL00000MURR8QAP. Response content: [{'message': \"No such column 'OpportunityName' on sobject of type Opportunity\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 95, in execute\n    result = client.update_record(obj, record_id, resolved_fields)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 119, in update_record\n    self._call_with_retry(getattr(sf, object_type).update, record_id, fields)\n    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 1137, in update\n    result = self._call_salesforce(\n        method='PATCH',\n    ...<4 lines>...\n        headers=headers\n        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 1276, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      self.name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/sobjects/Opportunity/006gL00000MURR8QAP. Response content: [{'message': \"No such column 'OpportunityName' on sobject of type Opportunity\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 3,
+      "object": "Opportunity",
+      "action": "update",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - Opportunity ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:59:06",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Test run completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "2ecf1ed5ec91",
+      "execution_ms": 4304
+    },
+    {
+      "ts": "2026-04-24T03:59:47",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Run test received",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "e4d287d5a60d",
+      "script_len": 271,
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:59:47",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-24T03:59:47",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Using direct-ID adapter plan",
+      "steps": 4
+    },
+    {
+      "ts": "2026-04-24T03:59:47",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "e4d287d5a60d",
+      "plan_steps": 4,
+      "planning_ms": 1
+    },
+    {
+      "ts": "2026-04-24T03:59:47",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4,
+      "script_hash": "e4d287d5a60d"
+    },
+    {
+      "ts": "2026-04-24T03:59:49",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 1 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+Name%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, Name, OpportunityName FROM Opportunity\\n                 ^\\nERROR at Row:1:Column:18\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 137, in execute\n    records = client.query(soql) if soql else []\n              ~~~~~~~~~~~~^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 147, in query\n    result = self._call_with_retry(sf.query_all, soql)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 669, in query_all\n    all_records = list(records)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 631, in query_all_iter\n    result = self.query(query,\n                        include_deleted=include_deleted,\n                        **kwargs\n                        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 565, in query\n    result = self._call_salesforce('GET',\n                                   url,\n    ...<2 lines>...\n                                   **kwargs\n                                   )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 784, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      name=name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+Name%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, Name, OpportunityName FROM Opportunity\\n                 ^\\nERROR at Row:1:Column:18\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 1,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "e4d287d5a60d",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:59:49",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 2 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, OpportunityName FROM Opportunity\\n           ^\\nERROR at Row:1:Column:12\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 137, in execute\n    records = client.query(soql) if soql else []\n              ~~~~~~~~~~~~^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 147, in query\n    result = self._call_with_retry(sf.query_all, soql)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 669, in query_all\n    all_records = list(records)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 631, in query_all_iter\n    result = self.query(query,\n                        include_deleted=include_deleted,\n                        **kwargs\n                        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 565, in query\n    result = self._call_salesforce('GET',\n                                   url,\n    ...<2 lines>...\n                                   **kwargs\n                                   )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 784, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      name=name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, OpportunityName FROM Opportunity\\n           ^\\nERROR at Row:1:Column:12\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 2,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "e4d287d5a60d",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:59:49",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 3 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/sobjects/Opportunity/006gL00000MURR8QAP. Response content: [{'message': \"No such column 'OpportunityName' on sobject of type Opportunity\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 95, in execute\n    result = client.update_record(obj, record_id, resolved_fields)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 119, in update_record\n    self._call_with_retry(getattr(sf, object_type).update, record_id, fields)\n    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 1137, in update\n    result = self._call_salesforce(\n        method='PATCH',\n    ...<4 lines>...\n        headers=headers\n        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 1276, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      self.name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/sobjects/Opportunity/006gL00000MURR8QAP. Response content: [{'message': \"No such column 'OpportunityName' on sobject of type Opportunity\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 3,
+      "object": "Opportunity",
+      "action": "update",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "e4d287d5a60d",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Opportunity Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T03:59:50",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Test run completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "e4d287d5a60d",
+      "execution_ms": 2109
+    },
+    {
+      "ts": "2026-04-24T04:00:53",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Run test received",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "f645747a32c4",
+      "script_len": 259,
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T04:00:53",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-24T04:00:53",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Using direct-ID adapter plan",
+      "steps": 4
+    },
+    {
+      "ts": "2026-04-24T04:00:53",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "f645747a32c4",
+      "plan_steps": 4,
+      "planning_ms": 1
+    },
+    {
+      "ts": "2026-04-24T04:00:53",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4,
+      "script_hash": "f645747a32c4"
+    },
+    {
+      "ts": "2026-04-24T04:00:54",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 1 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+Name%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, Name, OpportunityName FROM Opportunity\\n                 ^\\nERROR at Row:1:Column:18\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 137, in execute\n    records = client.query(soql) if soql else []\n              ~~~~~~~~~~~~^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 147, in query\n    result = self._call_with_retry(sf.query_all, soql)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 669, in query_all\n    all_records = list(records)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 631, in query_all_iter\n    result = self.query(query,\n                        include_deleted=include_deleted,\n                        **kwargs\n                        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 565, in query\n    result = self._call_salesforce('GET',\n                                   url,\n    ...<2 lines>...\n                                   **kwargs\n                                   )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 784, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      name=name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+Name%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, Name, OpportunityName FROM Opportunity\\n                 ^\\nERROR at Row:1:Column:18\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 1,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "f645747a32c4",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T04:00:54",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 2 failed: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, OpportunityName FROM Opportunity\\n           ^\\nERROR at Row:1:Column:12\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 137, in execute\n    records = client.query(soql) if soql else []\n              ~~~~~~~~~~~~^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 147, in query\n    result = self._call_with_retry(sf.query_all, soql)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 67, in _call_with_retry\n    return func(*args, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 669, in query_all\n    all_records = list(records)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 631, in query_all_iter\n    result = self.query(query,\n                        include_deleted=include_deleted,\n                        **kwargs\n                        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 565, in query\n    result = self._call_salesforce('GET',\n                                   url,\n    ...<2 lines>...\n                                   **kwargs\n                                   )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 784, in _call_salesforce\n    exception_handler(result,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^\n                      name=name\n                      ^^^^^^^^^\n                      )\n                      ^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\util.py\", line 89, in exception_handler\n    raise exc_cls(result.url, result.status_code, name, response_content)\nsimple_salesforce.exceptions.SalesforceMalformedRequest: Malformed request https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com/services/data/v59.0/query/?q=SELECT+Id%2C+OpportunityName+FROM+Opportunity+WHERE+Id+%3D+%27006gL00000MURR8QAP%27. Response content: [{'message': \"\\nSELECT Id, OpportunityName FROM Opportunity\\n           ^\\nERROR at Row:1:Column:12\\nNo such column 'OpportunityName' on entity 'Opportunity'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.\", 'errorCode': 'INVALID_FIELD'}]",
+      "step": 2,
+      "object": "Opportunity",
+      "action": "query",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "f645747a32c4",
+      "script_preview": "TEST: Update Opportunity Name\r\n\r\nSTEP 1: Open the Opportunity record\r\n  - ID: 006gL00000MURR8QAP\r\n\r\nSTEP 2: Look for Opportunity Name field\r\n\r\nSTEP 3: Edit the Opportunity Name field of the record\r\n  - Name: Deal Oppty\r\n\r\nSTEP 4: Save the update on the record"
+    },
+    {
+      "ts": "2026-04-24T04:00:55",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Test run completed",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "script_hash": "f645747a32c4",
+      "execution_ms": 2353
+    }
+  ]
+}

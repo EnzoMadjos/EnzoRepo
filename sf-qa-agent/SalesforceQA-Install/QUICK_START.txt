@@ -1,0 +1,42 @@
+SF QA Test Agent — Quick Start
+===============================
+
+REQUIREMENTS BEFORE INSTALLING
+--------------------------------
+1. Python 3.10+   →  https://www.python.org/downloads/
+   - During install CHECK: "Add Python to PATH"
+
+2. Ollama         →  https://ollama.com/download
+   - Install, then run install.bat (it will pull the AI model automatically)
+
+INSTALLATION
+------------
+1. Extract this zip anywhere (e.g. C:\SalesforceQA\)
+2. Right-click install.bat → "Run as administrator"
+   - Follow the on-screen prompts
+   - First-time AI model download is ~2 GB; keep the window open
+3. When done, a shortcut appears on your Desktop: "SF QA Test Agent"
+
+RUNNING THE APP
+---------------
+Double-click the "SF QA Test Agent" desktop icon.
+Your browser will open to http://localhost:8200
+
+FIRST USE
+---------
+- Log in with your Salesforce credentials (Never stored to disk in plain text)
+- See docs/README.md and docs/CONNECTED_APP_SETUP.md for full details
+
+TROUBLESHOOTING
+---------------
+- "Python not found" — re-install Python and check "Add to PATH"
+- "Ollama not found" — install Ollama from https://ollama.com/download
+- App won't start — open a terminal in the app\ folder and run:
+    .venv\Scripts\python.exe -m uvicorn sf_app:app --port 8200
+  Then visit http://localhost:8200
+
+UNINSTALL
+---------
+Delete the extracted folder and the Desktop shortcut. Nothing else is written
+to your system aside from the Python venv inside the app\ folder.
+

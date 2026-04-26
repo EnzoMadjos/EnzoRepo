@@ -1,0 +1,20 @@
+# NITRO — sensitive files
+secure/
+*.key
+*.bin
+*.bak
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

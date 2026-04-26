@@ -1,0 +1,2201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SF QA Test Agent</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --card: #22263a;
+      --border: #2e3352;
+      --accent: #0176d3;
+      --accent-hover: #0a5fa8;
+      --success: #3ba755;
+      --error: #e74c3c;
+      --warn: #e6a817;
+      --text: #e8eaf0;
+      --muted: #7a80a0;
+      --font: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header .logo {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: .5px;
+    }
+
+    header .sub {
+      font-size: .8rem;
+      color: var(--muted);
+    }
+
+    header .spacer { flex: 1; }
+
+    header .user-badge {
+      font-size: .78rem;
+      color: var(--muted);
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    /* ---------- Login overlay ---------- */
+    #login-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .login-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 92vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .login-box::-webkit-scrollbar { width: 6px; }
+    .login-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .login-header {
+      padding: 26px 32px 18px;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: var(--surface); z-index: 1;
+    }
+
+    .login-header h2 { font-size: 1.25rem; margin-bottom: 4px; }
+    .login-header p  { font-size: .83rem; color: var(--muted); }
+
+    .login-screen { display: none; flex-direction: column; }
+    .login-screen.active { display: flex; }
+
+    .login-section {
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .login-section-title {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      color: var(--muted);
+    }
+
+    .login-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .login-field label { font-size: .8rem; color: var(--muted); font-weight: 500; }
+
+    .login-field input,
+    .login-field select {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 7px;
+      font-size: .92rem;
+      outline: none;
+      width: 100%;
+    }
+
+    .login-field input:focus,
+    .login-field select:focus { border-color: var(--accent); }
+    .login-field input.mono { font-family: 'Cascadia Code','Consolas',monospace; font-size: .84rem; letter-spacing: .04em; }
+
+    .token-wrap { position: relative; }
+    .token-wrap input { padding-right: 40px; }
+    .token-clear {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--muted); cursor: pointer; font-size: .82rem; padding: 2px 4px;
+    }
+    .token-clear:hover { color: var(--text); }
+
+    .field-hint { font-size: .72rem; color: var(--muted); line-height: 1.5; }
+
+    .login-footer {
+      padding: 18px 32px 26px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+
+    .login-box .err { color: var(--error); font-size: .82rem; min-height: 16px; }
+
+    /* Choose screen */
+    .org-choice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 24px 32px;
+    }
+
+    .org-choice-btn {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 22px 16px;
+      cursor: pointer;
+      text-align: center;
+      color: var(--text);
+      transition: border-color .15s, background .15s;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+
+    .org-choice-btn:hover { border-color: var(--accent); background: rgba(1,118,211,.07); }
+    .org-choice-btn .choice-icon { font-size: 2rem; }
+    .org-choice-btn .choice-label { font-size: .95rem; font-weight: 600; }
+    .org-choice-btn .choice-desc  { font-size: .78rem; color: var(--muted); line-height: 1.4; }
+
+    /* Saved orgs list */
+    .org-list { display: flex; flex-direction: column; gap: 8px; padding: 18px 32px; }
+
+    .org-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+
+    .org-item:hover { border-color: var(--accent); }
+    .org-item .org-name  { font-weight: 600; font-size: .92rem; }
+    .org-item .org-user  { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+    .org-item .org-badge {
+      font-size: .7rem; background: rgba(1,118,211,.15); color: var(--accent);
+      padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+    }
+    .org-item .org-del {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: .85rem; padding: 4px 8px; margin-left: 8px; border-radius: 4px;
+    }
+    .org-item .org-del:hover { color: var(--error); }
+
+    .org-empty { color: var(--muted); font-size: .88rem; text-align: center; padding: 20px; }
+
+    /* Save toggle */
+    .save-toggle {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 7px; padding: 10px 14px; cursor: pointer;
+    }
+
+    .save-toggle input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+    .save-toggle label { font-size: .85rem; cursor: pointer; }
+
+    /* ---------- Main ---------- */
+    main {
+      width: 100%;
+      max-width: 860px;
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+    }
+
+    .card h3 {
+      font-size: .95rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+    }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 0; margin-bottom: 14px; }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: .87rem;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+
+    .tab-btn:first-child { border-radius: 7px 0 0 7px; }
+    .tab-btn:last-child  { border-radius: 0 7px 7px 0; border-left: none; }
+    .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 7px;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: .88rem;
+      resize: vertical;
+      outline: none;
+      line-height: 1.55;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: 7px;
+      padding: 32px;
+      text-align: center;
+      color: var(--muted);
+      font-size: .9rem;
+      cursor: pointer;
+      transition: border-color .15s;
+      position: relative;
+    }
+
+    .file-drop:hover, .file-drop.drag-over { border-color: var(--accent); color: var(--text); }
+
+    .file-drop input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+
+    .file-drop .file-name {
+      margin-top: 8px;
+      font-size: .82rem;
+      color: var(--success);
+    }
+
+    .hint {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 7px;
+      font-size: .92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: .45; cursor: default; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+    .run-row { display: flex; align-items: center; gap: 12px; }
+    .run-row .status-msg { font-size: .83rem; color: var(--muted); }
+
+    .run-progress-wrap {
+      display: none;
+      margin-top: 12px;
+    }
+    .run-progress-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      overflow: hidden;
+    }
+    .run-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #0176d3, #22c55e);
+      transition: width .25s ease;
+    }
+    .run-progress-bar.indeterminate {
+      width: 35%;
+      animation: runProgressSlide 1.1s linear infinite;
+    }
+    .run-progress-meta {
+      margin-top: 6px;
+      font-size: .78rem;
+      color: var(--muted);
+      min-height: 16px;
+    }
+    @keyframes runProgressSlide {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(320%); }
+    }
+
+    /* Progress feed */
+    #progress-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 340px;
+      overflow-y: auto;
+    }
+
+    .feed-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: .87rem;
+      background: var(--card);
+    }
+
+    .feed-item .icon { font-size: 1rem; width: 20px; flex-shrink: 0; }
+    .feed-item.info  .icon { color: var(--accent); }
+    .feed-item.ok    { border-left: 3px solid var(--success); }
+    .feed-item.ok    .icon { color: var(--success); }
+    .feed-item.err   { border-left: 3px solid var(--error); }
+    .feed-item.err   .icon { color: var(--error); }
+    .feed-item.warn  { border-left: 3px solid #e6a200; }
+    .feed-item.warn  .icon { color: #e6a200; }
+    .feed-body { line-height: 1.45; }
+    .feed-body a { color: var(--accent); text-decoration: none; }
+    .feed-body a:hover { text-decoration: underline; }
+
+    /* Summary table */
+    #summary-section { display: none; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .86rem;
+    }
+
+    th, td {
+      padding: 9px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: .75rem; letter-spacing: .5px; }
+    td a { color: var(--accent); text-decoration: none; }
+    td a:hover { text-decoration: underline; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 600;
+    }
+
+    .badge-ok    { background: rgba(59,167,85,.18); color: var(--success); }
+    .badge-err   { background: rgba(231,76,60,.15);  color: var(--error);   }
+    .badge-query { background: rgba(1,118,211,.15);  color: var(--accent);  }
+    .badge-warn  { background: rgba(230,162,0,.15);  color: #e6a200;        }
+
+    /* Main hidden until logged in */
+    main { display: none; }
+    main.visible { display: flex; }
+
+    /* Login spinner */
+    .login-spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .btn-primary.loading {
+      opacity: .75;
+      cursor: default;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    /* Format panel */
+    .format-panel {
+      margin-top: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .format-panel-title {
+      padding: 8px 14px;
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      background: rgba(255,255,255,.03);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .format-sample {
+      padding: 12px 14px;
+      font-family: 'Cascadia Code','Consolas',monospace;
+      font-size: .82rem;
+      white-space: pre;
+      color: var(--text);
+      line-height: 1.55;
+      overflow-x: auto;
+    }
+
+    .format-notes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 20px;
+      padding: 8px 14px;
+      border-top: 1px solid var(--border);
+      font-size: .75rem;
+      color: var(--muted);
+    }
+
+    .format-notes code {
+      background: rgba(255,255,255,.08);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+
+    /* Admin panel */
+    #admin-card { display: block; }
+
+    .log-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 340px;
+      overflow-y: auto;
+      font-family: 'Cascadia Code','Consolas',monospace;
+      font-size: .78rem;
+    }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: 140px 52px 1fr;
+      gap: 8px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      background: var(--card);
+      line-height: 1.4;
+      align-items: start;
+    }
+
+    .log-entry.ERROR { border-left: 3px solid var(--error); }
+    .log-entry.WARNING { border-left: 3px solid var(--warn); }
+    .log-entry.INFO { border-left: 3px solid var(--accent); }
+    .log-ts  { color: var(--muted); font-size: .73rem; }
+    .log-lvl { font-weight: 700; font-size: .73rem; }
+    .log-lvl.ERROR { color: var(--error); }
+    .log-lvl.WARNING { color: var(--warn); }
+    .log-lvl.INFO { color: var(--accent); }
+    .log-lvl.DEBUG { color: var(--muted); }
+    .log-msg { color: var(--text); word-break: break-all; }
+    .log-tb  { grid-column: 1/-1; background: rgba(231,76,60,.08); border-radius: 4px; padding: 6px 8px; color: var(--error); white-space: pre-wrap; font-size: .72rem; margin-top: 2px; }
+
+    .admin-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+    .admin-row h4 { font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); flex: 1; }
+    .btn-sm { padding: 5px 14px; font-size: .8rem; font-weight: 600; }
+    .prompt-area { min-height: 260px; font-size: .8rem; }
+    .prompt-status { font-size: .78rem; color: var(--success); min-height: 16px; }
+
+    .pull-progress-wrap { display: none; margin-top: 8px; }
+    .pull-progress-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      overflow: hidden;
+    }
+    .pull-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2f8bff, #26d5a7);
+      transition: width .25s ease;
+    }
+    .pull-progress-bar.indeterminate {
+      width: 35%;
+      animation: pullSlide 1.15s linear infinite;
+    }
+    .pull-progress-bar.error {
+      background: linear-gradient(90deg, #e74c3c, #f39c12);
+    }
+    .pull-progress-meta {
+      margin-top: 6px;
+      font-size: .76rem;
+      color: var(--muted);
+      min-height: 14px;
+    }
+    @keyframes pullSlide {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(320%); }
+    }
+
+    /* Toast notifications */
+    #toast-container {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      border-radius: 9px;
+      font-size: .88rem;
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,.4);
+      pointer-events: all;
+      opacity: 0;
+      transform: translateX(60px);
+      transition: opacity .25s, transform .25s;
+      max-width: 340px;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(0); }
+    .toast.success { background: #1a3a25; border: 1px solid var(--success); color: #6ee38a; }
+    .toast.error   { background: #3a1a1a; border: 1px solid var(--error);   color: #f08080; }
+    .toast.info    { background: #1a2a3a; border: 1px solid var(--accent);   color: #80c0f0; }
+    .toast-icon    { font-size: 1.1rem; flex-shrink: 0; }
+
+    /* Org item connecting overlay */
+    .org-item.connecting { opacity: .6; pointer-events: none; }
+    .org-item .org-connecting-spinner {
+      display: none;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    .org-item.connecting .org-connecting-spinner { display: block; }
+
+    /* Error report callout */
+    .error-callout {
+      background: rgba(231,76,60,.07);
+      border: 1px solid rgba(231,76,60,.3);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: .83rem;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .error-callout strong { color: var(--error); }
+    .error-callout code {
+      background: rgba(255,255,255,.08);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: .8rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login overlay -->
+<div id="login-overlay">
+  <div class="login-box">
+
+    <!-- Sticky header -->
+    <div class="login-header">
+      <h2>SF QA Test Agent</h2>
+      <p id="login-subtitle">Connect to a Salesforce org to get started.</p>
+    </div>
+
+    <!-- ── SCREEN 0: Choose existing or new ── -->
+    <div class="login-screen active" id="screen-choose">
+      <div class="org-choice-grid">
+        <button class="org-choice-btn" id="btn-existing-org">
+          <div class="choice-icon">🏢</div>
+          <div class="choice-label">Existing Org</div>
+          <div class="choice-desc">Sign in with a previously saved org profile</div>
+        </button>
+        <button class="org-choice-btn" id="btn-new-org">
+          <div class="choice-icon">➕</div>
+          <div class="choice-label">Add New Org</div>
+          <div class="choice-desc">Connect to a new Salesforce org for the first time</div>
+        </button>
+      </div>
+
+      <!-- Access URLs shown here too -->
+      <div class="login-section" id="access-info" style="display:none;">
+        <div class="login-section-title">App Access URLs</div>
+        <div style="font-size:.83rem;line-height:2.1;">
+          <div>🖥 &nbsp;This machine: <a id="info-local" href="#" target="_blank" style="color:var(--accent);"></a></div>
+          <div>🌐 &nbsp;Same network (share this): <a id="info-network" href="#" target="_blank" style="color:var(--accent);font-weight:600;"></a></div>
+        </div>
+        <div class="field-hint">Anyone on the same WiFi/network can use the network URL.</div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 1: Saved orgs list ── -->
+    <div class="login-screen" id="screen-existing">
+      <div class="org-list" id="saved-orgs-list">
+        <div class="org-empty">Loading saved orgs...</div>
+      </div>
+      <div class="login-footer">
+        <div class="err" id="existing-err"></div>
+        <button class="btn btn-ghost" id="btn-back-from-existing" style="width:100%;">← Back</button>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 2: New org login form ── -->
+    <div class="login-screen" id="screen-new">
+
+      <!-- Section: Account -->
+      <div class="login-section">
+        <div class="login-section-title">Salesforce Account</div>
+        <div class="login-field">
+          <label>Username</label>
+          <input type="email" id="sf-username" placeholder="you@example.com" autocomplete="username" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="login-field">
+            <label>Password</label>
+            <input type="password" id="sf-password" placeholder="Your password" autocomplete="current-password" />
+          </div>
+          <div class="login-field">
+            <label>Org Type</label>
+            <select id="sf-domain">
+              <option value="login" selected>Developer / Production</option>
+              <option value="test">Sandbox</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Security Token -->
+      <div class="login-section">
+        <div class="login-section-title">Security Token</div>
+        <div class="login-field">
+          <label>Security Token</label>
+          <div class="token-wrap">
+            <input type="text" id="sf-token" class="mono" placeholder="Paste your security token" autocomplete="off" />
+            <button type="button" class="token-clear" id="toggle-token" title="Clear">✕</button>
+          </div>
+          <div class="field-hint">
+            Get it from: SF → Avatar → Settings → My Personal Information → Reset My Security Token.<br/>
+            Leave blank only if your IP is on the Salesforce trusted IP list. Never stored to disk.
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Connected App -->
+      <div class="login-section">
+        <div class="login-section-title">Connected App <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.75rem;color:var(--muted);">— required for newer orgs</span></div>
+        <div class="login-field">
+          <label>Consumer Key (Client ID)</label>
+          <input type="text" id="sf-consumer-key" class="mono" placeholder="From your SF Connected App" autocomplete="off" />
+        </div>
+        <div class="login-field">
+          <label>Consumer Secret (Client Secret)</label>
+          <input type="password" id="sf-consumer-secret" placeholder="From your SF Connected App" autocomplete="off" />
+        </div>
+        <div class="field-hint">
+          See <strong>CONNECTED_APP_SETUP.md</strong> for step-by-step instructions. These are never stored — used only during login.
+        </div>
+      </div>
+
+      <!-- Section: Save profile -->
+      <div class="login-section">
+        <div class="login-section-title">Save This Org</div>
+        <label class="save-toggle">
+          <input type="checkbox" id="save-profile-chk" checked />
+          <span>Remember this org so I can log in faster next time</span>
+        </label>
+        <div class="login-field" id="profile-name-field">
+          <label>Profile Name</label>
+          <input type="text" id="profile-name" placeholder="e.g. My Dev Org, QA Sandbox" />
+          <div class="field-hint">This name will appear in the "Existing Org" list.</div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="login-footer">
+        <div class="err" id="login-err"></div>
+        <button class="btn btn-primary" id="login-btn" style="padding:12px;">
+          <span class="login-spinner" id="login-spinner"></span>
+          <span id="login-btn-text">Connect to Salesforce</span>
+        </button>
+        <button class="btn btn-ghost" id="btn-back-from-new">← Back</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Update available banner (hidden until auto-check fires) -->
+<div id="update-banner" style="display:none;background:var(--accent,#0070d2);color:#fff;padding:8px 18px;font-size:.82rem;display:none;align-items:center;gap:12px;justify-content:center;">
+  <span>⬆ A new update is available for this app.</span>
+  <button onclick="openAdminToUpdate()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.5);color:#fff;padding:3px 12px;border-radius:4px;cursor:pointer;font-size:.8rem;">Install Now</button>
+  <button onclick="document.getElementById('update-banner').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:1rem;line-height:1;">✕</button>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">SF QA Agent</div>
+  <div class="sub">Salesforce Test Automation</div>
+  <div class="spacer"></div>
+  <div class="user-badge" id="user-badge">Not connected</div>
+  <button class="btn btn-ghost" id="admin-btn" style="display:none;font-size:.78rem;padding:4px 10px;">⚙ Admin</button>
+  <button class="btn btn-ghost" id="logout-btn" style="display:none;font-size:.78rem;padding:4px 10px;">Sign Out</button>
+</header>
+
+<!-- Main content -->
+<main>
+
+  <!-- Input card -->
+  <div class="card">
+    <h3>Test Script</h3>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="paste">Paste Script</button>
+      <button class="tab-btn" data-tab="upload">Upload File</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-paste">
+      <textarea id="scenario-input" placeholder="Paste your test script here..."></textarea>
+      <div class="format-panel">
+        <div class="format-panel-title">📋 Expected Format</div>
+        <div class="format-sample">TEST: Create a Customer Account with a Contact
+
+STEP 1: Account
+  - Name: Acme Corporation
+  - Type: Customer
+  - Industry: Technology
+
+STEP 2: Contact (linked to Step 1 Account)
+  - FirstName: John
+  - LastName: Smith
+  - Email: john@acme.com
+  - AccountId: $step1.id</div>
+        <div class="format-notes">
+          <span>• Use SF <strong>API field names</strong> (e.g. <code>LastName</code>, not "Last Name")</span>
+          <span>• Link records with <code>$stepN.id</code></span>
+          <span>• Object names match SF API names (e.g. <code>Account</code>, <code>Contact</code>, <code>Opportunity</code>)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-upload">
+      <div class="file-drop" id="file-drop">
+        <input type="file" id="file-input" accept=".txt,.docx,.pdf" />
+        <div>Drop a file here or <strong>click to browse</strong></div>
+        <div>Supported: .txt, .docx, .pdf</div>
+        <div class="file-name" id="file-name"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;" class="run-row">
+      <button class="btn btn-primary" id="run-btn">▶ Run Test</button>
+      <button class="btn btn-ghost" id="clear-btn">Clear</button>
+      <span class="status-msg" id="run-status"></span>
+    </div>
+  </div>
+
+  <!-- Progress card -->
+  <div class="card" id="progress-card" style="display:none;">
+    <h3>Live Progress</h3>
+    <div id="run-progress-wrap" class="run-progress-wrap">
+      <div class="run-progress-track">
+        <div id="run-progress-bar" class="run-progress-bar"></div>
+      </div>
+      <div id="run-progress-meta" class="run-progress-meta">Initializing...</div>
+    </div>
+    <div id="progress-feed"></div>
+  </div>
+
+  <!-- Summary card -->
+  <div class="card" id="summary-section">
+    <h3>Test Run Summary</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Step</th>
+          <th>Object</th>
+          <th>Label</th>
+          <th>Record ID</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="summary-body"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- Admin modal -->
+<div id="admin-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:900;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 16px 40px;">
+  <div id="admin-card" style="background:var(--surface,#1e2330);border:1px solid var(--border);border-radius:14px;width:100%;max-width:860px;padding:28px 28px 24px;position:relative;box-shadow:0 12px 48px rgba(0,0,0,.5);">
+
+    <!-- Modal header -->
+    <div style="display:flex;align-items:center;margin-bottom:20px;">
+      <h2 style="margin:0;font-size:1.05rem;color:var(--text);flex:1;">⚙ Admin Panel</h2>
+      <button id="admin-modal-close" style="background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1;padding:0 2px;">✕</button>
+    </div>
+
+    <!-- Support server connection — compact status bar -->
+    <div id="relay-connect-box" style="margin-bottom:16px;padding:10px 14px;border-radius:8px;background:var(--surface2,#f4f6f8);border:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+      <span id="relay-dot" style="width:10px;height:10px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background .3s;"></span>
+      <span id="relay-status-text" style="font-size:.8rem;color:var(--muted);flex:1;">Not connected to support server.</span>
+      <button class="btn btn-ghost btn-sm" id="relay-refresh-btn" style="font-size:.75rem;padding:2px 8px;">↻ Recheck</button>
+      <button class="btn btn-primary btn-sm" id="relay-settings-btn" style="font-size:.75rem;padding:2px 10px;">⚙ Support</button>
+    </div>
+
+    <!-- Error report instructions -->
+    <div class="error-callout" style="margin-bottom:20px;">
+      <strong>🚨 Got an error?</strong> Here's what to do:
+      <ol style="margin:8px 0 0 16px;">
+        <li>Click <strong>↻ Refresh</strong> below to load the latest logs.</li>
+        <li>Click <strong>📤 Send to Support</strong> — this sends the logs directly to your admin (they must be online).</li>
+        <li>If the support server is offline, click <strong>📋 Copy Logs</strong> and paste them into a message.</li>
+        <li>Once a fix is ready, the <strong>⬇ Apply Update</strong> button will appear — click it to install.</li>
+      </ol>
+    </div>
+
+    <!-- Error Logs -->
+    <div class="admin-row">
+      <h4>Error Log</h4>
+      <button class="btn btn-ghost btn-sm" id="log-refresh-btn">↻ Refresh</button>
+      <button class="btn btn-ghost btn-sm" id="log-copy-btn">📋 Copy Logs</button>
+      <button class="btn btn-primary btn-sm" id="log-report-btn">📤 Send to Support</button>
+      <button class="btn btn-ghost btn-sm" id="log-clear-btn" style="color:var(--error);border-color:var(--error);">Clear</button>
+    </div>
+    <!-- Optional note before sending -->
+    <div id="log-report-note-row" style="display:none;margin-bottom:8px;display:none;gap:8px;align-items:center;">
+      <input id="log-report-note" type="text" placeholder="Add a note (optional) — e.g. what you were doing when the error occurred" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,#fff);color:#111;font-size:.82rem;" maxlength="200" />
+      <button class="btn btn-primary btn-sm" id="log-report-send-btn">Send</button>
+      <button class="btn btn-ghost btn-sm" id="log-report-cancel-btn">Cancel</button>
+    </div>
+    <div id="log-report-status" style="font-size:.8rem;min-height:18px;margin-bottom:4px;"></div>
+    <div class="log-feed" id="log-feed"><div style="color:var(--muted);font-size:.82rem;">Click Refresh to load logs.</div></div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:22px 0;" />
+
+    <!-- AI Model -->
+    <div class="admin-row" style="margin-top:0;">
+      <h4>AI Model</h4>
+      <button class="btn btn-ghost btn-sm" id="pull-model-btn">⬇ Pull AI Model</button>
+    </div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+      Download or update the AI model used to parse test scripts (<strong id="model-name-label">mistral:7b</strong>). Run this on first setup or after a model upgrade.
+    </div>
+    <div id="pull-model-status" style="font-size:.82rem;min-height:20px;"></div>
+    <div id="pull-model-progress-wrap" class="pull-progress-wrap">
+      <div class="pull-progress-track">
+        <div id="pull-model-progress-bar" class="pull-progress-bar indeterminate"></div>
+      </div>
+      <div id="pull-model-progress-meta" class="pull-progress-meta">Waiting for first progress event...</div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:22px 0;" />
+
+    <!-- LLM Prompt Patcher -->
+    <div class="admin-row">
+      <h4>AI System Prompt — Live Patch</h4>
+      <button class="btn btn-ghost btn-sm" id="prompt-load-btn">⬇ Pull Update</button>
+      <button class="btn btn-primary btn-sm" id="prompt-save-btn">✓ Apply Patch</button>
+    </div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+      Edit the instructions the AI uses to parse your test scripts. Changes take effect immediately without restarting — they reset on server restart. Use this to fix misread scripts.
+    </div>
+    <textarea id="prompt-area" class="prompt-area" spellcheck="false"></textarea>
+    <div class="prompt-status" id="prompt-status"></div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:22px 0;" />
+
+    <!-- App Update / Patch -->
+    <div class="admin-row">
+      <h4>App Update</h4>
+      <button class="btn btn-ghost btn-sm" id="update-check-btn">🔍 Check for Update</button>
+      <button class="btn btn-primary btn-sm" id="update-apply-btn" style="display:none;">⬇ Apply Update</button>
+    </div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+      Download and apply a patch sent by your admin. Click <strong>Check for Update</strong> first to see if one is available, then <strong>Apply Update</strong> to install it. <strong>The page will reconnect automatically after the local server restarts.</strong>
+    </div>
+    <div id="update-status" style="font-size:.82rem;min-height:24px;"></div>
+    <div id="update-progress-wrap" class="pull-progress-wrap" style="margin-top:2px;">
+      <div class="pull-progress-track">
+        <div id="update-progress-bar" class="pull-progress-bar indeterminate"></div>
+      </div>
+      <div id="update-progress-meta" class="pull-progress-meta">Waiting to start...</div>
+    </div>
+    <div id="update-file-list" style="display:none;margin-top:10px;font-size:.78rem;line-height:1.8;"></div>
+
+  </div>
+</div>
+
+<!-- Relay connect modal -->
+<div id="relay-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--surface,#1e2330);border:1px solid var(--border);border-radius:12px;padding:28px 28px 22px;width:100%;max-width:460px;box-shadow:0 8px 32px rgba(0,0,0,.4);position:relative;">
+    <button id="relay-modal-close" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+    <h3 style="margin:0 0 6px;font-size:1rem;color:var(--text);">Support Server Connection</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin:0 0 18px;line-height:1.6;">Your admin will send you a URL. Paste it below to connect — this lets them receive your error logs and push updates directly to you.</p>
+
+    <!-- Status row inside modal -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <span id="relay-modal-dot" style="width:9px;height:9px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background .3s;"></span>
+      <span id="relay-modal-status" style="font-size:.8rem;color:var(--muted);flex:1;">Not connected.</span>
+    </div>
+
+    <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:5px;">Support URL</label>
+    <input id="relay-url-input" type="text" placeholder="https://xxxx.ngrok-free.app"
+      style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,#fff);color:#111;font-size:.84rem;margin-bottom:12px;" />
+    <div id="relay-connect-status" style="font-size:.78rem;min-height:16px;margin-bottom:12px;color:var(--error);"></div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-ghost btn-sm" id="relay-disconnect-btn" style="display:none;color:var(--error);border-color:var(--error);">Disconnect</button>
+      <button class="btn btn-ghost btn-sm" id="relay-modal-close2">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="relay-connect-btn">Connect</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  //  Constants & state
+  // ============================================================
+  const TOKEN_KEY = 'sfqa_token';
+  const USER_KEY  = 'sfqa_user';
+  let token       = localStorage.getItem(TOKEN_KEY) || '';
+  let currentUser = localStorage.getItem(USER_KEY)  || '';
+  let selectedFile = null;
+  let activeTab    = 'paste';
+  let runTotalSteps = 0;
+  let runStartedSteps = new Set();
+  let runFinishedSteps = new Set();
+
+  function updateRunProgress(metaText = '', forceIndeterminate = false) {
+    const wrap = document.getElementById('run-progress-wrap');
+    const bar = document.getElementById('run-progress-bar');
+    const meta = document.getElementById('run-progress-meta');
+    wrap.style.display = 'block';
+    if (forceIndeterminate || !runTotalSteps) {
+      bar.classList.add('indeterminate');
+      bar.style.width = '35%';
+    } else {
+      bar.classList.remove('indeterminate');
+      const total = Math.max(1, runTotalSteps);
+      const inFlight = Math.max(0, runStartedSteps.size - runFinishedSteps.size);
+      const pct = Math.min(99, Math.round(((runFinishedSteps.size + (inFlight ? 0.45 : 0)) / total) * 100));
+      bar.style.width = `${pct}%`;
+    }
+    meta.textContent = metaText || `${runFinishedSteps.size}/${runTotalSteps || '?'} steps complete`;
+  }
+
+  // ============================================================
+  //  Toast notifications
+  // ============================================================
+  function showToast(msg, type = 'info', duration = 3500) {
+    const icons = { success: '✔', error: '✖', info: 'ℹ' };
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ'}</span><span>${msg}</span>`;
+    document.getElementById('toast-container').appendChild(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 280);
+    }, duration);
+  }
+
+  // ============================================================
+  //  Auth helpers
+  // ============================================================
+  function authHeader() { return { 'Authorization': `Bearer ${token}` }; }
+
+  function clearSession() {
+    token = '';
+    currentUser = '';
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }
+
+  async function tryAutoLogin() {
+    if (!token) { showLoginOverlay(); return; }
+    try {
+      const r = await fetch('/health', { headers: authHeader() });
+      if (r.ok) {
+        const data = await r.json();
+        showApp(currentUser, data.instance_url || '');
+      } else {
+        clearSession();
+        showLoginOverlay();
+      }
+    } catch (_) {
+      showLoginOverlay();
+    }
+  }
+
+  // ============================================================
+  //  Login overlay: screen navigation
+  // ============================================================
+  function showLoginOverlay() {
+    document.getElementById('login-overlay').style.display = 'flex';
+    showScreen('screen-choose');
+  }
+
+  function showScreen(id) {
+    document.querySelectorAll('.login-screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    const subtitles = {
+      'screen-choose':   'Connect to a Salesforce org to get started.',
+      'screen-existing': 'Choose a saved org to connect.',
+      'screen-new':      'Enter your Salesforce credentials.',
+    };
+    document.getElementById('login-subtitle').textContent = subtitles[id] || '';
+  }
+
+  // ── SCREEN 0 buttons ──
+  document.getElementById('btn-existing-org').addEventListener('click', async () => {
+    showScreen('screen-existing');
+    await loadSavedOrgs();
+  });
+
+  document.getElementById('btn-new-org').addEventListener('click', () => {
+    showScreen('screen-new');
+  });
+
+  // ── Back buttons ──
+  document.getElementById('btn-back-from-existing').addEventListener('click', () => showScreen('screen-choose'));
+  document.getElementById('btn-back-from-new').addEventListener('click',      () => showScreen('screen-choose'));
+
+  // ── Save-profile checkbox toggle ──
+  document.getElementById('save-profile-chk').addEventListener('change', function () {
+    document.getElementById('profile-name-field').style.display = this.checked ? 'flex' : 'none';
+  });
+
+  // ── Connect button ──
+  document.getElementById('login-btn').addEventListener('click', doLogin);
+  document.getElementById('sf-token').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  // ── Clear token button ──
+  document.getElementById('toggle-token').addEventListener('click', () => {
+    document.getElementById('sf-token').value = '';
+    document.getElementById('sf-token').focus();
+  });
+
+  // ============================================================
+  //  Saved orgs list
+  // ============================================================
+  async function loadSavedOrgs() {
+    const list = document.getElementById('saved-orgs-list');
+    const err  = document.getElementById('existing-err');
+    list.innerHTML = '<div class="org-empty">Loading…</div>';
+    err.textContent = '';
+
+    try {
+      const r = await fetch('/profiles');
+      if (!r.ok) throw new Error('Failed to load profiles');
+      const profiles = await r.json(); // [{name, username, domain, has_consumer_key}]
+
+      if (!profiles.length) {
+        list.innerHTML = '<div class="org-empty">No saved orgs yet. Use "Add New Org" to connect for the first time.</div>';
+        return;
+      }
+
+      list.innerHTML = '';
+      for (const p of profiles) {
+        const item = document.createElement('div');
+        item.className = 'org-item';
+        item.innerHTML = `
+          <div style="flex:1;cursor:pointer;" class="org-item-main">
+            <div class="org-name">${escHtml(p.name)}</div>
+            <div class="org-user">${escHtml(p.username)} · ${p.domain === 'test' ? 'Sandbox' : 'Production/Dev'}</div>
+          </div>
+          <div class="org-connecting-spinner"></div>
+          <span class="org-badge">${p.has_consumer_key ? 'OAuth' : 'SOAP'}</span>
+          <button class="org-del" title="Remove saved org" data-name="${escHtml(p.name)}">✕</button>`;
+
+        item.querySelector('.org-item-main').addEventListener('click', () => loginWithProfile(p.name, err, item));
+        item.querySelector('.org-del').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await deleteProfile(p.name, list, err);
+        });
+
+        list.appendChild(item);
+      }
+    } catch (ex) {
+      list.innerHTML = '<div class="org-empty">Could not load saved orgs.</div>';
+    }
+  }
+
+  async function loginWithProfile(name, errEl, itemEl) {
+    errEl.textContent = '';
+    if (itemEl) itemEl.classList.add('connecting');
+    try {
+      const r = await fetch(`/profiles/${encodeURIComponent(name)}/login`, { method: 'POST' });
+      if (r.ok) {
+        const data = await r.json();
+        token = data.token;
+        currentUser = data.username;
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem(USER_KEY, currentUser);
+        document.getElementById('login-overlay').style.display = 'none';
+        showApp(data.username, data.instance_url);
+        showToast(`Connected to ${data.instance_url ? data.instance_url.replace('https://','').split('.')[0] : 'org'}`, 'success');
+      } else {
+        const d = await r.json().catch(() => ({}));
+        errEl.textContent = d.detail || 'Login failed — org credentials may be out of date.';
+        showToast('Login failed', 'error');
+      }
+    } catch (_) {
+      errEl.textContent = 'Network error.';
+      showToast('Network error', 'error');
+    } finally {
+      if (itemEl) itemEl.classList.remove('connecting');
+    }
+  }
+
+  async function deleteProfile(name, listEl, errEl) {
+    if (!confirm(`Remove saved org "${name}"?`)) return;
+    try {
+      const r = await fetch(`/profiles/${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+        headers: authHeader(),
+      });
+      if (r.ok || r.status === 404) {
+        await loadSavedOrgs();
+      } else {
+        errEl.textContent = 'Could not remove profile.';
+      }
+    } catch (_) {
+      errEl.textContent = 'Network error.';
+    }
+  }
+
+  // ============================================================
+  //  New org login (screen-new)
+  // ============================================================
+  async function doLogin() {
+    const username        = document.getElementById('sf-username').value.trim();
+    const password        = document.getElementById('sf-password').value;
+    const security_token  = document.getElementById('sf-token').value.trim();
+    const domain          = document.getElementById('sf-domain').value;
+    const consumer_key    = document.getElementById('sf-consumer-key').value.trim();
+    const consumer_secret = document.getElementById('sf-consumer-secret').value.trim();
+    const saveOrg         = document.getElementById('save-profile-chk').checked;
+    const profileName     = document.getElementById('profile-name').value.trim();
+
+    const err = document.getElementById('login-err');
+    if (!username || !password) {
+      err.textContent = 'Username and password are required.';
+      return;
+    }
+    if (saveOrg && !profileName) {
+      err.textContent = 'Enter a profile name, or uncheck "Remember this org".';
+      return;
+    }
+
+    const btn = document.getElementById('login-btn');
+    const spinner = document.getElementById('login-spinner');
+    const btnText = document.getElementById('login-btn-text');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    spinner.style.display = 'block';
+    btnText.textContent = 'Connecting…';
+    err.textContent = '';
+
+    try {
+      const r = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, security_token, domain, consumer_key, consumer_secret }),
+      });
+
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        err.textContent = d.detail || 'Login failed.';
+      showToast(d.detail || 'Login failed', 'error', 5000);
+      }
+
+      const data = await r.json();
+      token = data.token;
+      currentUser = data.username;
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, currentUser);
+
+      // Optionally save profile
+      if (saveOrg && profileName) {
+        await fetch('/profiles/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader() },
+          body: JSON.stringify({ name: profileName, username, password, security_token, domain, consumer_key, consumer_secret }),
+        });
+      }
+
+      document.getElementById('login-overlay').style.display = 'none';
+      showApp(data.username, data.instance_url);
+      showToast(`Connected to ${data.instance_url ? data.instance_url.replace('https://','').split('.')[0] : 'org'}`, 'success');
+    } catch (_) {
+      err.textContent = 'Network error — is the server running?';
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      spinner.style.display = 'none';
+      btnText.textContent = 'Connect to Salesforce';
+    }
+  }
+
+  // ============================================================
+  //  App header: connected state
+  // ============================================================
+  function showApp(username, instanceUrl) {
+    document.getElementById('login-overlay').style.display = 'none';
+    const orgLabel = instanceUrl ? instanceUrl.replace('https://', '').split('.')[0] : 'connected';
+    document.getElementById('user-badge').textContent = orgLabel;
+    document.getElementById('logout-btn').style.display = 'inline-block';
+    document.getElementById('admin-btn').style.display = 'inline-block';
+    document.querySelector('main').classList.add('visible');
+    // Silently check for available update in the background
+    silentUpdateCheck();
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    try { await fetch('/auth/logout', { method: 'POST', headers: authHeader() }); } catch (_) {}
+    clearSession();
+    document.getElementById('logout-btn').style.display = 'none';
+    document.getElementById('admin-btn').style.display = 'none';
+    document.getElementById('user-badge').textContent = 'Not connected';
+    document.querySelector('main').classList.remove('visible');
+    document.getElementById('admin-modal-overlay').style.display = 'none';
+    document.getElementById('admin-btn').textContent = '⚙ Admin';
+    // Reset new-org form
+    ['sf-username','sf-password','sf-token','sf-consumer-key','sf-consumer-secret','profile-name'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('login-err').textContent = '';
+    showLoginOverlay();
+  });
+
+  // ============================================================
+  //  Tabs
+  // ============================================================
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${activeTab}`).classList.add('active');
+    });
+  });
+
+  // ============================================================
+  //  File input
+  // ============================================================
+  const fileInput = document.getElementById('file-input');
+  const fileDrop  = document.getElementById('file-drop');
+  const fileName  = document.getElementById('file-name');
+
+  fileInput.addEventListener('change', () => {
+    selectedFile = fileInput.files[0] || null;
+    fileName.textContent = selectedFile ? `Selected: ${selectedFile.name}` : '';
+  });
+
+  fileDrop.addEventListener('dragover',  e => { e.preventDefault(); fileDrop.classList.add('drag-over'); });
+  fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag-over'));
+  fileDrop.addEventListener('drop', e => {
+    e.preventDefault();
+    fileDrop.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) { selectedFile = f; fileName.textContent = `Selected: ${f.name}`; }
+  });
+
+  // ============================================================
+  //  Clear button
+  // ============================================================
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    document.getElementById('scenario-input').value = '';
+    selectedFile = null;
+    fileName.textContent = '';
+    fileInput.value = '';
+    document.getElementById('progress-card').style.display = 'none';
+    document.getElementById('run-progress-wrap').style.display = 'none';
+    document.getElementById('run-progress-bar').classList.remove('indeterminate');
+    document.getElementById('run-progress-bar').style.width = '0%';
+    document.getElementById('summary-section').style.display = 'none';
+    document.getElementById('progress-feed').innerHTML = '';
+    document.getElementById('summary-body').innerHTML = '';
+    document.getElementById('run-status').textContent = '';
+  });
+
+  // ============================================================
+  //  Run test  (SSE streaming)
+  // ============================================================
+  document.getElementById('run-btn').addEventListener('click', runTest);
+
+  async function runTest() {
+    if (!token) { alert('Please log in first.'); return; }
+
+    const runBtn  = document.getElementById('run-btn');
+    const feed    = document.getElementById('progress-feed');
+    const progCard        = document.getElementById('progress-card');
+    const summarySection  = document.getElementById('summary-section');
+    const summaryBody     = document.getElementById('summary-body');
+    const runStatus       = document.getElementById('run-status');
+
+    const scenarioText = document.getElementById('scenario-input').value.trim();
+    if (activeTab === 'paste' && !scenarioText) { runStatus.textContent = 'Please paste a test script first.'; return; }
+    if (activeTab === 'upload' && !selectedFile)  { runStatus.textContent = 'Please select a file first.'; return; }
+
+    feed.innerHTML = '';
+    summaryBody.innerHTML = '';
+    summarySection.style.display = 'none';
+    progCard.style.display = 'block';
+    runTotalSteps = 0;
+    runStartedSteps = new Set();
+    runFinishedSteps = new Set();
+    updateRunProgress('Planning test...', true);
+    runBtn.disabled = true;
+    runStatus.textContent = 'Running…';
+
+    const formData = new FormData();
+    if (activeTab === 'upload' && selectedFile) {
+      formData.append('file', selectedFile);
+    } else {
+      formData.append('scenario', scenarioText);
+    }
+
+    try {
+      const resp = await fetch('/run-test', {
+        method: 'POST',
+        headers: authHeader(),
+        body: formData,
+      });
+
+      if (!resp.ok) {
+        const e = await resp.json().catch(() => ({}));
+        addFeedItem(feed, 'err', '✗', e.detail || `Server error ${resp.status}`);
+        runStatus.textContent = 'Run failed.';
+        return;
+      }
+
+      const reader  = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try { handleEvent(JSON.parse(line.slice(6)), feed, summaryBody, summarySection, runStatus); } catch (_) {}
+          }
+        }
+      }
+    } catch (e) {
+      addFeedItem(feed, 'err', '✗', `Connection error: ${e.message}`);
+      runStatus.textContent = 'Run failed.';
+    } finally {
+      runBtn.disabled = false;
+    }
+  }
+
+  function handleEvent(evt, feed, summaryBody, summarySection, runStatus) {
+    switch (evt.type) {
+      case 'status':
+        if (evt.message && evt.message.includes('Plan ready')) {
+          const m = evt.message.match(/(\d+)\s*step/i);
+          if (m) {
+            runTotalSteps = Number(m[1]);
+            updateRunProgress(`Plan ready: ${runTotalSteps} step(s)`, false);
+          }
+        }
+        addFeedItem(feed, 'info', '⏳', evt.message);
+        break;
+      case 'step_start':
+        addFeedItem(feed, 'info', '▷', `Step ${evt.step}: ${evt.label} <span style="color:var(--muted)">(${evt.object})</span>`);
+        runStartedSteps.add(evt.step);
+        updateRunProgress(runTotalSteps ? `Running step ${evt.step} of ${runTotalSteps}` : `Running step ${evt.step}...`, !runTotalSteps);
+        break;
+      case 'step_done': {
+        const action = evt.action || 'create';
+        const actionLabel = {update:'Updated',delete:'Deleted',clone:'Cloned',query:'Queried',create:'Created'}[action] || 'Done';
+        const idPart = evt.url ? `— ID: <a href="${evt.url}" target="_blank">${evt.id}</a>` : (evt.id ? `— ID: ${evt.id}` : '');
+        addFeedItem(feed, 'ok', '✓', `Step ${evt.step}: ${actionLabel} <strong>${evt.object}</strong> ${idPart}`);
+        runFinishedSteps.add(evt.step);
+        updateRunProgress();
+        break;
+      }
+      case 'step_warning':
+        addFeedItem(feed, 'warn', '⚠', `Step ${evt.step} warning: ${evt.message || evt.label || ''}`);
+        runFinishedSteps.add(evt.step);
+        updateRunProgress();
+        break;
+      case 'step_error':
+        addFeedItem(feed, 'err', '✗', `Step ${evt.step} failed: ${evt.error}`);
+        runFinishedSteps.add(evt.step);
+        updateRunProgress();
+        break;
+      case 'error':
+        addFeedItem(feed, 'err', '✗', evt.message);
+        runStatus.textContent = 'Run failed.';
+        break;
+      case 'summary':
+        buildSummaryTable(evt.results, summaryBody, summarySection);
+        runStatus.textContent = 'Run complete.';
+        if (runTotalSteps && runFinishedSteps.size < runTotalSteps) {
+          runFinishedSteps = new Set(Array.from({length: runTotalSteps}, (_, i) => i + 1));
+        }
+        document.getElementById('run-progress-bar').classList.remove('indeterminate');
+        document.getElementById('run-progress-bar').style.width = '100%';
+        updateRunProgress('Run complete');
+        break;
+      case 'done':
+        break;
+    }
+  }
+
+  function addFeedItem(feed, cls, icon, html) {
+    const el = document.createElement('div');
+    el.className = `feed-item ${cls}`;
+    el.innerHTML = `<span class="icon">${icon}</span><div class="feed-body">${html}</div>`;
+    feed.appendChild(el);
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function buildSummaryTable(results, tbody, section) {
+    tbody.innerHTML = '';
+    for (const r of results) {
+      const statusText = String(r.status || '');
+      const isOk    = ['created','updated','deleted','cloned','saved'].includes(statusText);
+      const isQuery = r.status === 'queried';
+      const isWarn  = statusText.startsWith('warning');
+      const isErr   = !isOk && !isQuery && !isWarn;
+      const badgeCls  = isOk ? 'badge-ok' : isQuery ? 'badge-query' : isWarn ? 'badge-warn' : 'badge-err';
+      const badgeText = isOk ? (statusText.charAt(0).toUpperCase()+statusText.slice(1)) : isQuery ? 'Queried' : isWarn ? 'Warning' : 'Error';
+      const idCell = r.url
+        ? `<a href="${r.url}" target="_blank">${r.id}</a>`
+        : `<span style="color:var(--muted)">${r.id || '—'}</span>`;
+      tbody.innerHTML += `
+        <tr>
+          <td>${r.step}</td>
+          <td>${r.object}</td>
+          <td>${r.label}</td>
+          <td>${idCell}</td>
+          <td><span class="badge ${badgeCls}">${isErr ? r.status : badgeText}</span></td>
+        </tr>`;
+    }
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // ============================================================
+  //  Utility
+  // ============================================================
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ============================================================
+  //  Admin panel
+  // ============================================================
+  const adminCard = document.getElementById('admin-card');
+  const adminBtn  = document.getElementById('admin-btn');
+  // Note: the full admin-btn click handler (with relay polling) is defined below
+  // in the relay section. Only load logs here on open.
+  function _onAdminOpen() { loadLogs(); }
+
+  document.getElementById('log-copy-btn').addEventListener('click', async () => {
+    try {
+      const r = await fetch('/admin/logs?n=500', { headers: authHeader() });
+      const entries = await r.json();
+      const text = entries.map(e =>
+        `[${e.ts}] ${e.level} ${e.msg}${e.traceback ? '\n' + e.traceback : ''}`
+      ).join('\n');
+      await navigator.clipboard.writeText(text);
+      showToast('Logs copied to clipboard', 'success', 2500);
+    } catch (_) {
+      showToast('Could not copy logs', 'error');
+    }
+  });
+
+  document.getElementById('log-refresh-btn').addEventListener('click', loadLogs);
+
+  document.getElementById('log-clear-btn').addEventListener('click', async () => {
+    if (!confirm('Clear all logs?')) return;
+    await fetch('/admin/logs', { method: 'DELETE', headers: authHeader() });
+    loadLogs();
+    showToast('Logs cleared', 'info', 2000);
+  });
+
+  // ── Send Logs to Support ────────────────────────────────────────────────────
+  document.getElementById('log-report-btn').addEventListener('click', () => {
+    const noteRow = document.getElementById('log-report-note-row');
+    const statusEl = document.getElementById('log-report-status');
+    noteRow.style.display = 'flex';
+    statusEl.textContent = '';
+    document.getElementById('log-report-note').focus();
+  });
+
+  document.getElementById('log-report-cancel-btn').addEventListener('click', () => {
+    document.getElementById('log-report-note-row').style.display = 'none';
+    document.getElementById('log-report-status').textContent = '';
+    document.getElementById('log-report-note').value = '';
+  });
+
+  async function sendLogReport() {
+    const statusEl = document.getElementById('log-report-status');
+    const sendBtn  = document.getElementById('log-report-send-btn');
+    const note     = document.getElementById('log-report-note').value.trim();
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending…';
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = 'Sending logs to support…';
+    try {
+      const r = await fetch('/admin/logs/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ message: note }),
+      });
+      const d = await r.json();
+      if (r.ok) {
+        statusEl.textContent = `✅ Logs sent (${d.lines} entries). Your support team will review them shortly.`;
+        statusEl.style.color = 'var(--success)';
+        document.getElementById('log-report-note-row').style.display = 'none';
+        document.getElementById('log-report-note').value = '';
+        showToast('Logs sent to support', 'success');
+      } else {
+        statusEl.textContent = `✖ ${d.detail || 'Failed to send logs.'}`;
+        statusEl.style.color = 'var(--error)';
+      }
+    } catch (_) {
+      statusEl.textContent = 'Network error — could not send logs.';
+      statusEl.style.color = 'var(--error)';
+    }
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'Send';
+  }
+
+  document.getElementById('log-report-send-btn').addEventListener('click', sendLogReport);
+  document.getElementById('log-report-note').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendLogReport();
+  });
+
+  async function loadLogs() {
+    const feed = document.getElementById('log-feed');
+    feed.innerHTML = '<div style="color:var(--muted);font-size:.82rem;">Loading…</div>';
+    try {
+      const r = await fetch('/admin/logs?n=300', { headers: authHeader() });
+      if (!r.ok) { feed.innerHTML = '<div style="color:var(--error);">Failed to load logs.</div>'; return; }
+      const entries = await r.json();
+      if (!entries.length) { feed.innerHTML = '<div style="color:var(--muted);font-size:.82rem;">No log entries yet.</div>'; return; }
+      feed.innerHTML = '';
+      for (const e of entries) {
+        const div = document.createElement('div');
+        div.className = `log-entry ${e.level || ''}`;
+        div.innerHTML = `
+          <span class="log-ts">${escHtml(e.ts || '')}</span>
+          <span class="log-lvl ${e.level || ''}">${escHtml(e.level || '')}</span>
+          <span class="log-msg">${escHtml(e.msg || '')}</span>
+          ${e.traceback ? `<div class="log-tb">${escHtml(e.traceback)}</div>` : ''}`;
+        feed.appendChild(div);
+      }
+    } catch (_) {
+      feed.innerHTML = '<div style="color:var(--error);">Network error.</div>';
+    }
+  }
+
+  document.getElementById('pull-model-btn').addEventListener('click', async () => {
+    const statusEl = document.getElementById('pull-model-status');
+    const btn = document.getElementById('pull-model-btn');
+    const progressWrap = document.getElementById('pull-model-progress-wrap');
+    const progressBar = document.getElementById('pull-model-progress-bar');
+    const progressMeta = document.getElementById('pull-model-progress-meta');
+
+    const setProgress = (pct, metaText) => {
+      if (typeof pct === 'number' && !Number.isNaN(pct)) {
+        const clamped = Math.max(0, Math.min(100, pct));
+        progressBar.classList.remove('indeterminate');
+        progressBar.style.width = `${clamped}%`;
+      } else {
+        progressBar.classList.add('indeterminate');
+      }
+      if (metaText) progressMeta.textContent = metaText;
+    };
+
+    progressWrap.style.display = 'block';
+    progressBar.classList.remove('error');
+    progressBar.classList.add('indeterminate');
+    progressBar.style.width = '35%';
+    progressMeta.style.color = 'var(--muted)';
+    progressMeta.textContent = 'Connecting to model pull stream...';
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = 'Starting pull...';
+    btn.disabled = true;
+    try {
+      const resp = await fetch('/admin/pull-model', { method: 'POST', headers: authHeader() });
+      if (!resp.ok || !resp.body) {
+        let msg = `Request failed (${resp.status})`;
+        try {
+          const err = await resp.json();
+          if (err && err.detail) msg = String(err.detail);
+        } catch (_) {}
+        statusEl.style.color = 'var(--error)';
+        statusEl.textContent = msg;
+        progressBar.classList.remove('indeterminate');
+        progressBar.classList.add('error');
+        progressBar.style.width = '100%';
+        progressMeta.style.color = 'var(--error)';
+        progressMeta.textContent = 'Pull request failed.';
+        return;
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let sawEvent = false;
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, {stream: true});
+
+        // SSE commonly uses CRLF line endings; support both LF and CRLF separators.
+        const parts = buf.split(/\r?\n\r?\n/);
+        buf = parts.pop();
+        for (const part of parts) {
+          const line = part.split(/\r?\n/).find(l => l.startsWith('data:'));
+          if (!line) continue;
+          try {
+            const evt = JSON.parse(line.slice(5).trim());
+            sawEvent = true;
+            if (evt.type === 'progress') {
+              const msg = String(evt.message || 'Pulling model...');
+              statusEl.textContent = msg;
+              const m = msg.match(/(\d{1,3})(?:\.\d+)?%/);
+              if (m) {
+                const pct = Number(m[1]);
+                setProgress(pct, `${pct}%`);
+              } else {
+                setProgress(null, 'Downloading layers...');
+              }
+            }
+            else if (evt.type === 'done') {
+              statusEl.style.color = 'var(--success)';
+              statusEl.textContent = evt.message;
+              progressBar.classList.remove('indeterminate', 'error');
+              progressBar.style.width = '100%';
+              progressMeta.style.color = 'var(--success)';
+              progressMeta.textContent = 'Complete';
+            }
+            else if (evt.type === 'error') {
+              statusEl.style.color = 'var(--error)';
+              statusEl.textContent = evt.message;
+              progressBar.classList.remove('indeterminate');
+              progressBar.classList.add('error');
+              progressBar.style.width = '100%';
+              progressMeta.style.color = 'var(--error)';
+              progressMeta.textContent = 'Failed';
+            }
+          } catch(_) {}
+        }
+      }
+      if (!sawEvent) {
+        statusEl.style.color = 'var(--error)';
+        statusEl.textContent = 'No progress events received. Check if Ollama is installed and running.';
+        progressBar.classList.remove('indeterminate');
+        progressBar.classList.add('error');
+        progressBar.style.width = '100%';
+        progressMeta.style.color = 'var(--error)';
+        progressMeta.textContent = 'No stream events received';
+      }
+    } catch(e) {
+      statusEl.style.color = 'var(--error)';
+      statusEl.textContent = 'Request failed: ' + e.message;
+      progressBar.classList.remove('indeterminate');
+      progressBar.classList.add('error');
+      progressBar.style.width = '100%';
+      progressMeta.style.color = 'var(--error)';
+      progressMeta.textContent = 'Network error';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('prompt-load-btn').addEventListener('click', async () => {
+    const area = document.getElementById('prompt-area');
+    const status = document.getElementById('prompt-status');
+    status.textContent = '';
+    try {
+      const r = await fetch('/admin/prompt', { headers: authHeader() });
+      const d = await r.json();
+      area.value = d.prompt || '';
+      status.textContent = 'Loaded.';
+      setTimeout(() => status.textContent = '', 2000);
+    } catch (_) {
+      status.textContent = 'Failed to load prompt.';
+      status.style.color = 'var(--error)';
+    }
+  });
+
+  document.getElementById('prompt-save-btn').addEventListener('click', async () => {
+    const area   = document.getElementById('prompt-area');
+    const status = document.getElementById('prompt-status');
+    const newPrompt = area.value.trim();
+    if (!newPrompt) return;
+    status.textContent = 'Applying…';
+    status.style.color = 'var(--muted)';
+    try {
+      const r = await fetch('/admin/prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ prompt: newPrompt }),
+      });
+      if (r.ok) {
+        status.textContent = '✓ Prompt updated — takes effect on the next test run.';
+        status.style.color = 'var(--success)';
+      } else {
+        const d = await r.json().catch(() => ({}));
+        status.textContent = d.detail || 'Failed.';
+        status.style.color = 'var(--error)';
+      }
+    } catch (_) {
+      status.textContent = 'Network error.';
+      status.style.color = 'var(--error)';
+    }
+  });
+
+  // ============================================================
+  //  Relay connection — connect UI, status pill, auto-poll, button gating
+  // ============================================================
+
+  let _relayOnline        = false;
+  let _relayUpdateReady   = false;
+  let _relayPollTimer     = null;
+  const RELAY_POLL_MS     = 30_000;
+
+  function _setRelayUI(online, configured, statusMsg, savedUrl) {
+    const dot        = document.getElementById('relay-dot');
+    const statusText = document.getElementById('relay-status-text');
+    const mDot       = document.getElementById('relay-modal-dot');
+    const mStatus    = document.getElementById('relay-modal-status');
+    const reportBtn  = document.getElementById('log-report-btn');
+    const input      = document.getElementById('relay-url-input');
+    const connectBtn = document.getElementById('relay-connect-btn');
+    const disconnBtn = document.getElementById('relay-disconnect-btn');
+    const banner     = document.getElementById('update-banner');
+
+    _relayOnline = online;
+
+    if (online) {
+      dot.style.background    = '#22c55e';
+      mDot.style.background   = '#22c55e';
+      statusText.style.color  = 'var(--success, #22c55e)';
+      statusText.textContent  = '\uD83D\uDFE2 Support server online.';
+      mStatus.style.color     = '#22c55e';
+      mStatus.textContent     = '\uD83D\uDFE2 Connected — you can send logs and receive updates.';
+      reportBtn.disabled      = false;
+      connectBtn.style.display= 'none';
+      disconnBtn.style.display= 'inline-flex';
+      if (savedUrl) input.value = savedUrl;
+    } else if (configured) {
+      dot.style.background    = '#ef4444';
+      mDot.style.background   = '#ef4444';
+      statusText.style.color  = 'var(--error)';
+      statusText.textContent  = '\uD83D\uDD34 ' + (statusMsg || 'Support server offline.');
+      mStatus.style.color     = 'var(--error)';
+      mStatus.textContent     = '\uD83D\uDD34 ' + (statusMsg || 'Server offline — try again later.');
+      reportBtn.disabled      = true;
+      connectBtn.style.display= 'inline-flex';
+      disconnBtn.style.display= 'none';
+      banner.style.display    = 'none';
+      if (savedUrl && !input.value) input.value = savedUrl;
+    } else {
+      dot.style.background    = '#aaa';
+      mDot.style.background   = '#aaa';
+      statusText.style.color  = 'var(--muted)';
+      statusText.textContent  = 'Not connected to support server.';
+      mStatus.style.color     = 'var(--muted)';
+      mStatus.textContent     = 'Not connected.';
+      reportBtn.disabled      = true;
+      connectBtn.style.display= 'inline-flex';
+      disconnBtn.style.display= 'none';
+    }
+  }
+
+  async function pollRelayStatus() {
+    try {
+      const r = await fetch('/admin/relay/status', { headers: authHeader() });
+      if (!r.ok) throw new Error('non-2xx');
+      const d = await r.json();
+      _relayUpdateReady = d.update_available;
+      _setRelayUI(d.online, d.relay_configured, d.message, d.saved_url);
+      if (d.online && d.update_available) {
+        document.getElementById('update-banner').style.display = 'flex';
+      }
+    } catch (_) {
+      _setRelayUI(false, false, 'Could not reach server.', '');
+    }
+  }
+
+  // Modal open/close
+  function openRelayModal() {
+    const overlay = document.getElementById('relay-modal-overlay');
+    overlay.style.display = 'flex';
+    document.getElementById('relay-connect-status').textContent = '';
+    document.getElementById('relay-url-input').focus();
+  }
+  function closeRelayModal() {
+    document.getElementById('relay-modal-overlay').style.display = 'none';
+  }
+  document.getElementById('relay-settings-btn').addEventListener('click', openRelayModal);
+  document.getElementById('relay-modal-close').addEventListener('click', closeRelayModal);
+  document.getElementById('relay-modal-close2').addEventListener('click', closeRelayModal);
+  document.getElementById('relay-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('relay-modal-overlay')) closeRelayModal();
+  });
+
+  // Connect button
+  document.getElementById('relay-connect-btn').addEventListener('click', async () => {
+    const input      = document.getElementById('relay-url-input');
+    const connectBtn = document.getElementById('relay-connect-btn');
+    const statusEl   = document.getElementById('relay-connect-status');
+    const url = input.value.trim();
+    if (!url) { statusEl.textContent = 'Please paste a URL first.'; statusEl.style.color='var(--error)'; return; }
+
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Connecting…';
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = 'Checking connection…';
+
+    try {
+      const r = await fetch('/admin/relay/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ url }),
+      });
+      const d = await r.json();
+      if (r.ok) {
+        statusEl.textContent = '';
+        _setRelayUI(true, true, 'Support server online. You can send logs or apply updates.', url);
+        showToast('Connected to support server ✓', 'success');
+        closeRelayModal();
+        if (d.update_available) {
+          document.getElementById('update-banner').style.display = 'flex';
+        }
+      } else {
+        statusEl.textContent = '✖ ' + (d.detail || 'Connection failed.');
+        statusEl.style.color = 'var(--error)';
+      }
+    } catch (_) {
+      statusEl.textContent = 'Network error — check your connection.';
+      statusEl.style.color = 'var(--error)';
+    }
+    connectBtn.disabled = false;
+    connectBtn.textContent = 'Connect';
+  });
+
+  // Allow Enter key in URL input
+  document.getElementById('relay-url-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('relay-connect-btn').click();
+  });
+
+  // Disconnect button
+  document.getElementById('relay-disconnect-btn').addEventListener('click', async () => {
+    await fetch('/admin/relay/disconnect', { method: 'POST', headers: authHeader() });
+    document.getElementById('relay-url-input').value = '';
+    document.getElementById('relay-connect-status').textContent = '';
+    _setRelayUI(false, false, '', '');
+    closeRelayModal();
+    showToast('Disconnected from support server.', 'info', 2500);
+  });
+
+  // Admin modal open/close
+  function openAdminModal() {
+    document.getElementById('admin-modal-overlay').style.display = 'flex';
+    document.getElementById('admin-btn').textContent = '✕ Close Admin';
+    _onAdminOpen();
+    pollRelayStatus();
+    _relayPollTimer = setInterval(pollRelayStatus, RELAY_POLL_MS);
+  }
+  function closeAdminModal() {
+    document.getElementById('admin-modal-overlay').style.display = 'none';
+    document.getElementById('admin-btn').textContent = '⚙ Admin';
+    clearInterval(_relayPollTimer);
+    _relayPollTimer = null;
+  }
+
+  document.getElementById('admin-btn').addEventListener('click', () => {
+    const isOpen = document.getElementById('admin-modal-overlay').style.display === 'flex';
+    isOpen ? closeAdminModal() : openAdminModal();
+  });
+  document.getElementById('admin-modal-close').addEventListener('click', closeAdminModal);
+  document.getElementById('admin-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('admin-modal-overlay')) closeAdminModal();
+  });
+
+  document.getElementById('relay-refresh-btn').addEventListener('click', pollRelayStatus);
+
+  // ── Called automatically on every login ──────────────────────────────────
+  async function silentUpdateCheck() {
+    try {
+      const r = await fetch('/admin/relay/status', { headers: authHeader() });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d.online && d.update_available) {
+        document.getElementById('update-banner').style.display = 'flex';
+      }
+    } catch (_) { /* silent */ }
+  }
+
+
+  // "Install Now" on the banner: open admin modal and highlight update section
+  function openAdminToUpdate() {
+    const overlay = document.getElementById('admin-modal-overlay');
+    if (overlay.style.display !== 'flex') {
+      openAdminModal();
+    }
+    setTimeout(() => {
+      const el = document.getElementById('update-apply-btn');
+      if (el) {
+        el.style.display = 'inline-flex';
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const statusEl = document.getElementById('update-status');
+        if (statusEl) {
+          statusEl.textContent = '✓ Update is ready. Click Apply Update to install.';
+          statusEl.style.color = 'var(--success)';
+        }
+      }
+    }, 300);
+  }
+
+  // ============================================================
+  //  App Update / Patch
+  // ============================================================
+
+  document.getElementById('update-check-btn').addEventListener('click', async () => {
+    const statusEl  = document.getElementById('update-status');
+    const applyBtn  = document.getElementById('update-apply-btn');
+    const fileList  = document.getElementById('update-file-list');
+    const progressWrap = document.getElementById('update-progress-wrap');
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = 'Checking…';
+    applyBtn.style.display = 'none';
+    fileList.style.display = 'none';
+    progressWrap.style.display = 'none';
+    if (!_relayOnline) {
+      statusEl.textContent = '🔴 Support server is offline. Ask your admin to come online first.';
+      statusEl.style.color = 'var(--error)';
+      return;
+    }
+    try {
+      const r = await fetch('/admin/update/check', { headers: authHeader() });
+      const d = await r.json();
+      if (d.available) {
+        statusEl.textContent = '✓ Update available and ready to apply.';
+        statusEl.style.color = 'var(--success)';
+        applyBtn.style.display = 'inline-flex';
+      } else {
+        statusEl.textContent = '✓ You are already on the latest version.';
+        statusEl.style.color = 'var(--muted)';
+      }
+    } catch (_) {
+      statusEl.textContent = 'Could not reach the server.';
+      statusEl.style.color = 'var(--error)';
+    }
+  });
+
+  document.getElementById('update-apply-btn').addEventListener('click', async () => {
+    const statusEl = document.getElementById('update-status');
+    const applyBtn = document.getElementById('update-apply-btn');
+    const fileList = document.getElementById('update-file-list');
+    const progressWrap = document.getElementById('update-progress-wrap');
+    const progressBar = document.getElementById('update-progress-bar');
+    const progressMeta = document.getElementById('update-progress-meta');
+    let reconnectBox = null;
+
+    const waitForServerAndReload = async () => {
+      const startedAt = Date.now();
+      progressMeta.style.color = 'var(--success)';
+      progressMeta.textContent = '100% — restarting local server...';
+      statusEl.textContent = '✅ Update applied. Waiting for the local server, then reloading this page...';
+      statusEl.style.color = 'var(--success)';
+
+      reconnectBox = document.createElement('div');
+      reconnectBox.style.cssText = 'margin-top:12px;padding:10px 14px;border-radius:8px;background:#1a3a2a;border:1px solid #22c55e;color:#22c55e;font-size:.85rem;';
+      reconnectBox.innerHTML = '🔄 <strong>Applying update.</strong> The local server is restarting. This page will reload automatically. If it does not, press <strong>Ctrl+Shift+R</strong> in a few seconds.';
+      fileList.after(reconnectBox);
+
+      while (Date.now() - startedAt < 45000) {
+        try {
+          const health = await fetch(`/health?_=${Date.now()}`, { cache: 'no-store' });
+          if (health.ok) {
+            progressMeta.textContent = '100% — reloading page...';
+            const nextUrl = new URL(window.location.href);
+            nextUrl.searchParams.set('_updated', String(Date.now()));
+            window.location.replace(nextUrl.toString());
+            return;
+          }
+        } catch (_) {}
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+
+      progressMeta.textContent = 'Update applied — refresh the page if needed';
+      statusEl.textContent = '✅ Update applied. If the page does not reconnect automatically, press Ctrl+Shift+R.';
+      applyBtn.disabled = false;
+      applyBtn.textContent = '⬇ Apply Update';
+    };
+
+    let fakePct = 8;
+    let fakeTimer = null;
+    const startProgress = () => {
+      progressWrap.style.display = 'block';
+      progressBar.classList.remove('error');
+      progressBar.classList.remove('indeterminate');
+      progressBar.style.width = `${fakePct}%`;
+      progressMeta.style.color = 'var(--muted)';
+      progressMeta.textContent = `${fakePct}% — preparing patch...`;
+      fakeTimer = setInterval(() => {
+        fakePct = Math.min(92, fakePct + (fakePct < 40 ? 8 : fakePct < 70 ? 5 : 2));
+        progressBar.style.width = `${fakePct}%`;
+        progressMeta.textContent = `${fakePct}% — applying update...`;
+      }, 700);
+    };
+    const stopProgress = () => {
+      if (fakeTimer) clearInterval(fakeTimer);
+      fakeTimer = null;
+    };
+
+    applyBtn.disabled = true;
+    applyBtn.textContent = '⬇ Applying…';
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = 'Downloading and applying patch — please wait…';
+    fileList.style.display = 'none';
+    startProgress();
+    try {
+      const r = await fetch('/admin/update/apply', {
+        method: 'POST',
+        headers: authHeader(),
+      });
+      const d = await r.json();
+      if (r.ok) {
+        stopProgress();
+        progressBar.classList.remove('indeterminate', 'error');
+        progressBar.style.width = '100%';
+        progressMeta.style.color = 'var(--success)';
+        progressMeta.textContent = '100% — update applied';
+        statusEl.textContent = '✅ ' + d.message;
+        statusEl.style.color = 'var(--success)';
+        if (d.updated && d.updated.length) {
+          fileList.innerHTML = '<strong>Updated files:</strong><br>' + d.updated.map(f => `&nbsp;&nbsp;✔ ${f}`).join('<br>');
+          fileList.style.display = 'block';
+        }
+        if (d.skipped && d.skipped.length) {
+          fileList.innerHTML += '<br><strong>Skipped:</strong><br>' + d.skipped.map(f => `&nbsp;&nbsp;⚠ ${f}`).join('<br>');
+          fileList.style.display = 'block';
+        }
+        applyBtn.style.display = 'none';
+        document.getElementById('update-banner').style.display = 'none';
+        showToast('Patch applied. Reloading the page after the server restarts...', 'success', 6000);
+        if (d.restart_scheduled) {
+          waitForServerAndReload();
+        }
+      } else {
+        stopProgress();
+        progressBar.classList.add('error');
+        progressBar.style.width = '100%';
+        progressMeta.style.color = 'var(--error)';
+        progressMeta.textContent = 'Update failed';
+        statusEl.textContent = '✖ ' + (d.detail || 'Patch failed.');
+        statusEl.style.color = 'var(--error)';
+        applyBtn.disabled = false;
+        applyBtn.textContent = '⬇ Apply Update';
+      }
+    } catch (_) {
+      stopProgress();
+      progressBar.classList.add('error');
+      progressBar.style.width = '100%';
+      progressMeta.style.color = 'var(--error)';
+      progressMeta.textContent = 'Network error';
+      statusEl.textContent = 'Network error while applying patch.';
+      statusEl.style.color = 'var(--error)';
+      applyBtn.disabled = false;
+      applyBtn.textContent = '⬇ Apply Update';
+    }
+  });
+
+  // ============================================================
+  //  Init
+  // ============================================================
+  tryAutoLogin();
+
+  fetch('/info').then(r => r.json()).then(data => {
+    const box = document.getElementById('access-info');
+    const localLink   = document.getElementById('info-local');
+    const networkLink = document.getElementById('info-network');
+    localLink.textContent   = data.local_url;
+    localLink.href          = data.local_url;
+    networkLink.textContent = data.network_url;
+    networkLink.href        = data.network_url;
+    box.style.display = 'block';
+  }).catch(() => {});
+</script>
+
+</body>
+</html>

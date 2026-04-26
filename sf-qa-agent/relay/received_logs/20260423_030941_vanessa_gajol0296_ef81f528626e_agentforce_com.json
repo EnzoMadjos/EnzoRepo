@@ -1,0 +1,289 @@
+{
+  "received_at": "2026-04-23 03:09:41",
+  "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+  "machine": "Banban",
+  "message": "",
+  "logs": [
+    {
+      "ts": "2026-04-23T01:41:12",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Logs cleared",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com"
+    },
+    {
+      "ts": "2026-04-23T01:41:34",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "System prompt updated by user",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "length": 3167
+    },
+    {
+      "ts": "2026-04-23T01:41:36",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Update apply requested",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "url": "https://mayflower-gossip-unmanned.ngrok-free.dev/update/patch"
+    },
+    {
+      "ts": "2026-04-23T01:41:37",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Patch applied",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "files": [
+        "sf_app.py",
+        "sf_client.py",
+        "sf_executor.py",
+        "llm_planner.py",
+        "templates/qa.html"
+      ]
+    },
+    {
+      "ts": "2026-04-23T01:42:13",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Login successful",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "instance_url": "https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com"
+    },
+    {
+      "ts": "2026-04-23T01:42:55",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-23T01:47:28",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM plan ready \u2014 2 step(s)"
+    },
+    {
+      "ts": "2026-04-23T01:47:28",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 2
+    },
+    {
+      "ts": "2026-04-23T01:47:50",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 1 failed: HTTPSConnectionPool(host='orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com', port=443): Read timed out. (read timeout=None)",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\urllib3\\connectionpool.py\", line 534, in _make_request\n    response = conn.getresponse()\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\urllib3\\connection.py\", line 571, in getresponse\n    httplib_response = super().getresponse()\n  File \"C:\\Program Files\\Python313\\Lib\\http\\client.py\", line 1450, in getresponse\n    response.begin()\n    ~~~~~~~~~~~~~~^^\n  File \"C:\\Program Files\\Python313\\Lib\\http\\client.py\", line 336, in begin\n    version, status, reason = self._read_status()\n                              ~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Program Files\\Python313\\Lib\\http\\client.py\", line 297, in _read_status\n    line = str(self.fp.readline(_MAXLINE + 1), \"iso-8859-1\")\n               ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^\n  File \"C:\\Program Files\\Python313\\Lib\\socket.py\", line 719, in readinto\n    return self._sock.recv_into(b)\n           ~~~~~~~~~~~~~~~~~~~~^^^\n  File \"C:\\Program Files\\Python313\\Lib\\ssl.py\", line 1304, in recv_into\n    return self.read(nbytes, buffer)\n           ~~~~~~~~~^^^^^^^^^^^^^^^^\n  File \"C:\\Program Files\\Python313\\Lib\\ssl.py\", line 1138, in read\n    return self._sslobj.read(len, buffer)\n           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^\nTimeoutError: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\requests\\adapters.py\", line 645, in send\n    resp = conn.urlopen(\n        method=request.method,\n    ...<9 lines>...\n        chunked=chunked,\n    )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\urllib3\\connectionpool.py\", line 841, in urlopen\n    retries = retries.increment(\n        method, url, error=new_e, _pool=self, _stacktrace=sys.exc_info()[2]\n    )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\urllib3\\util\\retry.py\", line 490, in increment\n    raise reraise(type(error), error, _stacktrace)\n          ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\urllib3\\util\\util.py\", line 39, in reraise\n    raise value\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\urllib3\\connectionpool.py\", line 787, in urlopen\n    response = self._make_request(\n        conn,\n    ...<10 lines>...\n        **response_kw,\n    )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\urllib3\\connectionpool.py\", line 536, in _make_request\n    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\urllib3\\connectionpool.py\", line 367, in _raise_timeout\n    raise ReadTimeoutError(\n        self, url, f\"Read timed out. (read timeout={timeout_value})\"\n    ) from err\nurllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com', port=443): Read timed out. (read timeout=None)\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 128, in execute\n    records = client.query(soql) if soql else []\n              ~~~~~~~~~~~~^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_client.py\", line 99, in query\n    result = sf.query_all(soql)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 669, in query_all\n    all_records = list(records)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 631, in query_all_iter\n    result = self.query(query,\n                        include_deleted=include_deleted,\n                        **kwargs\n                        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 565, in query\n    result = self._call_salesforce('GET',\n                                   url,\n    ...<2 lines>...\n                                   **kwargs\n                                   )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\simple_salesforce\\api.py\", line 758, in _call_salesforce\n    result = self.session.request(\n        method,\n    ...<2 lines>...\n        **kwargs\n        )\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\requests\\sessions.py\", line 592, in request\n    resp = self.send(prep, **send_kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\requests\\sessions.py\", line 706, in send\n    r = adapter.send(request, **kwargs)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\.venv\\Lib\\site-packages\\requests\\adapters.py\", line 691, in send\n    raise ReadTimeout(e, request=request)\nrequests.exceptions.ReadTimeout: HTTPSConnectionPool(host='orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com', port=443): Read timed out. (read timeout=None)",
+      "step": 1,
+      "object": "Opportunity",
+      "action": "query"
+    },
+    {
+      "ts": "2026-04-23T01:59:36",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "System prompt updated by user",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "length": 3167
+    },
+    {
+      "ts": "2026-04-23T01:59:43",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "System prompt updated by user",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "length": 3167
+    },
+    {
+      "ts": "2026-04-23T01:59:47",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Update apply requested",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "url": "https://mayflower-gossip-unmanned.ngrok-free.dev/update/patch"
+    },
+    {
+      "ts": "2026-04-23T01:59:48",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Patch applied",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "files": [
+        "sf_app.py",
+        "sf_client.py",
+        "sf_executor.py",
+        "llm_planner.py",
+        "templates/qa.html"
+      ]
+    },
+    {
+      "ts": "2026-04-23T02:00:17",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Login successful",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "instance_url": "https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com"
+    },
+    {
+      "ts": "2026-04-23T02:00:47",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-23T02:10:10",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM plan ready \u2014 5 step(s)"
+    },
+    {
+      "ts": "2026-04-23T02:10:33",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 5
+    },
+    {
+      "ts": "2026-04-23T02:10:34",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 4 failed: Unsupported action: link",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 140, in execute\n    raise ValueError(f\"Unsupported action: {action}\")\nValueError: Unsupported action: link",
+      "step": 4,
+      "object": "Account",
+      "action": "link"
+    },
+    {
+      "ts": "2026-04-23T02:10:34",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 5 failed: Unsupported action: save",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 140, in execute\n    raise ValueError(f\"Unsupported action: {action}\")\nValueError: Unsupported action: save",
+      "step": 5,
+      "object": "Opportunity",
+      "action": "save"
+    },
+    {
+      "ts": "2026-04-23T03:02:29",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "System prompt updated by user",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "length": 4680
+    },
+    {
+      "ts": "2026-04-23T03:02:32",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Update apply requested",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "url": "https://mayflower-gossip-unmanned.ngrok-free.dev/update/patch"
+    },
+    {
+      "ts": "2026-04-23T03:02:33",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Patch applied",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "files": [
+        "sf_app.py",
+        "sf_client.py",
+        "sf_executor.py",
+        "llm_planner.py",
+        "templates/qa.html"
+      ]
+    },
+    {
+      "ts": "2026-04-23T03:03:16",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Log report sent via relay",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com"
+    },
+    {
+      "ts": "2026-04-23T03:03:44",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Login successful",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "instance_url": "https://orgfarm-649bbf7ad7-dev-ed.develop.my.salesforce.com"
+    },
+    {
+      "ts": "2026-04-23T03:04:06",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-23T03:04:06",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Using UI-flow adapter plan",
+      "steps": 2
+    },
+    {
+      "ts": "2026-04-23T03:04:06",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 2
+    },
+    {
+      "ts": "2026-04-23T03:06:25",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM planning started",
+      "model": "llama3.2:3b"
+    },
+    {
+      "ts": "2026-04-23T03:09:13",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "LLM plan ready \u2014 4 step(s)"
+    },
+    {
+      "ts": "2026-04-23T03:09:14",
+      "level": "INFO",
+      "logger": "sfqa",
+      "msg": "Executing test plan",
+      "username": "vanessa.gajol0296.ef81f528626e@agentforce.com",
+      "steps": 4
+    },
+    {
+      "ts": "2026-04-23T03:09:14",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 1 failed: $step1.id referenced before step 1 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 135, in execute\n    soql = _resolve_refs(soql, results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step1.id referenced before step 1 ran",
+      "step": 1,
+      "object": "Opportunity",
+      "action": "query"
+    },
+    {
+      "ts": "2026-04-23T03:09:14",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 2 failed: $step1.id referenced before step 1 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 135, in execute\n    soql = _resolve_refs(soql, results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step1.id referenced before step 1 ran",
+      "step": 2,
+      "object": "Opportunity",
+      "action": "query"
+    },
+    {
+      "ts": "2026-04-23T03:09:14",
+      "level": "ERROR",
+      "logger": "sfqa",
+      "msg": "Step 3 failed: $step1.id referenced before step 1 ran",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 91, in execute\n    record_id = _resolve_refs(op.get(\"record_id\", \"\"), results)\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 29, in _resolve_refs\n    return _REF_PATTERN.sub(replacer, value)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"C:\\SalesforceQA\\SalesforceQA-Install\\app\\sf_executor.py\", line 27, in replacer\n    raise ValueError(f\"$step{step_num}.id referenced before step {step_num} ran\")\nValueError: $step1.id referenced before step 1 ran",
+      "step": 3,
+      "object": "Opportunity",
+      "action": "update"
+    }
+  ]
+}

@@ -1,0 +1,2782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>ATLAS</title>
+  <link rel="stylesheet" href="/ui/static/fonts.css">
+  <link rel="stylesheet" href="/ui/static/hljs-github-dark.min.css">
+  <script src="/ui/static/marked.min.js"></script>
+  <script src="/ui/static/highlight.min.js"></script>
+  <script src="/ui/static/atlas-face.js"></script>
+  <style>
+    :root{
+      --bg:#090910; --sf:#0e0e18; --sf2:#14141f;
+      --br:rgba(108,182,255,.1); --brh:rgba(108,182,255,.22);
+      --ac:#6cb6ff; --acd:#3a6a9a;
+      --tx:#aaaacc; --txm:#3d3d55; --txb:#ddddee;
+      --us:#c5a5f5; --usd:rgba(197,165,245,.08);
+      --gn:#4ec9b0; --rd:#f48771; --yw:#dcdcaa;
+      --r:6px;
+      --fh:'Inter','Segoe UI',system-ui,sans-serif;
+      --fm:'JetBrains Mono','Cascadia Code','Consolas',monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--fh);font-size:14px}
+    canvas{display:block}
+
+    /* ── SCENE ─────────────────────────────────────────────────────── */
+    #scene{position:fixed;inset:0;overflow:hidden;
+      background:radial-gradient(ellipse at 50% 38%,rgba(80,46,180,.1) 0%,transparent 62%)}
+
+    /* ── LAYOUT COLUMNS ─────────────────────────────────────────── */
+    #col-atlas{position:fixed;left:0;top:0;bottom:0;width:30vw;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      z-index:5;pointer-events:none;
+      border-right:1px solid rgba(108,182,255,.06);
+      transition:opacity .45s ease, filter .45s ease}
+    #col-atlas.orb-hidden{opacity:0;filter:blur(12px) scale(.95);pointer-events:none!important}
+    #col-chat{position:fixed;right:0;top:0;bottom:0;width:70vw;
+      display:flex;flex-direction:column;z-index:4;
+      transition:filter .45s ease}
+    #col-chat.orb-blur{filter:blur(6px) brightness(.6)}
+
+    /* ── ORB ZONE (pinned to same point as solar center 15vw,50vh) ────────── */
+    #orb-zone{position:fixed;top:50%;left:15vw;
+      transform:translate(-50%,-90px); /* -90px = half canvas height so canvas center = 50vh */
+      display:flex;flex-direction:column;align-items:center;gap:6px;
+      user-select:none;pointer-events:auto;cursor:pointer;z-index:6}
+    #orb-zone:hover #main-orb{filter:drop-shadow(0 0 32px rgba(108,182,255,.5))}
+    #main-orb{transition:filter .4s;width:180px;height:180px}
+    #main-orb.thinking{filter:drop-shadow(0 0 28px rgba(245,166,35,.55))}
+    #main-orb.speaking{filter:drop-shadow(0 0 28px rgba(108,182,255,.55))}
+    #orb-label{font-family:var(--fm);font-size:1.1rem;font-weight:700;
+      letter-spacing:7px;color:var(--txb);text-shadow:0 0 24px rgba(108,182,255,.4)}
+    #nstate{font-family:var(--fm);font-size:.72rem;letter-spacing:2.5px;
+      color:var(--txm);transition:color .4s}
+    #nstate.on{color:var(--gn)}
+    #sbadge{font-family:var(--fm);font-size:.72rem;letter-spacing:1px;color:var(--txm)}
+    #sbadge.local{color:var(--gn)} #sbadge.groq{color:var(--ac)}
+    #sbadge.github{color:#f0883e} #sbadge.openrouter{color:#a78bfa} #sbadge.err{color:var(--rd)}
+    .orb-build-btn{font-family:var(--fm);font-size:.72rem;letter-spacing:2px;
+      color:var(--txb);background:rgba(108,182,255,.07);border:1px solid var(--brh);
+      border-radius:4px;padding:7px 22px;cursor:pointer;margin-top:4px;
+      transition:all .15s;pointer-events:auto}
+    .orb-build-btn:hover{color:#fff;border-color:var(--ac);background:rgba(108,182,255,.13)}
+    .deep-think-btn{
+      font-family:var(--fm);font-size:.6rem;letter-spacing:2px;
+      color:#4af;background:rgba(0,100,255,.07);
+      border:none;border-radius:4px;padding:5px 14px;
+      cursor:pointer;margin-top:2px;transition:color .15s,background .15s;
+      pointer-events:auto;text-transform:uppercase;
+      position:relative;isolation:isolate;
+    }
+    .deep-think-btn::before{
+      content:'';position:absolute;inset:-1px;border-radius:5px;
+      background:transparent;border:1px solid #4af4;
+      transition:border-color .15s;
+    }
+    .deep-think-btn:hover::before{border-color:#0ff8}
+    .deep-think-btn.active{color:#0ff;background:rgba(0,200,255,.13);}
+    .deep-think-btn.active::before{
+      border:none;
+      background:conic-gradient(from var(--angle,0deg),transparent 75%,#0ff 100%);
+      -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+      -webkit-mask-composite:xor;mask-composite:exclude;
+      padding:1px;animation:spin-border 1.2s linear infinite;
+    }
+    @property --angle{syntax:'<angle>';initial-value:0deg;inherits:false}
+    @keyframes spin-border{to{--angle:360deg}}
+    .orb-setup-btn{font-family:var(--fm);font-size:.72rem;letter-spacing:2px;
+      color:var(--txm);background:rgba(255,255,255,.04);border:1px solid var(--br);
+      border-radius:4px;padding:7px 22px;cursor:pointer;margin-top:4px;
+      transition:all .15s;pointer-events:auto}
+    .orb-setup-btn:hover{color:var(--tx);border-color:var(--brh)}
+    .setup-item{font-family:var(--fm);font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;
+      color:var(--txm);background:rgba(255,255,255,.03);border:1px solid var(--br);
+      border-radius:4px;padding:6px 18px;cursor:pointer;transition:all .15s;text-align:center}
+    .setup-item:hover{color:var(--tx);border-color:var(--brh);background:rgba(255,255,255,.07)}
+    .model-select{font-family:var(--fm);font-size:.6rem;letter-spacing:1.5px;
+      color:var(--txb);background:rgba(6,6,14,.9);border:1px solid var(--br);
+      border-radius:4px;padding:5px 10px;cursor:pointer;margin-top:2px;
+      outline:none;pointer-events:auto;text-transform:uppercase;width:100%;
+      transition:border-color .15s;appearance:none;text-align:center}
+    .model-select:hover{border-color:var(--brh)}
+    .model-select option{background:#06060e}
+
+    /* ── SOLAR / WIDGETS (inside 30% col, scaled down) ─────────── */
+    #wl,#wr{display:none}
+    /* Solar center — fixed at center of 30% col */
+    #solar{position:fixed;top:50%;left:15vw;width:0;height:0;z-index:2;pointer-events:none}
+    /* Faint decorative orbit rings — smaller scale */
+    .oring{position:absolute;border-radius:50%;
+      border:1px solid rgba(108,182,255,.05);
+      transform:translate(-50%,-50%);pointer-events:none}
+    /* Arm — rotates around solar center */
+    .arm{position:absolute;top:0;left:0;height:0;
+      width:var(--r);transform-origin:0 0;
+      animation:arm-cw var(--t) linear infinite;
+      animation-delay:var(--d,0s);pointer-events:none}
+    /* Counter-rotate wrapper — keeps widget upright */
+    .wob{position:absolute;right:0;top:0;
+      animation:arm-ccw var(--t) linear infinite;
+      animation-delay:var(--d,0s);pointer-events:none}
+    @keyframes arm-cw {from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    @keyframes arm-ccw{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
+    /* Widget planet — title pill only, ambient drift */
+    .w{position:absolute;transform:translate(-50%,-50%);
+      background:rgba(6,6,14,.55);
+      border:1px solid rgba(108,182,255,.12);
+      border-radius:20px;padding:4px 11px;font-family:var(--fm);
+      pointer-events:none;user-select:none;
+      filter:blur(.5px) brightness(.55)}
+    /* hide all widget children except the title */
+    .w > *{display:none}
+    .w > .wt{display:flex}
+    .wt{font-size:.48rem;letter-spacing:2.5px;color:var(--acd);
+      text-transform:uppercase;margin:0;
+      display:flex;align-items:center;gap:5px}
+    .wt::before{content:'';width:3px;height:3px;background:var(--acd);
+      border-radius:50%;flex-shrink:0}
+    /* clock */
+    #wclk-t{font-size:1.55rem;font-weight:500;color:var(--txb);
+      letter-spacing:2px;line-height:1;margin-bottom:3px}
+    #wclk-d{font-size:.57rem;color:var(--txm);letter-spacing:1px}
+    /* weather */
+    #wtmp{font-size:1.45rem;font-weight:500;color:var(--txb);line-height:1}
+    #wdsc{font-size:.56rem;color:var(--txm);letter-spacing:1px;
+      text-transform:uppercase;margin-top:4px}
+    #wloc{font-size:.52rem;color:var(--acd);letter-spacing:1px;margin-top:2px}
+    /* sys */
+    .sr{display:flex;justify-content:space-between;align-items:center;
+      padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+    .sr:last-child{border-bottom:none}
+    .sk{font-size:.52rem;color:var(--txm);letter-spacing:1px}
+    .sv{font-size:.66rem;color:var(--txb)}
+    /* calendar */
+    #wcal-hdr{font-size:.57rem;color:var(--ac);letter-spacing:2px;
+      text-align:center;margin-bottom:7px}
+    .cgrid{display:grid;grid-template-columns:repeat(7,1fr);
+      gap:2px;text-align:center}
+    .cdow{font-size:.5rem;color:var(--txm);padding-bottom:3px}
+    .cday{font-size:.56rem;color:var(--tx);cursor:default;
+      padding:1px;border-radius:2px}
+    .ctd{font-size:.56rem;color:var(--bg);background:var(--ac);
+      padding:1px 2px;border-radius:3px;font-weight:700}
+    /* news */
+    .nh{font-size:.57rem;color:var(--txm);line-height:1.52;
+      padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+    .nh:last-child{border-bottom:none}
+    .nh a{color:inherit;text-decoration:none;transition:color .14s}
+    .nh a:hover{color:var(--txb)}
+    .nh-src{font-family:var(--fm);font-size:.44rem;letter-spacing:1px;
+      color:var(--acd);text-transform:uppercase;margin-bottom:2px}
+    /* forex */
+    .fx-row{display:flex;justify-content:space-between;align-items:center;
+      padding:3.5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+    .fx-row:last-child{border-bottom:none}
+    .fx-pair{font-family:var(--fm);font-size:.52rem;color:var(--txm);letter-spacing:.8px}
+    .fx-val{font-family:var(--fm);font-size:.68rem;color:var(--txb);font-weight:500}
+    /* crypto */
+    .cr-row{display:flex;justify-content:space-between;align-items:center;
+      padding:3.5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+    .cr-row:last-child{border-bottom:none}
+    .cr-pair{font-family:var(--fm);font-size:.52rem;color:var(--txm);letter-spacing:.8px}
+    .cr-val{font-family:var(--fm);font-size:.68rem;color:var(--txb);font-weight:500}
+    .cr-up{color:var(--gn)!important}.cr-dn{color:var(--rd)!important}
+    /* ── ORB EXPANDED OVERLAY ──────────────────────────────────────── */
+    #orb-overlay{position:fixed;inset:0;z-index:100;
+      background:rgba(5,5,14,.82);backdrop-filter:blur(18px);
+      display:none;opacity:0;transition:opacity .35s ease;
+      pointer-events:none}
+    #orb-overlay.open{display:flex;pointer-events:auto}
+    #orb-overlay.visible{opacity:1}
+    /* Center column */
+    #orb-center{position:absolute;top:50%;left:50%;
+      transform:translate(-50%,-50%);
+      display:flex;flex-direction:column;align-items:center;gap:10px}
+    #orb-big{width:240px;height:240px;
+      filter:drop-shadow(0 0 48px rgba(108,182,255,.4));
+      animation:orbPulse 3s ease-in-out infinite}
+    @keyframes orbPulse{
+      0%,100%{filter:drop-shadow(0 0 32px rgba(108,182,255,.3))}
+      50%{filter:drop-shadow(0 0 64px rgba(108,182,255,.55))}
+    }
+    #orb-big-label{font-family:var(--fm);font-size:1.1rem;font-weight:700;
+      letter-spacing:10px;color:var(--txb);text-align:center;
+      text-shadow:0 0 32px rgba(108,182,255,.5)}
+    #orb-big-state{font-family:var(--fm);font-size:.6rem;letter-spacing:3px;
+      color:var(--tx);text-align:center}
+    #orb-big-badge{font-family:var(--fm);font-size:.55rem;letter-spacing:1px;
+      color:var(--txm);text-align:center;margin-top:2px}
+    .orb-close-btn{font-family:var(--fm);font-size:.58rem;letter-spacing:2px;
+      color:var(--tx);background:rgba(108,182,255,.07);border:1px solid var(--brh);
+      border-radius:4px;padding:5px 16px;cursor:pointer;margin-top:8px;
+      transition:all .15s}
+    .orb-close-btn:hover{color:var(--txb);border-color:var(--ac);background:rgba(108,182,255,.13)}
+    /* Widget tiles — vertical columns left and right */
+    #wtiles-left,#wtiles-right{position:absolute;top:50%;transform:translateY(-50%);
+      display:flex;flex-direction:column;gap:8px;width:170px}
+    #wtiles-left{left:24px}
+    #wtiles-right{right:24px}
+    .wtile{background:rgba(10,10,22,.9);border:1px solid rgba(108,182,255,.14);
+      border-radius:6px;padding:10px 14px;cursor:pointer;
+      transition:background .18s,border-color .18s,transform .18s;
+      display:flex;align-items:center;gap:8px;user-select:none}
+    .wtile:hover{background:rgba(108,182,255,.06);border-color:var(--brh);
+      transform:translateX(3px)}
+    #wtiles-right .wtile:hover{transform:translateX(-3px)}
+    .wtile-dot{width:5px;height:5px;border-radius:50%;
+      background:var(--acd);flex-shrink:0}
+    .wtile-name{font-family:var(--fm);font-size:.6rem;letter-spacing:2px;
+      color:var(--txb);text-transform:uppercase;flex:1}
+    .wtile-val{font-family:var(--fm);font-size:.62rem;color:var(--txm);
+      white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis}
+    /* widget expand modal */
+    #wex{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.72);
+      display:none;align-items:center;justify-content:center}
+    #wex.open{display:flex;animation:fadeIn .18s ease}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    #wex-box{background:rgba(11,11,20,.98);border:1px solid var(--brh);
+      border-radius:6px;width:min(560px,90vw);max-height:78vh;
+      overflow-y:auto;position:relative;padding:22px 24px;
+      animation:slideUp .18s ease}
+    @keyframes slideUp{from{transform:translateY(18px);opacity:.4}to{transform:translateY(0);opacity:1}}
+    #wex-box::-webkit-scrollbar{width:3px}
+    #wex-box::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+    #wex-ttl{font-family:var(--fm);font-size:.58rem;letter-spacing:3px;
+      color:var(--acd);text-transform:uppercase;margin-bottom:18px;
+      display:flex;align-items:center;justify-content:space-between}
+    #wex-close{background:none;border:none;color:var(--txm);font-size:1rem;
+      cursor:pointer;line-height:1;transition:color .12s;padding:0}
+    #wex-close:hover{color:var(--txb)}
+    #wex-body{font-size:.82rem;line-height:1.65;color:var(--tx)}
+    #wex-body .xrow{display:flex;justify-content:space-between;align-items:center;
+      padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+    #wex-body .xrow:last-child{border-bottom:none}
+    #wex-body .xk{font-family:var(--fm);font-size:.6rem;color:var(--txm);letter-spacing:.8px}
+    #wex-body .xv{font-family:var(--fm);font-size:.76rem;color:var(--txb);font-weight:500}
+    #wex-body .xsec{font-family:var(--fm);font-size:.52rem;letter-spacing:2px;
+      color:var(--acd);text-transform:uppercase;margin:14px 0 6px}
+    #wex-body .xbar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:3px}
+    #wex-body .xfill{height:100%;border-radius:2px;transition:width .4s}
+    #wex-body .xnh{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.78rem}
+    #wex-body .xnh:last-child{border-bottom:none}
+    #wex-body .xnh a{color:var(--ac);text-decoration:none}
+    #wex-body .xnh a:hover{text-decoration:underline}
+    #wex-body .xnh-src{font-family:var(--fm);font-size:.5rem;color:var(--txm);
+      letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+
+    /* ── MESSAGES ──────────────────────────────────────────────────── */
+    #messages{position:absolute;left:0;right:0;
+      bottom:74px;top:0;
+      overflow-y:auto;display:flex;flex-direction:column;
+      gap:9px;padding:14px 16px 4px;z-index:4;scroll-behavior:smooth}
+    #messages::-webkit-scrollbar{width:3px}
+    #messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);border-radius:2px}
+    .msg{display:flex;flex-direction:column}
+    .msg.user{align-self:flex-end;align-items:flex-end;max-width:74%}
+    .msg.atlas{align-self:flex-start;align-items:flex-start;max-width:80%}
+    .lbl{font-family:var(--fm);font-size:.5rem;letter-spacing:1.5px;
+      margin-bottom:3px;opacity:.4}
+    .msg.user .lbl{color:var(--us)}
+    .msg.atlas .lbl{color:var(--ac)}
+    .bubble{padding:9px 13px;font-size:.875rem;line-height:1.65;
+      word-break:break-word;backdrop-filter:blur(4px)}
+    .msg.user .bubble{background:var(--usd);
+      border:1px solid rgba(197,165,245,.12);color:var(--us);
+      white-space:pre-wrap;border-radius:10px 10px 2px 10px}
+    .msg.atlas .bubble{background:rgba(10,10,20,.85);
+      border:1px solid var(--br);color:var(--tx);
+      border-radius:10px 10px 10px 2px}
+    .bubble.dim{color:var(--txm);font-style:italic}
+    .bubble p{margin:0 0 6px}.bubble p:last-child{margin-bottom:0}
+    .bubble h1,.bubble h2,.bubble h3{color:var(--txb);margin:10px 0 5px;
+      font-size:.92rem;font-weight:600}
+    .bubble ul,.bubble ol{padding-left:18px;margin:5px 0}
+    .bubble li{margin:2px 0}
+    .bubble strong{color:var(--txb)}.bubble em{color:var(--txm)}
+    .bubble a{color:var(--ac)}
+    .gen-img-wrap{margin:10px 0;display:inline-block;max-width:100%}
+    .gen-img{max-width:min(480px,100%);border-radius:8px;cursor:pointer;border:1px solid var(--br);display:block}
+    .gen-img-lbl{font-size:.6rem;color:var(--txm);margin-top:4px;letter-spacing:.5px}
+    .bubble hr{border:none;border-top:1px solid var(--br);margin:9px 0}
+    .bubble blockquote{border-left:2px solid var(--brh);
+      margin:5px 0;padding:3px 11px;color:var(--txm)}
+    .bubble code:not(pre code){background:rgba(0,0,0,.4);
+      border:1px solid var(--br);border-radius:3px;padding:1px 5px;
+      font-family:var(--fm);font-size:.78rem;color:#ce9178}
+    .cblk{position:relative;margin:8px 0}
+    .cblk pre{margin:0;border-radius:4px;overflow-x:auto;border:1px solid var(--br)}
+    .cblk pre code{font-family:var(--fm);font-size:.78rem}
+    .cpybtn{position:absolute;top:6px;right:7px;
+      background:rgba(255,255,255,.05);border:1px solid var(--br);
+      border-radius:3px;color:var(--txm);padding:2px 8px;font-size:.64rem;
+      cursor:pointer;transition:all .14s;font-family:var(--fm)}
+    .cpybtn:hover{background:rgba(255,255,255,.1);color:var(--tx)}
+    .llbl{position:absolute;top:6px;left:10px;font-size:.58rem;
+      color:var(--txm);font-family:var(--fm)}
+    .copy-resp{display:none;background:transparent;border:1px solid var(--br);
+      border-radius:4px;color:var(--txm);padding:2px 9px;font-size:.62rem;
+      cursor:pointer;font-family:var(--fm);margin-top:4px;
+      align-self:flex-start;transition:all .14s}
+    .copy-resp:hover{background:rgba(255,255,255,.06);color:var(--tx)}
+    .msg.atlas:hover .copy-resp{display:inline-block}
+    .cur{display:inline-block;color:var(--ac);animation:blink .8s step-end infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+    .typing-dots,.typing-dots-inline{display:inline-flex;gap:5px;align-items:center;padding:4px 2px}
+    .typing-dots span,.typing-dots-inline span{width:5px;height:5px;border-radius:50%;
+      background:var(--txm);animation:dp 1.2s ease-in-out infinite}
+    .typing-dots span:nth-child(2),.typing-dots-inline span:nth-child(2){animation-delay:.2s}
+    .typing-dots span:nth-child(3),.typing-dots-inline span:nth-child(3){animation-delay:.4s}
+    @keyframes dp{0%,80%,100%{opacity:.3;transform:scale(.85)}
+      40%{opacity:1;transform:scale(1.15)}}
+    .tool-call{display:inline-flex;align-items:center;gap:6px;
+      background:rgba(197,165,245,.07);border:1px solid rgba(197,165,245,.18);
+      border-radius:6px;padding:4px 9px;margin:3px 0;
+      font-family:var(--fm);font-size:.75rem;color:#c5a5f5}
+    .tool-call .tc-args{color:var(--txm);max-width:260px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tool-result{display:block;background:rgba(255,255,255,.03);
+      border-left:2px solid var(--brh);border-radius:0 4px 4px 0;
+      padding:5px 9px;margin:3px 0;font-family:var(--fm);font-size:.73rem;
+      color:var(--txm);white-space:pre-wrap;max-height:140px;overflow-y:auto}
+    .tool-result summary{cursor:pointer;color:var(--ac);
+      font-size:.74rem;list-style:none;margin-bottom:3px}
+    .tool-result summary::before{content:'▶ ';font-size:.6rem}
+    details.tool-result[open] summary::before{content:'▼ '}
+    .think-block{display:block;background:rgba(139,92,246,.06);
+      border-left:2px solid rgba(139,92,246,.35);border-radius:0 6px 6px 0;
+      padding:6px 10px;margin:0 0 8px 0;font-family:var(--fm);font-size:.73rem;
+      color:rgba(197,165,245,.65);white-space:pre-wrap;max-height:180px;overflow-y:auto}
+    .think-block summary{cursor:pointer;color:rgba(197,165,245,.75);
+      font-size:.72rem;list-style:none;user-select:none;
+      display:flex;align-items:center;gap:5px;margin-bottom:2px}
+    .think-block summary::before{content:'▶';font-size:.55rem;transition:transform .2s}
+    details.think-block[open] summary::before{content:'▼'}
+    .think-block .think-content{padding-top:4px;line-height:1.5}
+
+    /* ── INPUT BAR ─────────────────────────────────────────────────── */
+    #input-bar{position:absolute;bottom:0;left:0;right:0;
+      padding:8px 16px 14px;z-index:10;
+      background:linear-gradient(to top,rgba(9,9,16,1) 68%,transparent)}
+    .ihint{font-family:var(--fm);font-size:.53rem;color:var(--txm);
+      text-align:center;padding:0 0 6px;letter-spacing:.4px}
+    .ihint button{font-family:var(--fm);font-size:.53rem;color:var(--txm);
+      background:none;border:none;cursor:pointer;text-decoration:underline}
+    .ihint button:hover{color:var(--tx)}
+    .irow{display:flex;gap:8px;align-items:flex-end;
+      max-width:100%;margin:0 auto}
+    .irow textarea{flex:1;background:rgba(18,18,28,.98);
+      border:1px solid var(--br);border-radius:8px;
+      color:var(--txb);font-family:var(--fh);font-size:.875rem;
+      padding:10px 14px;min-height:44px;max-height:118px;resize:none;
+      outline:none;transition:border-color .2s,box-shadow .2s;line-height:1.5}
+    .irow textarea:focus{border-color:rgba(108,182,255,.3);
+      box-shadow:0 0 0 1px rgba(108,182,255,.08)}
+    .irow textarea::placeholder{color:var(--txm)}
+    .irow textarea:disabled{opacity:.35}
+    .ico{background:rgba(18,18,28,.98);border:1px solid var(--br);
+      border-radius:8px;color:var(--txm);font-size:.88rem;
+      padding:0 11px;cursor:pointer;height:44px;align-self:flex-end;
+      transition:all .14s;flex-shrink:0}
+    .ico:hover{border-color:var(--brh);color:var(--tx)}
+    .snd{background:rgba(108,182,255,.1);
+      border:1px solid rgba(108,182,255,.22);
+      border-radius:8px;color:var(--ac);font-size:.82rem;
+      padding:0 16px;cursor:pointer;height:44px;align-self:flex-end;
+      transition:all .14s;flex-shrink:0;
+      font-family:var(--fm);font-weight:600;letter-spacing:1px}
+    .snd:hover:not(:disabled){background:rgba(108,182,255,.18);
+      border-color:rgba(108,182,255,.38)}
+    .snd:disabled{opacity:.28;cursor:not-allowed}
+    .fbadge{display:none;max-width:100%;margin:0 auto 5px;
+      background:rgba(18,18,28,.98);border:1px solid var(--br);
+      border-radius:6px;padding:5px 12px;font-size:.7rem;
+      font-family:var(--fm);color:var(--txm);
+      align-items:center;gap:8px}
+    .fbadge.show{display:flex}
+    .fbadge .fname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .fbadge .rmf{cursor:pointer;color:var(--rd);font-weight:bold}
+    .fbadge .img-thumb{width:30px;height:30px;object-fit:cover;
+      border-radius:3px;border:1px solid var(--br)}
+
+    /* ── BOOT OVERLAY ──────────────────────────────────────────────── */
+    #boot-overlay{position:fixed;inset:0;z-index:100;background:var(--bg);
+      display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:14px;transition:opacity .5s}
+    #boot-overlay.fade{opacity:0;pointer-events:none}
+    .boot-lbl{font-family:var(--fm);font-size:.64rem;letter-spacing:3px;
+      color:var(--txm);text-transform:uppercase}
+    .boot-bar{width:130px;height:1px;background:rgba(255,255,255,.06);
+      border-radius:1px;overflow:hidden}
+    .boot-fill{height:100%;width:0%;background:var(--ac);
+      border-radius:1px;animation:bf 2.5s ease-in-out forwards}
+    @keyframes bf{0%{width:0%}60%{width:72%}85%{width:88%}100%{width:100%}}
+
+    /* ── DROP ──────────────────────────────────────────────────────── */
+    .drop{display:none;position:fixed;inset:0;
+      background:rgba(108,182,255,.03);
+      border:2px dashed rgba(108,182,255,.22);
+      align-items:center;justify-content:center;
+      font-size:.88rem;font-family:var(--fm);color:var(--ac);
+      z-index:20;pointer-events:none;letter-spacing:2px}
+    .drop.show{display:flex}
+
+    /* ── TOAST ─────────────────────────────────────────────────────── */
+    .toast{position:fixed;bottom:88px;right:20px;
+      background:rgba(18,18,28,.96);border:1px solid var(--brh);
+      color:var(--tx);padding:8px 14px;border-radius:var(--r);
+      font-family:var(--fm);font-size:.72rem;opacity:0;
+      transition:opacity .3s;pointer-events:none;z-index:9999;
+      box-shadow:0 4px 14px rgba(0,0,0,.5);backdrop-filter:blur(8px)}
+    .toast.err{border-color:rgba(244,135,113,.4);color:var(--rd)}
+
+    /* ── PANEL CHROME (used inside modals) ─────────────────────────── */
+    .panel{display:none}
+    .panel.active{display:flex;flex-direction:column}
+    .pcontent{flex:1;overflow-y:auto;padding:17px;display:flex;flex-direction:column;gap:13px}
+    .pcontent::-webkit-scrollbar{width:4px}
+    .pcontent::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+    #panel-modal-box::-webkit-scrollbar,#panel-modal-body *::-webkit-scrollbar{width:4px}
+    #panel-modal-box::-webkit-scrollbar-thumb,#panel-modal-body *::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+    #panel-modal-box,#panel-modal-body *{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.09) transparent}
+    .phdr{padding:13px 17px 9px;border-bottom:1px solid var(--br);
+      display:flex;align-items:center;justify-content:space-between}
+    .phdr h2{font-size:.76rem;font-weight:600;letter-spacing:2px;color:var(--txb)}
+    .card{background:rgba(18,18,28,.98);border:1px solid var(--br);
+      border-radius:var(--r);padding:13px;display:flex;flex-direction:column;gap:9px}
+    .card h3{font-size:.74rem;font-weight:600;letter-spacing:1px;
+      color:var(--txb);text-transform:uppercase}
+    .card p.hint{font-size:.68rem;color:var(--txm);margin-top:-4px;line-height:1.55}
+    input,textarea,select{background:rgba(9,9,16,.96);border:1px solid var(--br);
+      border-radius:var(--r);color:var(--txb);padding:7px 11px;
+      font-size:.83rem;font-family:var(--fh);width:100%;outline:none;
+      transition:border-color .2s}
+    input:focus,textarea:focus{border-color:var(--brh)}
+    textarea{resize:vertical}
+    select option{background:var(--bg)}
+    .btn{background:rgba(108,182,255,.1);
+      border:1px solid rgba(108,182,255,.24);
+      border-radius:var(--r);color:var(--ac);font-family:var(--fh);
+      font-size:.74rem;font-weight:600;letter-spacing:1px;
+      padding:6px 13px;cursor:pointer;transition:all .12s;
+      text-transform:uppercase;white-space:nowrap}
+    .btn:hover{background:rgba(108,182,255,.18)}
+    .btn:disabled{opacity:.35;cursor:not-allowed}
+    .btn.dng{background:rgba(244,135,113,.08);
+      border-color:rgba(244,135,113,.24);color:var(--rd)}
+    .btn.dng:hover{background:rgba(244,135,113,.16)}
+    .btn.sec{background:rgba(255,255,255,.04);
+      border-color:var(--br);color:var(--txm)}
+    .btn.sec:hover{color:var(--tx);border-color:var(--brh)}
+    .row{display:flex;gap:8px;align-items:flex-start}
+    .row input,.row textarea{flex:1}
+    .srow{display:flex;justify-content:space-between;align-items:center}
+    .fs-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:4px;font-size:.72rem;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);color:var(--txb);transition:background .15s}
+    .fs-row:hover{background:rgba(255,255,255,.06)}
+    .fs-back{color:var(--txm)!important}
+    .fs-sz{font-size:.6rem;color:var(--txm);margin-left:auto}
+    /* Toggle switch */
+    .tgl-wrap{position:relative;display:inline-block;width:46px;height:24px;cursor:pointer;flex-shrink:0}
+    .tgl-wrap input{opacity:0;width:0;height:0}
+    .tgl-slider{position:absolute;inset:0;background:rgba(255,255,255,.12);border-radius:24px;transition:.25s}
+    .tgl-slider:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#888;border-radius:50%;transition:.25s}
+    .tgl-wrap input:checked+.tgl-slider{background:var(--ac)}
+    .tgl-wrap input:checked+.tgl-slider:before{transform:translateX(22px);background:#fff}
+    .empty{color:var(--txm);font-size:.72rem;font-style:italic;font-family:var(--fm)}
+    .tags{display:flex;flex-wrap:wrap;gap:6px}
+    .tag{background:rgba(255,255,255,.05);border:1px solid var(--br);
+      border-radius:20px;padding:3px 10px;font-size:.68rem;
+      font-family:var(--fm);color:var(--txm);display:flex;align-items:center;gap:5px}
+    .tag.auto{border-color:rgba(220,220,170,.2);color:var(--yw);
+      background:rgba(220,220,170,.05)}
+    .tag .x{cursor:pointer;color:var(--rd);font-weight:bold;line-height:1}
+    .sysgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .sysi{background:rgba(9,9,16,.96);border:1px solid var(--br);
+      border-radius:var(--r);padding:8px}
+    .sys-lbl{font-family:var(--fm);color:var(--txm);font-size:.58rem;
+      text-transform:uppercase;letter-spacing:1px}
+    .sys-val{color:var(--txb);font-size:.94rem;font-weight:600;margin-top:2px}
+    .pbar{height:2px;background:rgba(255,255,255,.06);border-radius:1px;margin-top:4px}
+    .pfill{height:100%;background:var(--ac);border-radius:1px;transition:width .4s}
+    .pfill.w{background:var(--yw)}.pfill.dng{background:var(--rd)}
+    .agcard{background:rgba(255,255,255,.03);border:1px solid var(--br);
+      border-radius:var(--r);padding:10px 12px;display:flex;align-items:center;gap:9px}
+    .agcard .agn{font-family:var(--fm);font-size:.76rem;color:var(--ac);
+      font-weight:600;flex:1}
+    .agcard .agd{font-size:.68rem;color:var(--txm);flex:2;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .aglbl{font-family:var(--fm);font-size:.64rem;color:var(--txm);
+      letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+    .agcode{background:rgba(9,9,16,.96);border:1px solid var(--br);
+      border-radius:var(--r);padding:10px;font-family:var(--fm);
+      font-size:.72rem;color:#ce9178;line-height:1.58;
+      max-height:240px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+
+    /* ── RESPONSIVE ────────────────────────────────────────────────── */
+    @media(max-width:960px){
+      #wtiles-left,#wtiles-right{width:130px}
+      #messages{width:88vw}
+    }
+    @media(max-height:680px){
+      #orb-zone{top:8px}
+    }
+
+    /* ── MODAL DIALOG ANIMATION ────────────────────────────────────── */
+    dialog#layout-dialog{
+      border:none;background:rgba(11,11,20,.98);border-radius:8px;
+      border:1px solid rgba(108,182,255,.22);padding:24px;
+      max-width:90vw;max-height:90vh;color:var(--tx);
+      font-family:var(--fh);font-size:.89rem;line-height:1.65;
+      box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 32px rgba(108,182,255,.15);
+      animation:modalSlideIn .4s ease-out;overflow-y:auto;
+      scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.08) transparent;
+    }
+    dialog#layout-dialog::backdrop{
+      background:rgba(5,5,14,.78);backdrop-filter:blur(12px);
+      animation:backdropFade .4s ease-out;
+    }
+    @keyframes modalSlideIn{
+      from{
+        opacity:0;transform:translateY(20px) scale(.96)
+      }
+      to{
+        opacity:1;transform:translateY(0) scale(1)
+      }
+    }
+    @keyframes backdropFade{
+      from{opacity:0;backdrop-filter:blur(0)}
+      to{opacity:1;backdrop-filter:blur(12px)}
+    }
+    dialog#layout-dialog::-webkit-scrollbar{width:3px}
+    dialog#layout-dialog::-webkit-scrollbar-track{background:transparent}
+    dialog#layout-dialog::-webkit-scrollbar-thumb{
+      background:rgba(108,182,255,.2);border-radius:2px;
+    }
+    dialog#layout-dialog::-webkit-scrollbar-thumb:hover{
+      background:rgba(108,182,255,.4)
+    }
+    .modal-content{display:flex;flex-direction:column;gap:16px}
+    .modal-content h2{
+      font-size:1.1rem;font-weight:700;letter-spacing:1.5px;
+      color:var(--txb);text-transform:uppercase;margin:0
+    }
+    .modal-content h3{
+      font-size:.95rem;font-weight:600;letter-spacing:1px;
+      color:var(--ac);margin:12px 0 6px
+    }
+    .modal-body{color:var(--tx);line-height:1.7}
+    .modal-body p{margin:0 0 10px}
+    .modal-body ul{padding-left:20px;margin:8px 0}
+    .modal-body li{margin:4px 0}
+    .modal-body strong{color:var(--txb)}
+    .modal-body em{color:var(--txm);font-style:italic}
+    .modal-body code{
+      background:rgba(9,9,16,.6);border:1px solid rgba(108,182,255,.12);
+      border-radius:3px;padding:2px 6px;font-family:var(--fm);
+      font-size:.8rem;color:#ce9178
+    }
+    .modal-trigger{cursor:pointer;transition:all .2s ease}
+    .modal-trigger.is-open{opacity:.2;pointer-events:none}
+
+    /* ── Atlas widget dialog (anime.js createLayout modal) ────────────── */
+    /* Source tile fades while clone morphs into dialog */
+    .wtile.is-open{opacity:.15!important;pointer-events:none!important;transform:none!important}
+    /* Native <dialog> reset to full-screen flex container */
+    dialog#atlas-widget-dialog{all:unset;position:fixed;inset:0;width:100%;height:100%;
+      max-width:100%;max-height:100%;display:flex;align-items:center;
+      justify-content:center;z-index:9999;border:none;padding:0;margin:0}
+    /* CRITICAL: hide when not open — all:unset strips the native display:none */
+    dialog#atlas-widget-dialog:not([open]){display:none!important}
+    dialog#atlas-widget-dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(4px)}
+    /* Tile clone inside the dialog: disable hover transitions during FLIP */
+    dialog#atlas-widget-dialog .wtile{
+      width:min(420px,88vw);padding:14px 18px;border-radius:10px;
+      cursor:default;transition:none!important;pointer-events:none}
+    dialog#atlas-widget-dialog .wtile-name{font-size:.75rem}
+    dialog#atlas-widget-dialog .wtile-val{font-size:.82rem}
+    /* Full widget content panel (appears after FLIP animation) */
+    .atd-inner{background:rgba(11,11,20,.98);border:1px solid var(--brh);
+      border-radius:6px;width:min(560px,90vw);max-height:78vh;overflow-y:auto;
+      display:flex;flex-direction:column;animation:atdIn .22s ease}
+    @keyframes atdIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+    .atd-inner::-webkit-scrollbar{width:3px}
+    .atd-inner::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+    .atd-header{font-family:var(--fm);font-size:.58rem;letter-spacing:3px;
+      color:var(--acd);text-transform:uppercase;padding:18px 22px 14px;
+      display:flex;align-items:center;justify-content:space-between;
+      border-bottom:1px solid rgba(108,182,255,.08);flex-shrink:0}
+    .atd-title{color:var(--acd)}
+    .atd-close{background:none;border:none;color:var(--txm);font-size:1rem;
+      cursor:pointer;line-height:1;transition:color .12s;padding:0}
+    .atd-close:hover{color:var(--txb)}
+    .atd-body{font-size:.82rem;line-height:1.65;color:var(--tx);padding:18px 22px;overflow-y:auto}
+  </style>
+</head>
+<body>
+<div id="scene">
+
+  <!-- BOOT -->
+  <div id="boot-overlay">
+    <div class="typing-dots"><span></span><span></span><span></span></div>
+    <div class="boot-lbl" id="boot-label">ATLAS INITIALIZING</div>
+    <div class="boot-bar"><div class="boot-fill"></div></div>
+  </div>
+
+  <!-- DROP -->
+  <div class="drop" id="drop-ov">📎 DROP FILE TO ATTACH</div>
+
+  <!-- SOLAR SYSTEM — inside col-atlas, smaller orbit radii -->
+  <div id="col-atlas">
+  <div id="solar">
+    <!-- faint orbit rings -->
+    <div class="oring" style="width:200px;height:200px"></div>
+    <div class="oring" style="width:290px;height:290px"></div>
+    <div class="oring" style="width:380px;height:380px"></div>
+    <div class="oring" style="width:470px;height:470px"></div>
+
+    <!-- Ring 1 · r=100 · t=22s : clock, weather (180° apart) -->
+    <div class="arm" style="--r:100px;--t:22s;--d:0s">
+      <div class="wob"><div id="wc-clock" class="w" onclick="expandWidget('clock')">
+        <div class="wt">SYSTEM TIME</div>
+        <div id="wclk-t">--:--:--</div>
+        <div id="wclk-d">-- -- ----</div>
+      </div></div>
+    </div>
+    <div class="arm" style="--r:100px;--t:22s;--d:-11s">
+      <div class="wob"><div id="wc-weather" class="w" onclick="expandWidget('weather')">
+        <div class="wt">WEATHER</div>
+        <div id="wtmp" style="font-size:1.45rem;font-weight:500;color:var(--txb);line-height:1">--°</div>
+        <div id="wdsc" style="font-size:.55rem;color:var(--txm);letter-spacing:1px;text-transform:uppercase;margin-top:4px">LOADING</div>
+        <div id="wloc" style="font-size:.5rem;color:var(--acd);letter-spacing:1px;margin-top:2px">—</div>
+      </div></div>
+    </div>
+
+    <!-- Ring 2 · r=145 · t=34s : forex, network, system (120° apart) -->
+    <div class="arm" style="--r:145px;--t:34s;--d:0s">
+      <div class="wob"><div id="wc-forex" class="w" onclick="expandWidget('forex')">
+        <div class="wt">FOREX · PHP</div>
+        <div id="w-forex"><span style="font-size:.56rem;color:var(--txm)">Loading...</span></div>
+      </div></div>
+    </div>
+    <div class="arm" style="--r:145px;--t:34s;--d:-11.3s">
+      <div class="wob"><div id="wc-network" class="w" onclick="expandWidget('network')">
+        <div class="wt">NETWORK</div>
+        <div id="w-net-ping" style="font-size:1.3rem;font-weight:500;color:var(--txb);font-family:var(--fm);line-height:1">—</div>
+        <div id="w-net-lbl" style="font-size:.5rem;color:var(--txm);letter-spacing:1px;font-family:var(--fm);margin-top:3px">LATENCY</div>
+        <div class="sr" style="margin-top:6px"><span class="sk">UPTIME</span><span class="sv" id="ws-uptime">—</span></div>
+      </div></div>
+    </div>
+    <div class="arm" style="--r:145px;--t:34s;--d:-22.7s">
+      <div class="wob"><div id="wc-system" class="w" onclick="expandWidget('system')">
+        <div class="wt">SYSTEM</div>
+        <div class="sr"><span class="sk">CPU</span><span class="sv" id="ws-cpu">—</span></div>
+        <div class="sr"><span class="sk">RAM</span><span class="sv" id="ws-ram">—</span></div>
+        <div class="sr"><span class="sk">DISK</span><span class="sv" id="ws-disk">—</span></div>
+      </div></div>
+    </div>
+
+    <!-- Ring 3 · r=190 · t=48s : phnews, worldnews, crypto (120° apart) -->
+    <div class="arm" style="--r:190px;--t:48s;--d:0s">
+      <div class="wob"><div id="wc-phnews" class="w" onclick="expandWidget('phnews')">
+        <div class="wt">PH NEWS</div>
+        <div id="w-phnews"><span style="font-size:.56rem;color:var(--txm)">Loading...</span></div>
+      </div></div>
+    </div>
+    <div class="arm" style="--r:190px;--t:48s;--d:-16s">
+      <div class="wob"><div id="wc-worldnews" class="w" onclick="expandWidget('worldnews')">
+        <div class="wt">WORLD NEWS</div>
+        <div id="w-worldnews"><span style="font-size:.56rem;color:var(--txm)">Loading...</span></div>
+      </div></div>
+    </div>
+    <div class="arm" style="--r:190px;--t:48s;--d:-32s">
+      <div class="wob"><div id="wc-crypto" class="w" onclick="expandWidget('crypto')">
+        <div class="wt">CRYPTO</div>
+        <div id="w-crypto"><span style="font-size:.56rem;color:var(--txm)">Loading...</span></div>
+      </div></div>
+    </div>
+
+    <!-- Ring 4 · r=235 · t=64s : calendar, sky, github (120° apart) -->
+    <div class="arm" style="--r:235px;--t:64s;--d:0s">
+      <div class="wob"><div id="wc-calendar" class="w" onclick="expandWidget('calendar')">
+        <div class="wt">CALENDAR</div>
+        <div id="wcal-body"></div>
+      </div></div>
+    </div>
+    <div class="arm" style="--r:235px;--t:64s;--d:-21.3s">
+      <div class="wob"><div id="wc-sky" class="w" onclick="expandWidget('sky')">
+        <div class="wt">SKY</div>
+        <div id="w-moon" style="font-size:1.1rem;line-height:1.2;margin-bottom:2px">—</div>
+        <div id="w-moon-lbl" style="font-size:.5rem;color:var(--txm);letter-spacing:1px;font-family:var(--fm)">MOON PHASE</div>
+        <div class="sr" style="margin-top:5px"><span class="sk">GOLDEN HR</span><span class="sv" id="w-golden">—</span></div>
+        <div class="sr"><span class="sk">UV INDEX</span><span class="sv" id="w-uv">—</span></div>
+      </div></div>
+    </div>
+    <div class="arm" style="--r:235px;--t:64s;--d:-42.7s">
+      <div class="wob"><div id="wc-github" class="w" onclick="expandWidget('github')">
+        <div class="wt">GITHUB</div>
+        <div id="w-github"><span style="font-size:.56rem;color:var(--txm)">Enter username</span></div>
+        <input id="gh-user-input" type="text" placeholder="github username"
+          style="margin-top:6px;font-size:.6rem;padding:4px 8px"
+          onclick="event.stopPropagation()" oninput="debGH(this.value)">
+      </div></div>
+    </div>
+
+    <!-- Ring 4 extra · tunnel -->
+    <div class="arm" style="--r:235px;--t:64s;--d:-53.4s">
+      <div class="wob"><div id="wc-tunnel" class="w" onclick="openPanel('tunnel')">
+        <div class="wt">REMOTE ACCESS</div>
+        <div id="w-tun-dot" style="font-size:1.3rem;line-height:1">⚫</div>
+        <div id="w-tun-lbl" style="font-size:.5rem;color:var(--txm);letter-spacing:1px;font-family:var(--fm);margin-top:3px">OFFLINE</div>
+        <div class="sr" style="margin-top:5px"><span class="sk">REMOTE</span><span class="sv" id="w-tun-url-short">—</span></div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- ORB (centered in col-atlas, clickable) -->
+  <div id="orb-zone" onclick="openOrbExpanded()">
+    <canvas id="main-orb" width="180" height="180"></canvas>
+    <div id="orb-label">A T L A S</div>
+    <div id="nstate">STANDBY</div>
+    <span id="sbadge">● —</span>
+    <button class="orb-build-btn" onclick="event.stopPropagation();openPanel('build')">&#x26A1; BUILD</button>
+    <button id="deep-think-btn" class="deep-think-btn" onclick="event.stopPropagation();toggleDeepThink()" title="Two-pass reasoning for complex tasks">&#x1F9E0; DEEP THINK</button>
+    <select id="model-select" class="model-select" onchange="setProvider(this.value)" onclick="event.stopPropagation()">
+      <option value="auto">&#x26A1; AUTO</option>
+      <optgroup label="── OpenAI ──">
+        <option value="github:gpt-4.1" selected>&#x2601; GPT-4.1</option>
+        <option value="github:gpt-4.1-mini">&#x2601; GPT-4.1-mini</option>
+        <option value="github:gpt-4.1-nano">&#x2601; GPT-4.1-nano</option>
+        <option value="github:gpt-4o">&#x2601; GPT-4o (vision)</option>
+        <option value="github:gpt-4o-mini">&#x2601; GPT-4o-mini</option>
+      </optgroup>
+      <optgroup label="── Meta ──">
+        <option value="github:meta-llama-3.1-405b-instruct">&#x2601; Llama 3.1 405B</option>
+        <option value="github:llama-3.3-70b-instruct">&#x2601; Llama 3.3 70B</option>
+        <option value="github:llama-4-maverick-17b-128e-instruct-fp8">&#x2601; Llama 4 Maverick</option>
+        <option value="github:llama-4-scout-17b-16e-instruct">&#x2601; Llama 4 Scout</option>
+      </optgroup>
+      <optgroup label="── DeepSeek ──">
+        <option value="github:deepseek-v3-0324">&#x2601; DeepSeek-V3</option>
+      </optgroup>
+      <optgroup label="── Mistral ──">
+        <option value="github:mistral-medium-2505">&#x2601; Mistral Medium 3</option>
+        <option value="github:Codestral-2501">&#x2601; Codestral</option>
+      </optgroup>
+      <optgroup label="── Microsoft ──">
+        <option value="github:Phi-4">&#x2601; Phi-4</option>
+      </optgroup>
+      <option value="local">■ LOCAL · atlas</option>
+    </select>
+  </div>
+  </div><!-- end col-atlas -->
+
+  <!-- ORB EXPANDED OVERLAY (outside col-chat so blur on col-chat doesn't affect it) -->
+  <div id="orb-overlay" onclick="handleOverlayClick(event)">
+    <!-- Left widget tiles -->
+    <div id="wtiles-left">
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'clock')">
+        <div class="wtile-dot"></div><span class="wtile-name">TIME</span><span class="wtile-val" id="tile-clock">--:--</span>
+      </div>
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'weather')">
+        <div class="wtile-dot"></div><span class="wtile-name">WEATHER</span><span class="wtile-val" id="tile-weather">--°</span>
+      </div>
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'system')">
+        <div class="wtile-dot"></div><span class="wtile-name">SYSTEM</span><span class="wtile-val" id="tile-system">CPU --</span>
+      </div>
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'network')">
+        <div class="wtile-dot"></div><span class="wtile-name">NETWORK</span><span class="wtile-val" id="tile-network">--ms</span>
+      </div>
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'tunnel')">
+        <div class="wtile-dot"></div><span class="wtile-name">REMOTE ACCESS</span><span class="wtile-val" id="tile-tunnel">OFFLINE</span>
+      </div>
+    </div>
+    <!-- Center orb -->
+    <div id="orb-center">
+      <canvas id="orb-big" width="240" height="240"></canvas>
+      <div id="orb-big-label">A T L A S</div>
+      <div id="orb-big-state">STANDBY</div>
+      <div id="orb-big-badge">● —</div>
+      <button class="orb-close-btn" onclick="closeOrbExpanded()">✕ CLOSE</button>
+      <button class="orb-close-btn" style="margin-top:0" onclick="closeOrbExpanded();openPanel('build')">⚡ BUILD</button>
+      <button class="orb-close-btn" style="margin-top:0" onclick="openSetupModal()">&#x2699; SETUP</button>
+    </div>
+    <!-- Right widget tiles -->
+    <div id="wtiles-right">
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'forex')">
+        <div class="wtile-dot"></div><span class="wtile-name">FOREX</span><span class="wtile-val" id="tile-forex">PHP</span>
+      </div>
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'crypto')">
+        <div class="wtile-dot"></div><span class="wtile-name">CRYPTO</span><span class="wtile-val" id="tile-crypto">--</span>
+      </div>
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'phnews')">
+        <div class="wtile-dot"></div><span class="wtile-name">PH NEWS</span><span class="wtile-val"></span>
+      </div>
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'worldnews')">
+        <div class="wtile-dot"></div><span class="wtile-name">WORLD NEWS</span><span class="wtile-val"></span>
+      </div>
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'calendar')">
+        <div class="wtile-dot"></div><span class="wtile-name">CALENDAR</span><span class="wtile-val" id="tile-calendar">APR</span>
+      </div>
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'sky')">
+        <div class="wtile-dot"></div><span class="wtile-name">SKY</span><span class="wtile-val" id="tile-sky">--</span>
+      </div>
+      <div class="wtile" data-duration="600" onclick="openAtlasModal(this,'github')">
+        <div class="wtile-dot"></div><span class="wtile-name">GITHUB</span><span class="wtile-val"></span>
+      </div>
+    </div>
+  </div><!-- end orb-overlay -->
+
+  <!-- WIDGET EXPAND MODAL (outside col-chat so blur doesn't affect it) -->
+  <div id="wex" onclick="closeWEx(event)">
+    <div id="wex-box">
+      <div id="wex-ttl"><span id="wex-title">—</span><button id="wex-close" onclick="closeWEx()">✕</button></div>
+      <div id="wex-body"></div>
+    </div>
+  </div>
+
+  <!-- CHAT COLUMN -->
+  <div id="col-chat">
+
+  <!-- MESSAGES -->
+  <div id="messages"></div>
+
+  <!-- INPUT BAR -->
+  <div id="input-bar">
+    <div class="ihint">Shift+Enter = new line &nbsp;·&nbsp; <button onclick="exportChat()">Export</button></div>
+    <input type="file" id="file-in" style="display:none"
+      accept=".py,.js,.ts,.html,.css,.json,.txt,.md,.yaml,.yml,.sh,.sql,.csv,.xml,.apex,.cls,.pdf,image/*"
+      onchange="handleFile(event)">
+    <div class="fbadge" id="fbadge">
+      <img class="img-thumb" id="img-thumb" style="display:none" alt="">
+      <span id="ficon">📎</span>
+      <span class="fname" id="fname"></span>
+      <span class="rmf" onclick="clearFile()">✕</span>
+    </div>
+    <div class="irow">
+      <button class="ico" onclick="document.getElementById('file-in').click()" title="Attach">📎</button>
+      <textarea id="msg-in" placeholder="Speak to ATLAS..." rows="1" disabled></textarea>
+      <button class="snd" id="sendbtn" onclick="sendMsg()" disabled>▶</button>
+    </div>
+  </div>
+  </div><!-- end col-chat -->
+
+  <!-- HIDDEN PANEL CONTAINERS -->
+  <div style="display:none" id="panel-store">
+
+    <!-- ══ BUILD PANEL ══════════════════════════════════════════════════════ -->
+    <div class="panel" id="tab-build">
+      <div class="phdr">
+        <h2>⚡ AUTONOMOUS BUILD</h2>
+        <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="loadProjects()">↻ PROJECTS</button>
+      </div>
+      <div class="pcontent">
+        <div class="card">
+          <h3>Give ATLAS a Goal</h3>
+          <p class="hint">ATLAS will plan, write code, run commands, and build it autonomously — step by step.</p>
+          <textarea id="build-goal" rows="4" placeholder="e.g. Build a simple expense tracker web app with HTML, CSS and vanilla JS. Store expenses in localStorage."></textarea>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
+            <button class="btn" id="build-run-btn" onclick="runBuildTask()">⚡ BUILD IT</button>
+            <button class="btn sec" id="build-stop-btn" onclick="stopBuildTask()" style="display:none">■ STOP</button>
+            <span id="build-status" style="font-family:var(--fm);font-size:.65rem;color:var(--txm)"></span>
+          </div>
+        </div>
+
+        <!-- Live Build Log -->
+        <div class="card" id="build-log-card" style="display:none">
+          <h3>Build Log <span id="build-step-counter" style="font-size:.65rem;color:var(--txm);font-family:var(--fm)"></span></h3>
+          <div id="build-plan" style="display:none;margin-bottom:10px">
+            <p class="aglbl">PLAN</p>
+            <ol id="build-plan-list" style="margin:0;padding-left:1.4rem;font-size:.72rem;color:var(--txm);font-family:var(--fm);line-height:1.8"></ol>
+          </div>
+          <div id="build-log" style="background:rgba(9,9,16,.96);border:1px solid var(--br);border-radius:var(--r);padding:10px;font-family:var(--fm);font-size:.68rem;color:#9cdcfe;line-height:1.6;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>
+          <div id="build-files-out" style="display:none;margin-top:8px">
+            <p class="aglbl">FILES BUILT</p>
+            <div id="build-files-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          </div>
+        </div>
+
+        <!-- Past Projects -->
+        <div class="card">
+          <h3>Projects</h3>
+          <div id="build-projects-list"><span class="empty">No projects yet.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="tab-agents">
+      <div class="phdr">
+        <h2>AGENT BUILDER</h2>
+        <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="loadAgents()">↻ REFRESH</button>
+      </div>      <div class="pcontent">
+        <div class="card">
+          <h3>Build New Agent</h3>
+          <p class="hint">Describe what you want the agent to do.</p>
+          <textarea id="ag-desc" rows="4" placeholder="e.g. Monitor Salesforce org for new leads today..."></textarea>
+          <div><button class="btn" id="ag-build-btn" onclick="buildAgent()">⚡ BUILD AGENT</button></div>
+          <div id="ag-output" style="display:none">
+            <p class="aglbl">GENERATED CODE — REVIEW BEFORE SAVING:</p>
+            <div id="ag-code" class="agcode"></div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+              <button class="btn" onclick="saveAgent()">💾 SAVE</button>
+              <button class="btn sec" onclick="discardAgent()">DISCARD</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Saved Agents</h3>
+          <div id="ag-list"><span class="empty">No agents yet.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="tab-training">
+      <div class="phdr"><h2>TRAINING</h2></div>
+      <div class="pcontent">
+        <div class="card">
+          <h3>Add Training Entry</h3>
+          <p class="hint">Teach ATLAS new things — preferences, facts, how you work.</p>
+          <div class="row">
+            <textarea id="train-in" rows="3" placeholder="e.g. I prefer direct answers."></textarea>
+          </div>
+          <div><button class="btn" onclick="addTraining()">SAVE ENTRY</button></div>
+          <div class="srow" style="margin-top:4px">
+            <span style="font-size:.7rem;color:var(--txm);font-family:var(--fm)">SAVED ENTRIES:</span>
+            <button class="btn dng" style="padding:4px 9px;font-size:.68rem" onclick="clearTraining()">CLEAR ALL</button>
+            <button class="btn" style="padding:4px 9px;font-size:.68rem" onclick="exportTraining()">⬇ EXPORT</button>
+            <label class="btn" style="padding:4px 9px;font-size:.68rem;cursor:pointer">⬆ IMPORT<input type="file" id="import-file" accept=".json" style="display:none" onchange="importTraining(this)"></label>
+          </div>
+          <input id="train-search" type="text" placeholder="Search..." style="margin:6px 0 4px;font-size:.75rem" oninput="filterTraining(this.value)">
+          <div id="train-list" class="tags"><span class="empty">No entries yet.</span></div>
+        </div>
+        <div class="card">
+          <h3>Personality Traits</h3>
+          <div class="row">
+            <input id="trait-in" type="text" placeholder="e.g. Always replies with a bit of Bisaya humor">
+            <button class="btn" onclick="addTrait()">ADD</button>
+          </div>
+          <div id="traits-list" class="tags"><span class="empty">No traits yet.</span></div>
+        </div>
+        <div class="card">
+          <h3>Nickname</h3>
+          <div class="row">
+            <select id="nick-sel">
+              <option value="">— Pick one —</option>
+              <option value="Pre">Pre</option>
+              <option value="Lods">Lods</option>
+            </select>
+            <button class="btn" onclick="setNickname()">SAVE</button>
+          </div>
+          <div id="nick-cur" style="font-size:.74rem;color:var(--txm);font-family:var(--fm)">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="tab-persona">
+      <div class="phdr"><h2>PERSONA</h2></div>
+      <div class="pcontent">
+        <div class="card">
+          <h3>Persona Summary</h3>
+          <p class="hint">ATLAS's identity text. Injected into every conversation.</p>
+          <textarea id="persona-txt" rows="22" placeholder="Loading..."></textarea>
+          <div><button class="btn" onclick="savePersona()">SAVE PERSONA</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="tab-logs">
+      <div class="phdr">
+        <h2>LOGS</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn" style="font-size:.66rem;padding:4px 10px" onclick="loadLogs()">↻ REFRESH</button>
+          <button class="btn dng" style="font-size:.66rem;padding:4px 10px" onclick="clearFrontendErrors()">CLEAR ERRORS</button>
+        </div>
+      </div>
+      <div class="pcontent" style="gap:13px">
+        <div class="card" id="fe-errors-card" style="display:none">
+          <h3 style="color:var(--rd)">⚠ FRONTEND ERRORS</h3>
+          <div id="fe-errors" style="font-family:var(--fm);font-size:.68rem;color:#ff8080;line-height:1.8;max-height:160px;overflow-y:auto"></div>
+        </div>
+        <div class="card">
+          <h3>AUDIT LOG</h3>
+          <div id="audit-log" style="font-family:var(--fm);font-size:.66rem;color:var(--txm);line-height:1.9;max-height:460px;overflow-y:auto;word-break:break-all"><span style="opacity:.4">Loading…</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="tab-settings">
+      <div class="phdr"><h2>SETTINGS</h2></div>
+      <div class="pcontent">
+        <div class="card">
+          <h3>Change Passphrase</h3>
+          <input type="password" id="pass-cur" placeholder="Current passphrase" style="margin-bottom:6px">
+          <input type="password" id="pass-new" placeholder="New passphrase" style="margin-bottom:6px">
+          <input type="password" id="pass-cnf" placeholder="Confirm new passphrase" style="margin-bottom:6px">
+          <div><button class="btn" onclick="changePass()">UPDATE</button></div>
+        </div>
+        <div class="card">
+          <h3>System Status</h3>
+          <div id="sys-info" class="sysgrid"><span class="empty">Loading...</span></div>
+          <button class="btn sec" style="margin-top:7px;font-size:.68rem;padding:4px 11px" onclick="loadSys()">↻ REFRESH</button>
+        </div>
+        <div class="card">
+          <h3>Remote Access</h3>
+          <p class="hint">Expose ATLAS over the internet via Cloudflare Tunnel — access from any device, no VPN needed.</p>
+          <!-- Toggle row -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px">
+            <div>
+              <div id="tun-status" style="font-size:.78rem;font-weight:600;color:var(--txm)">● TUNNEL OFF</div>
+              <div id="tun-url" style="font-size:.68rem;color:var(--ac);word-break:break-all;font-family:var(--fm);margin-top:3px;display:none"></div>
+            </div>
+            <!-- Toggle switch -->
+            <label class="tgl-wrap" title="Toggle tunnel">
+              <input type="checkbox" id="tun-toggle" onchange="toggleTunnel(this.checked)">
+              <span class="tgl-slider"></span>
+            </label>
+          </div>
+          <!-- Copy URL button (only when running) -->
+          <div id="tun-copy-row" style="display:none;margin-top:6px">
+            <button class="btn sec" style="font-size:.66rem;padding:4px 12px" onclick="tunCopyUrl()">⎘ COPY PUBLIC URL</button>
+            <button class="btn sec" style="font-size:.66rem;padding:4px 12px;margin-left:6px" onclick="tunOpenUrl()">↗ OPEN</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Trust Status</h3>
+          <div id="trust-info" style="font-size:.78rem;color:var(--txm)">Loading...</div>
+        </div>
+        <div class="card">
+          <h3>About</h3>
+          <p style="font-size:.76rem;color:var(--txm);font-family:var(--fm);line-height:2">
+            MODEL: hybrid (cloud when online / llama3.2 local fallback)<br>
+            BACKEND: FastAPI + Python<br>
+            STORAGE: local secure/ folder<br>
+            <em style="color:var(--acd)">Built for you, Pre. 🔥</em>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="tab-memory">
+      <div class="phdr"><h2>MEMORY</h2><button class="btn sec" onclick="loadMemory()">↻ REFRESH</button></div>
+      <div class="pcontent">
+        <div class="card">
+          <h3>Add Memory</h3>
+          <textarea id="mem-add-in" rows="2" placeholder="e.g. I prefer dark mode..." style="width:100%;margin-bottom:8px"></textarea>
+          <button class="btn" onclick="addMemory()">ADD</button>
+        </div>
+        <div class="card">
+          <h3>Stored Memories</h3>
+          <input id="mem-search" type="text" placeholder="Search..." oninput="filterMemory(this.value)" style="margin-bottom:10px">
+          <div id="mem-list"><span class="empty">Loading...</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="tab-tunnel">
+      <div class="phdr">
+        <h2>REMOTE ACCESS</h2>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="tpnl-status" style="font-size:.7rem;color:var(--txm)">● OFFLINE</span>
+          <label class="tgl-wrap" title="Toggle tunnel">
+            <input type="checkbox" id="tun-toggle2" onchange="toggleTunnel(this.checked)">
+            <span class="tgl-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="pcontent">
+        <div class="card">
+          <h3>CLOUDFLARE TUNNEL</h3>
+          <p class="hint">Exposes ATLAS over the internet via a secure Cloudflare URL. No VPN or port forwarding needed.</p>
+          <div id="tpnl-url-wrap" style="display:none;margin:10px 0">
+            <div id="tpnl-url" style="font-size:.72rem;color:var(--ac);word-break:break-all;font-family:var(--fm);padding:8px;background:rgba(0,0,0,.3);border-radius:4px;cursor:pointer" onclick="tunCopyUrl()" title="Click to copy"></div>
+            <div style="font-size:.6rem;color:var(--txm);margin-top:4px">Click URL to copy · Share with /ui/ appended</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn sec" onclick="tunCopyUrl()" id="tpnl-copy" style="display:none">⎘ COPY URL</button>
+            <button class="btn sec" onclick="tunOpenUrl()" id="tpnl-open" style="display:none">↗ OPEN IN BROWSER</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>HOW TO USE ON COMPANY LAPTOP</h3>
+          <p class="hint" style="line-height:1.9">
+            1. Flip the toggle above to start the tunnel<br>
+            2. Copy the public URL<br>
+            3. On your company laptop: open VS Code<br>
+            4. Press <strong>Ctrl+Shift+P</strong> → type <strong>Simple Browser: Show</strong><br>
+            5. Paste the URL + <code>/ui/</code> → Enter<br>
+            6. ATLAS opens as a panel inside VS Code — no install needed
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="tab-files">
+      <div class="phdr"><h2>FILES</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn sec" onclick="fsLoadDir('')">⌂ ROOT</button>
+          <button class="btn sec" onclick="fsIndexWorkspace()">⚡ INDEX WORKSPACE</button>
+        </div>
+      </div>
+      <div class="pcontent">
+        <!-- Status bar -->
+        <div class="card" id="fs-status-card" style="padding:10px 14px">
+          <div id="fs-status-line" style="font-size:.72rem;color:var(--txm)">Loading workspace info...</div>
+        </div>
+        <!-- Search -->
+        <div class="card">
+          <h3>SEARCH FILES</h3>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="fs-search-q" type="text" placeholder="Search content..." style="flex:1"
+              onkeydown="if(event.key==='Enter') fsSearch()">
+            <button class="btn" onclick="fsSearch()">SEARCH</button>
+          </div>
+          <div id="fs-search-results"></div>
+        </div>
+        <!-- File browser -->
+        <div class="card">
+          <h3>BROWSE — <span id="fs-cur-path" style="color:var(--ac);font-weight:400">/</span></h3>
+          <div id="fs-browser"><span class="empty">Loading...</span></div>
+        </div>
+        <!-- File viewer -->
+        <div class="card" id="fs-viewer-card" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <h3 id="fs-viewer-name" style="margin:0;word-break:break-all"></h3>
+            <button class="btn sec" onclick="fsInjectToChat()" title="Send file to chat">+ CHAT</button>
+          </div>
+          <pre id="fs-viewer-body" style="background:rgba(0,0,0,.3);border-radius:4px;padding:12px;overflow:auto;max-height:340px;font-size:.7rem;line-height:1.6;white-space:pre-wrap;word-break:break-word"></pre>
+          <div id="fs-viewer-info" style="font-size:.6rem;color:var(--txm);margin-top:6px"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel-store -->
+
+  <!-- PANEL MODAL -->
+  <div id="panel-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.68);align-items:flex-start;justify-content:center;padding-top:36px" onclick="_modalBgClick(event)">
+    <div style="background:rgba(14,14,24,.98);border:1px solid var(--br);border-radius:var(--r);width:min(800px,94vw);max-height:84vh;overflow-y:auto;position:relative" id="panel-modal-box">
+      <button onclick="closePanel()" style="position:absolute;top:11px;right:14px;background:none;border:none;color:var(--txm);font-size:1.1rem;cursor:pointer;z-index:1;line-height:1" title="Close">✕</button>
+      <div id="panel-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Setup modal -->
+  <div id="setup-modal" onclick="closeSetupModal()" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.72);align-items:center;justify-content:center">
+    <div onclick="event.stopPropagation()" style="background:rgba(14,14,24,.98);border:1px solid var(--br);border-radius:var(--r);padding:28px 32px;min-width:220px;display:flex;flex-direction:column;gap:10px;position:relative">
+      <button onclick="closeSetupModal()" style="position:absolute;top:10px;right:14px;background:none;border:none;color:var(--txm);font-size:1.1rem;cursor:pointer">✕</button>
+      <div style="font-family:var(--fm);font-size:.65rem;letter-spacing:3px;color:var(--txm);margin-bottom:4px;text-align:center">⚙ SETUP</div>
+      <button class="setup-item" onclick="_setupOpen('persona')">🧬 PERSONA</button>
+      <button class="setup-item" onclick="_setupOpen('agents')">🤖 AGENTS</button>
+      <button class="setup-item" onclick="_setupOpen('training')">📚 TRAINING</button>
+      <button class="setup-item" onclick="_setupOpen('memory')">🧠 MEMORY</button>
+      <button class="setup-item" onclick="_setupOpen('settings')">⚙️ SETTINGS</button>
+      <button class="setup-item" onclick="_setupOpen('logs')">📋 LOGS</button>
+      <button class="setup-item" onclick="_setupOpen('files')">📂 FILES</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+</div><!-- /scene -->
+
+<script>
+let mainOrb;
+
+// ══ CONST ════════════════════════════════════════════════════════════════════
+const BASE = location.origin;
+let apiKey = localStorage.getItem('atlas_key') || '';
+
+// ══ API ══════════════════════════════════════════════════════════════════════
+async function api(method, path, body){
+  const opts = {method, headers:{'X-API-Key':apiKey}};
+  if(body !== undefined){opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body);}
+  const r = await fetch(BASE+path, opts);
+  if(!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+// ══ BOOT ═════════════════════════════════════════════════════════════════════
+async function autoInit(){
+  if(!apiKey){
+    try{
+      const r = await fetch(BASE+'/auth/autokey');
+      if(r.ok){ const d=await r.json(); apiKey=d.api_key; localStorage.setItem('atlas_key',apiKey); }
+    }catch{}
+  }
+  boot();
+}
+
+function boot(){
+  mainOrb = new AtlasFace(document.getElementById('main-orb'), 180);
+  // Also init the big orb canvas in the overlay
+  window._bigOrb = new AtlasFace(document.getElementById('orb-big'), 240);
+  // Restore saved provider preference
+  const _savedProv = localStorage.getItem('atlas_provider');
+  if(_savedProv){
+    let _p = _savedProv, _m = '';
+    if(_savedProv.startsWith('github:')){ _p='github'; _m=_savedProv.slice(7); }
+    api('POST','/brain/set-provider',{provider:_p, model:_m}).catch(()=>{});
+  }
+  checkStatus();
+  ensureSession().then(()=>{ fetchProactiveGreeting(); });
+  loadTraining(); loadTraits(); loadNickname(); loadPersona();
+  loadTrust(); loadSys(); loadTunnelStatus(); loadAgents();
+  _restoreDeepThink();
+  startClock(); renderCalendar(); loadWeather();
+  setInterval(updateSysWidget, 30000); updateSysWidget();
+  setInterval(loadWeather, 600000);
+  loadPHNews(); loadWorldNews(); loadForex(); loadCrypto();
+  setInterval(loadPHNews, 600000); setInterval(loadWorldNews, 600000);
+  setInterval(loadForex, 300000); setInterval(loadCrypto, 120000);
+  pingNet(); setInterval(pingNet, 30000);
+  loadSkyWidget(); setInterval(loadSkyWidget, 600000);
+  loadGithub(); setInterval(loadGithub, 120000);
+  setInterval(updateUptime, 30000); updateUptime();
+  setupDrop();
+}
+
+// ══ NEWS ═════════════════════════════════════════════════════════════════════
+let _phNewsCache=[], _worldNewsCache=[];
+async function _rssLoad(feeds, elId, count, cache){
+  const el=document.getElementById(elId); if(!el) return;
+  for(const url of feeds){
+    try{
+      const r=await api('GET',`/news/feed?url=${encodeURIComponent(url)}&count=12`);
+      if(r.status==='ok'&&r.items?.length){
+        const src=r.source||'';
+        if(cache){ cache.length=0; r.items.forEach(i=>cache.push({src,title:i.title.replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/&quot;/g,'"'),link:i.link,date:i.date})); }
+        el.innerHTML=(cache||r.items).slice(0,count||4).map(i=>`<div class="nh"><div class="nh-src">${esc(i.src||src)}</div><a href="${esc(i.link)}" target="_blank" rel="noopener noreferrer">${esc(i.title)}</a></div>`).join('');
+        return;
+      }
+    }catch{}
+  }
+  el.innerHTML='<span style="font-size:.56rem;color:var(--txm)">Unavailable</span>';
+}
+function loadPHNews(){ return _rssLoad(['https://newsinfo.inquirer.net/feed','https://www.rappler.com/rss/philippines.xml','https://mb.com.ph/feed'],'w-phnews',4,_phNewsCache); }
+function loadWorldNews(){ return _rssLoad(['https://feeds.bbci.co.uk/news/world/rss.xml','https://rss.nytimes.com/services/xml/rss/nyt/World.xml','https://feeds.reuters.com/reuters/worldNews'],'w-worldnews',4,_worldNewsCache); }
+
+// ══ FOREX ════════════════════════════════════════════════════════════════════
+let _forexRates={};
+async function loadForex(){
+  const el=document.getElementById('w-forex'); if(!el) return;
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/USD');
+    const d=await r.json();
+    if(d.result!=='success') throw new Error();
+    _forexRates=d.rates;
+    const rates=_forexRates;
+    const pairs=[{p:'USD/PHP',v:rates.PHP?.toFixed(2)},{p:'EUR/PHP',v:(rates.PHP/rates.EUR)?.toFixed(2)},{p:'GBP/PHP',v:(rates.PHP/rates.GBP)?.toFixed(2)},{p:'USD/JPY',v:rates.JPY?.toFixed(2)}];
+    el.innerHTML=pairs.map(x=>`<div class="fx-row"><span class="fx-pair">${x.p}</span><span class="fx-val">${x.v??'—'}</span></div>`).join('');
+  }catch{el.innerHTML='<span style="font-size:.56rem;color:var(--txm)">Unavailable</span>';}
+}
+
+// ══ CRYPTO ═══════════════════════════════════════════════════════════════════
+let _cryptoCache={};
+async function loadCrypto(){
+  const el=document.getElementById('w-crypto'); if(!el) return;
+  try{
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin,cardano,polkadot&vs_currencies=usd,php&include_24hr_change=true&include_market_cap=true');
+    const d=await r.json();
+    _cryptoCache=d;
+    const coins=[{name:'BTC',id:'bitcoin'},{name:'ETH',id:'ethereum'},{name:'SOL',id:'solana'}];
+    el.innerHTML=coins.map(({name,id})=>{
+      const coin=d[id]; if(!coin) return '';
+      const chg=coin.usd_24h_change;
+      const cls=chg>0?'cr-up':'cr-dn';
+      return `<div class="cr-row"><span class="cr-pair">${name}&nbsp;<span class="${cls}" style="font-size:.46rem">${chg>0?'+':''}${chg?.toFixed(1)}%</span></span><span class="cr-val">$${coin.usd?.toLocaleString()}</span></div>`;
+    }).join('');
+  }catch{el.innerHTML='<span style="font-size:.56rem;color:var(--txm)">Unavailable</span>';}
+}
+
+// ══ CLOCK ════════════════════════════════════════════════════════════════════
+function startClock(){
+  const mo=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  function tick(){
+    const n=new Date();
+    const te=document.getElementById('wclk-t');
+    const de=document.getElementById('wclk-d');
+    if(te) te.textContent=n.toLocaleTimeString('en-US',{hour12:false});
+    if(de) de.textContent=mo[n.getMonth()]+' '+n.getDate()+', '+n.getFullYear();
+    setTimeout(tick,1000);
+  }
+  tick();
+}
+
+// ══ WEATHER ══════════════════════════════════════════════════════════════════
+let _weatherData=null;
+async function loadWeather(){
+  try{
+    const r=await fetch('https://wttr.in/?format=j1');
+    const d=await r.json();
+    _weatherData=d;
+    const c=d.current_condition[0];
+    document.getElementById('wtmp').textContent=c.temp_C+'°C';
+    document.getElementById('wdsc').textContent=c.weatherDesc[0].value.toUpperCase();
+    const area=d.nearest_area[0].areaName[0].value;
+    document.getElementById('wloc').textContent=area.toUpperCase();
+  }catch{document.getElementById('wdsc').textContent='UNAVAILABLE';}
+}
+
+// ══ CALENDAR ═════════════════════════════════════════════════════════════════
+function renderCalendar(){
+  const n=new Date(), y=n.getFullYear(), m=n.getMonth(), td=n.getDate();
+  const mo=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const fd=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate();
+  let h=`<div id="wcal-hdr">${mo[m]} ${y}</div><div class="cgrid">`;
+  ['S','M','T','W','T','F','S'].forEach(d=>h+=`<span class="cdow">${d}</span>`);
+  for(let i=0;i<fd;i++) h+='<span></span>';
+  for(let d=1;d<=dim;d++) h+=`<span class="${d===td?'ctd':'cday'}">${d}</span>`;
+  h+='</div>';
+  document.getElementById('wcal-body').innerHTML=h;
+}
+
+// ══ SYS WIDGET ═══════════════════════════════════════════════════════════════
+let _sysData = null;
+async function updateSysWidget(){
+  if(!apiKey) return;
+  try{
+    const d = await api('GET','/system/info');
+    _sysData = d;
+    const ce=document.getElementById('ws-cpu');
+    const re=document.getElementById('ws-ram');
+    const de=document.getElementById('ws-disk');
+    if(ce) ce.textContent=(d.cpu_percent??'--')+'%';
+    if(re) re.textContent=`${d.ram_used_gb??'--'}/${d.ram_total_gb??'--'}G`;
+    if(de) de.textContent=`${d.disk_used_gb??'--'}G`;
+  }catch{}
+}
+
+// ══ WIDGET EXPAND ════════════════════════════════════════════════════════════
+const _WEX_TITLES={
+  clock:'SYSTEM TIME',weather:'WEATHER REPORT',phnews:'PHILIPPINE NEWS',
+  forex:'FOREX RATES',network:'NETWORK STATUS',system:'SYSTEM STATUS',
+  calendar:'CALENDAR',worldnews:'WORLD NEWS',crypto:'CRYPTOCURRENCY',
+  sky:'SKY & ASTRONOMY',github:'GITHUB ACTIVITY'
+};
+
+function expandWidget(id){
+  const box=document.getElementById('wex');
+  const title=document.getElementById('wex-title');
+  const body=document.getElementById('wex-body');
+  if(!box||!body) return;
+  title.textContent=_WEX_TITLES[id]||id.toUpperCase();
+  body.innerHTML=_renderWEx(id);
+  box.classList.add('open');
+  document.addEventListener('keydown',_wexEsc);
+}
+
+function closeWEx(e){
+  if(e&&e.target!==document.getElementById('wex')&&
+     e.target!==document.getElementById('wex-close')) return;
+  document.getElementById('wex').classList.remove('open');
+  document.removeEventListener('keydown',_wexEsc);
+}
+
+function _wexEsc(e){
+  if(e.key==='Escape'){
+    document.getElementById('wex').classList.remove('open');
+    document.removeEventListener('keydown',_wexEsc);
+  }
+}
+
+function _renderWEx(id){
+  switch(id){
+    case 'clock':    return _wxClock();
+    case 'weather':  return _wxWeather();
+    case 'phnews':   return _wxNews(_phNewsCache,'PH NEWS');
+    case 'worldnews':return _wxNews(_worldNewsCache,'WORLD NEWS');
+    case 'forex':    return _wxForex();
+    case 'crypto':   return _wxCrypto();
+    case 'network':  return _wxNetwork();
+    case 'system':   return _wxSystem();
+    case 'calendar': return _wxCalendar();
+    case 'sky':      return _wxSky();
+    case 'github':   return _wxGithub();
+    case 'tunnel':
+    case 'remote':   return _wxTunnel();
+    default: return '<p style="opacity:.5">No data available.</p>';
+  }
+}
+
+function _wxTunnel(){
+  const status=document.getElementById('tpnl-status');
+  const url=document.getElementById('tpnl-url');
+  const isOnline=status&&status.textContent.includes('ONLINE');
+  const tunnelUrl=url&&url.textContent.trim();
+  return `
+    <div class="xrow"><span class="xk">STATUS</span><span class="xv" style="color:${isOnline?'var(--gn)':'var(--rd)'}">${isOnline?'● ONLINE':'● OFFLINE'}</span></div>
+    ${tunnelUrl?`<div class="xrow"><span class="xk">URL</span><span class="xv" style="font-size:.65rem;color:var(--ac);word-break:break-all;cursor:pointer" onclick="navigator.clipboard.writeText('${tunnelUrl}'">${tunnelUrl}</span></div><div class="xrow"><span class="xk">SHARE AS</span><span class="xv" style="font-size:.62rem;color:var(--txm)">${tunnelUrl}/ui/</span></div>`:''}
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <label class="tgl-wrap" title="Toggle tunnel" style="display:flex;align-items:center;gap:8px;pointer-events:auto">
+        <input type="checkbox" id="wex-tun-toggle" ${isOnline?'checked':''} onchange="toggleTunnel(this.checked)">
+        <span class="tgl-slider"></span>
+        <span style="font-family:var(--fm);font-size:.6rem;letter-spacing:1px;color:var(--txm)">TOGGLE TUNNEL</span>
+      </label>
+    </div>
+    <div class="card" style="margin-top:14px;background:rgba(255,255,255,.02)">
+      <div style="font-family:var(--fm);font-size:.62rem;letter-spacing:1.5px;color:var(--acd);margin-bottom:8px">HOW TO USE ON COMPANY LAPTOP</div>
+      <div style="font-size:.68rem;color:var(--txm);line-height:1.9">
+        1. Flip the toggle above to start the tunnel<br>
+        2. Copy the public URL<br>
+        3. On your company laptop: open VS Code<br>
+        4. Press <strong style="color:var(--txb)">Ctrl+Shift+P</strong> → type <strong style="color:var(--txb)">Simple Browser: Show</strong><br>
+        5. Paste the URL + <code style="color:var(--ac)">/ui/</code> → Enter<br>
+        6. ATLAS opens as a panel inside VS Code — no install needed
+      </div>
+    </div>`;
+}
+
+function _wxClock(){
+  const n=new Date();
+  const opts={weekday:'long',year:'numeric',month:'long',day:'numeric'};
+  const start=new Date(n.getFullYear(),0,0);
+  const doy=Math.floor((n-start)/86400000);
+  const wn=Math.ceil((doy+((new Date(n.getFullYear(),0,1)).getDay()+1))/7);
+  const iso=n.toISOString().replace('T',' ').slice(0,19)+' UTC';
+  return `
+    <div class="xrow"><span class="xk">LOCAL</span><span class="xv">${n.toLocaleTimeString()}</span></div>
+    <div class="xrow"><span class="xk">DATE</span><span class="xv">${n.toLocaleDateString(undefined,opts)}</span></div>
+    <div class="xrow"><span class="xk">ISO (UTC)</span><span class="xv">${iso}</span></div>
+    <div class="xrow"><span class="xk">DAY OF YEAR</span><span class="xv">${doy}</span></div>
+    <div class="xrow"><span class="xk">WEEK NUMBER</span><span class="xv">W${wn}</span></div>
+    <div class="xrow"><span class="xk">TIMEZONE</span><span class="xv">${Intl.DateTimeFormat().resolvedOptions().timeZone}</span></div>
+    <div class="xrow"><span class="xk">UTC OFFSET</span><span class="xv">UTC${n.getTimezoneOffset()<=0?'+':''}${-n.getTimezoneOffset()/60}</span></div>
+    <div class="xrow"><span class="xk">UNIX EPOCH</span><span class="xv">${Math.floor(n/1000)}</span></div>`;
+}
+
+function _wxWeather(){
+  if(!_weatherData) return '<p style="opacity:.5">Weather data not loaded yet.</p>';
+  try{
+    const c=_weatherData.current_condition?.[0]||{};
+    const area=_weatherData.nearest_area?.[0];
+    const loc=area?`${area.areaName?.[0]?.value||''}, ${area.country?.[0]?.value||''}`:'—';
+    const feels=c.FeelsLikeC;
+    const wx=c.weatherDesc?.[0]?.value||'—';
+    const days=(_weatherData.weather||[]).map(d=>{
+      const desc=d.hourly?.[4]?.weatherDesc?.[0]?.value||'—';
+      const mn=d.mintempC, mx=d.maxtempC;
+      const rain=d.hourly?.[4]?.chanceofrain||'0';
+      const date=new Date(d.date);
+      const label=date.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+      return `<div class="xrow"><span class="xk">${label}</span><span class="xv">${mn}°–${mx}°C · ${desc} · 💧${rain}%</span></div>`;
+    }).join('');
+    return `
+      <div class="xrow"><span class="xk">LOCATION</span><span class="xv">${loc}</span></div>
+      <div class="xrow"><span class="xk">CONDITION</span><span class="xv">${wx}</span></div>
+      <div class="xrow"><span class="xk">TEMP</span><span class="xv">${c.temp_C}°C (feels ${feels}°C)</span></div>
+      <div class="xrow"><span class="xk">HUMIDITY</span><span class="xv">${c.humidity}%</span></div>
+      <div class="xrow"><span class="xk">WIND</span><span class="xv">${c.windspeedKmph} km/h ${c.winddir16Point}</span></div>
+      <div class="xrow"><span class="xk">VISIBILITY</span><span class="xv">${c.visibility} km</span></div>
+      <div class="xrow"><span class="xk">UV INDEX</span><span class="xv">${c.uvIndex}</span></div>
+      <div class="xsec">3-DAY FORECAST</div>
+      ${days}`;
+  }catch{ return '<p style="opacity:.5">Failed to parse weather data.</p>'; }
+}
+
+function _wxNews(cache, label){
+  if(!cache||!cache.length) return `<p style="opacity:.5">${label} not loaded yet.</p>`;
+  return cache.map(it=>`
+    <div class="xnh" onclick="window.open('${esc(it.link||'')}','_blank')" style="cursor:pointer">
+      <a class="xnh-headline" href="${esc(it.link||'')}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${esc(it.title||'—')}</a>
+      <div class="xnh-src">${esc(it.src||'')} · ${esc(it.date||'')}</div>
+    </div>`).join('');
+}
+
+function _wxForex(){
+  const pairs=[
+    ['USD/PHP','PHP'],['EUR/PHP',null],['GBP/PHP',null],['JPY/PHP',null],
+    ['SGD/PHP',null],['AUD/PHP',null],['CNY/PHP',null],
+    ['USD/EUR',null],['USD/JPY',null],['USD/SGD',null]
+  ];
+  if(!_forexRates||!Object.keys(_forexRates).length)
+    return '<p style="opacity:.5">Forex data not loaded yet.</p>';
+  const rows=pairs.map(([label,direct])=>{
+    const [from,to]=label.split('/');
+    let rate;
+    if(direct){
+      rate=_forexRates[to];
+    } else {
+      const fromRate=_forexRates[from];
+      const toRate=_forexRates[to];
+      if(fromRate&&toRate) rate=(toRate/fromRate).toFixed(4);
+      else if(from==='USD') rate=_forexRates[to];
+    }
+    if(!rate) return '';
+    const r=parseFloat(rate);
+    return `<div class="xrow"><span class="xk">${label}</span><span class="xv">${isNaN(r)?rate:r.toFixed(4)}</span></div>`;
+  }).join('');
+  return rows||'<p style="opacity:.5">No rates available.</p>';
+}
+
+function _wxCrypto(){
+  if(!_cryptoCache||!Object.keys(_cryptoCache).length)
+    return '<p style="opacity:.5">Crypto data not loaded yet.</p>';
+  return Object.entries(_cryptoCache).map(([sym,d])=>{
+    const chg=parseFloat(d.change24h);
+    const chgStr=(chg>=0?'+':'')+chg.toFixed(2)+'%';
+    const chgColor=chg>=0?'var(--gn)':'var(--rd)';
+    return `
+      <div class="xrow" style="align-items:flex-start">
+        <span class="xk">${sym}</span>
+        <span class="xv" style="text-align:right">
+          $${parseFloat(d.usd).toLocaleString(undefined,{maximumFractionDigits:2})}<br>
+          <small style="opacity:.7">₱${parseFloat(d.php||0).toLocaleString(undefined,{maximumFractionDigits:2})}</small><br>
+          <small style="color:${chgColor}">${chgStr} 24h</small>
+        </span>
+      </div>`;
+  }).join('');
+}
+
+function _wxNetwork(){
+  const online=_pingHistory.length&&_pingHistory[_pingHistory.length-1].ok;
+  const latest=_pingHistory[_pingHistory.length-1];
+  const avg=_pingHistory.filter(p=>p.ok).reduce((a,p)=>a+p.ms,0)/(_pingHistory.filter(p=>p.ok).length||1);
+  const best=Math.min(..._pingHistory.filter(p=>p.ok).map(p=>p.ms));
+  const worst=Math.max(..._pingHistory.filter(p=>p.ok).map(p=>p.ms));
+  const bars=_pingHistory.slice(-15).map(p=>{
+    const h=p.ok?Math.min(100,Math.round(p.ms/3)):0;
+    const c=!p.ok?'var(--rd)':p.ms<80?'var(--gn)':p.ms<200?'var(--txb)':'var(--rd)';
+    return `<div style="width:12px;height:${Math.max(4,h)}px;background:${c};border-radius:2px;align-self:flex-end" title="${p.ok?p.ms+'ms':'offline'}"></div>`;
+  }).join('');
+  return `
+    <div class="xrow"><span class="xk">STATUS</span><span class="xv" style="color:${online?'var(--gn)':'var(--rd)'}">${online?'● ONLINE':'● OFFLINE'}</span></div>
+    ${latest&&latest.ok?`<div class="xrow"><span class="xk">LAST PING</span><span class="xv">${latest.ms}ms</span></div>`:''}
+    ${_pingHistory.filter(p=>p.ok).length?`
+    <div class="xrow"><span class="xk">AVG PING</span><span class="xv">${Math.round(avg)}ms</span></div>
+    <div class="xrow"><span class="xk">BEST / WORST</span><span class="xv">${best}ms / ${worst}ms</span></div>`:''}
+    <div style="font-size:10px;opacity:.5;margin:10px 0 4px">PING HISTORY (last ${_pingHistory.slice(-15).length} readings)</div>
+    <div style="display:flex;gap:3px;align-items:flex-end;height:60px;padding:4px;background:rgba(255,255,255,.03);border-radius:4px">${bars}</div>`;
+}
+
+function _wxSystem(){
+  if(!_sysData) return '<p style="opacity:.5">System data not loaded yet.</p>';
+  const d=_sysData;
+  const cpuPct=d.cpu_percent||0;
+  const ramPct=d.ram_total_gb?Math.round((d.ram_used_gb/d.ram_total_gb)*100):0;
+  const diskPct=d.disk_total_gb?Math.round((d.disk_used_gb/d.disk_total_gb)*100):0;
+  const bar=(p,c)=>`<div class="xbar"><div class="xfill" style="width:${p}%;background:${c}"></div></div>`;
+  const c1=cpuPct>80?'var(--rd)':cpuPct>50?'#f5a623':'var(--gn)';
+  const c2=ramPct>80?'var(--rd)':ramPct>50?'#f5a623':'var(--gn)';
+  const c3=diskPct>80?'var(--rd)':diskPct>50?'#f5a623':'var(--gn)';
+  return `
+    <div class="xrow"><span class="xk">PLATFORM</span><span class="xv">${d.platform||'—'}</span></div>
+    <div class="xrow"><span class="xk">PYTHON</span><span class="xv">${d.python_version||'—'}</span></div>
+    <div class="xsec">RESOURCES</div>
+    <div class="xrow"><span class="xk">CPU</span><span class="xv">${cpuPct}%</span></div>
+    ${bar(cpuPct,c1)}
+    <div class="xrow" style="margin-top:8px"><span class="xk">RAM</span><span class="xv">${d.ram_used_gb}/${d.ram_total_gb} GB (${ramPct}%)</span></div>
+    ${bar(ramPct,c2)}
+    <div class="xrow" style="margin-top:8px"><span class="xk">DISK</span><span class="xv">${d.disk_used_gb}/${d.disk_total_gb} GB (${diskPct}%)</span></div>
+    ${bar(diskPct,c3)}
+    ${d.uptime_seconds!=null?`
+    <div class="xsec">UPTIME</div>
+    <div class="xrow"><span class="xk">SERVER UP</span><span class="xv">${(()=>{const s=d.uptime_seconds;const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h>0?h+'h '+m+'m':m+'m';})()}</span></div>`:''}`;
+}
+
+function _wxCalendar(){
+  const n=new Date(), y=n.getFullYear(), mo=n.getMonth();
+  const mNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const first=new Date(y,mo,1).getDay();
+  const days=new Date(y,mo+1,0).getDate();
+  const today=n.getDate();
+  let cells='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center">';
+  ['SU','MO','TU','WE','TH','FR','SA'].forEach(d=>{ cells+=`<div style="font-size:10px;opacity:.4;padding:2px">${d}</div>`; });
+  for(let i=0;i<first;i++) cells+='<div></div>';
+  for(let d=1;d<=days;d++){
+    const isToday=d===today;
+    cells+=`<div style="padding:4px 2px;border-radius:4px;font-size:12px;${isToday?'background:var(--ac);color:#000;font-weight:700':'opacity:.7'}">${d}</div>`;
+  }
+  cells+='</div>';
+  return `<div style="font-size:13px;font-weight:700;text-align:center;margin-bottom:12px;color:var(--ac)">${mNames[mo].toUpperCase()} ${y}</div>${cells}`;
+}
+
+function _wxSky(){
+  if(!_weatherData) return '<p style="opacity:.5">Sky data not loaded yet.</p>';
+  try{
+    const n=new Date();
+    const {icon:mIcon,name:mName}=moonPhase(n);
+    const weather=_weatherData.weather||[];
+    const today=weather[0]||{};
+    const h=today.hourly||[];
+    const sunrise=today.astronomy?.[0]?.sunrise||'—';
+    const sunset=today.astronomy?.[0]?.sunset||'—';
+    const uv=h[4]?.uvIndex||'—';
+    const area=_weatherData.nearest_area?.[0];
+    const loc=area?`${area.areaName?.[0]?.value||''}, ${area.country?.[0]?.value||''}`:'—';
+    const forecast=weather.map(d=>{
+      const astr=d.astronomy?.[0]||{};
+      const date=new Date(d.date);
+      const label=date.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+      return `<div class="xrow"><span class="xk">${label}</span><span class="xv">🌅${astr.sunrise||'—'} 🌇${astr.sunset||'—'}</span></div>`;
+    }).join('');
+    return `
+      <div class="xrow"><span class="xk">LOCATION</span><span class="xv">${loc}</span></div>
+      <div class="xrow"><span class="xk">MOON PHASE</span><span class="xv">${mIcon} ${mName}</span></div>
+      <div class="xrow"><span class="xk">SUNRISE</span><span class="xv">${sunrise}</span></div>
+      <div class="xrow"><span class="xk">SUNSET</span><span class="xv">${sunset}</span></div>
+      <div class="xrow"><span class="xk">UV INDEX</span><span class="xv">${uv}</span></div>
+      <div class="xsec">3-DAY SUNRISE / SUNSET</div>
+      ${forecast}`;
+  }catch{ return '<p style="opacity:.5">Failed to parse sky data.</p>'; }
+}
+
+function _wxGithub(){
+  const user=document.getElementById('w-gh-user')?.value?.trim()||localStorage.getItem('atlas_gh_user')||'';
+  const events=Array.from(document.querySelectorAll('#w-gh-feed .gh-ev'));
+  if(!user&&!events.length) return '<p style="opacity:.5">Enter a GitHub username to load activity.</p>';
+  const link=user?`<div style="margin-bottom:10px"><a href="https://github.com/${user}" target="_blank" rel="noopener noreferrer" style="color:var(--ac);text-decoration:none">github.com/${user} ↗</a></div>`:'';
+  const rows=events.map(el=>`<div class="xnh"><div class="xnh-title">${el.textContent}</div></div>`).join('')
+    ||'<p style="opacity:.5">No recent events.</p>';
+  return link+rows;
+}
+
+// ══ ORB STATE ════════════════════════════════════════════════════════════════
+function setOrb(s){
+  if(mainOrb) mainOrb.setState(s);
+  if(window._bigOrb) window._bigOrb.setState(s);
+  const canvas=document.getElementById('main-orb');
+  if(canvas) canvas.className = s==='idle' ? '' : s;
+  const el=document.getElementById('nstate');
+  const bigEl=document.getElementById('orb-big-state');
+  const label = s==='thinking'?'PROCESSING...':s==='speaking'?'RESPONDING...':'STANDBY';
+  if(el){ el.textContent=label; el.className='nstate'+(s!=='idle'?' on':''); }
+  if(bigEl) bigEl.textContent=label;
+}
+
+// ══ ORB EXPAND / COLLAPSE ═════════════════════════════════════════════════════
+function openOrbExpanded(){
+  const ov=document.getElementById('orb-overlay');
+  ov.style.display='flex';
+  requestAnimationFrame(()=>{ ov.classList.add('open'); setTimeout(()=>ov.classList.add('visible'),10); });
+  document.getElementById('col-atlas').classList.add('orb-hidden');
+  document.getElementById('col-chat').classList.add('orb-blur');
+  syncOrbOverlayBadge();
+}
+function closeOrbExpanded(){
+  const ov=document.getElementById('orb-overlay');
+  ov.classList.remove('visible');
+  setTimeout(()=>{ ov.classList.remove('open'); ov.style.display='none'; }, 350);
+  document.getElementById('col-atlas').classList.remove('orb-hidden');
+  document.getElementById('col-chat').classList.remove('orb-blur');
+}
+function handleOverlayClick(e){
+  if(e.target===document.getElementById('orb-overlay')) closeOrbExpanded();
+}
+function syncOrbOverlayBadge(){
+  const src=document.getElementById('sbadge');
+  const dst=document.getElementById('orb-big-badge');
+  if(src&&dst) dst.textContent=src.textContent;
+  // Sync tile quick-values
+  const clk=document.getElementById('wclk-t');
+  if(clk) { const t=document.getElementById('tile-clock'); if(t) t.textContent=clk.textContent.slice(0,5); }
+  const tmp=document.getElementById('wtmp');
+  if(tmp) { const t=document.getElementById('tile-weather'); if(t) t.textContent=tmp.textContent; }
+  const cpu=document.getElementById('ws-cpu');
+  if(cpu) { const t=document.getElementById('tile-system'); if(t) t.textContent='CPU '+cpu.textContent; }
+  const ping=document.getElementById('w-net-ping');
+  if(ping) { const t=document.getElementById('tile-network'); if(t) t.textContent=ping.textContent+'ms'; }
+  const sky=document.getElementById('w-moon');
+  if(sky) { const t=document.getElementById('tile-sky'); if(t) t.textContent=sky.textContent||'--'; }
+  const tun=document.getElementById('w-tun-lbl');
+  if(tun) { const t=document.getElementById('tile-tunnel'); if(t) t.textContent=tun.textContent; }
+}
+function overlayExpandWidget(name){
+  expandWidget(name);
+}
+
+// ══ STATUS ═══════════════════════════════════════════════════════════════════
+async function checkStatus(){
+  const b=document.getElementById('sbadge');
+  if(!b) return;
+  try{
+    const d=await api('GET','/brain/status');
+    if(d.backend==='github'){
+      const mdl = d.cloud_model||'';
+      b.textContent=`● ${mdl}`.trim();
+      b.className='github';
+    } else {
+      b.textContent=`● LOCAL · ${d.local_model||'atlas'}`;
+      b.className='local';
+    }
+    // sync model dropdown with backend state
+    const sel=document.getElementById('model-select');
+    if(sel){
+      const targetVal = d.provider_override==='local' ? 'local'
+        : d.provider_override==='github' && d.cloud_model ? `github:${d.cloud_model}`
+        : d.provider_override||'auto';
+      if([...sel.options].some(o=>o.value===targetVal)) sel.value=targetVal;
+    }
+  }catch{ b.textContent='● OFFLINE'; b.className='err'; }
+  const bigB=document.getElementById('orb-big-badge');
+  if(bigB) bigB.textContent=b.textContent;
+}
+async function setProvider(val){
+  try{
+    let provider = val;
+    let model = '';
+    if(val.startsWith('github:')){
+      provider = 'github';
+      model = val.slice(7);
+    }
+    await api('POST','/brain/set-provider',{provider, model});
+    await checkStatus();
+    localStorage.setItem('atlas_provider',val);
+  }catch(e){ console.error('setProvider failed',e); }
+}
+
+let _deepThinkOn = localStorage.getItem('atlas_deepthink') === '1';
+async function toggleDeepThink(){
+  _deepThinkOn = !_deepThinkOn;
+  const btn = document.getElementById('deep-think-btn');
+  if(btn) btn.classList.toggle('active', _deepThinkOn);
+  localStorage.setItem('atlas_deepthink', _deepThinkOn ? '1' : '0');
+  try{ await api('POST','/brain/deep-think',{enabled:_deepThinkOn}); }
+  catch(e){ console.error('deep-think toggle failed',e); }
+}
+function _restoreDeepThink(){
+  const btn = document.getElementById('deep-think-btn');
+  if(btn && _deepThinkOn){ btn.classList.add('active'); api('POST','/brain/deep-think',{enabled:true}).catch(()=>{}); }
+}
+
+function openSetupModal(){
+  document.getElementById('setup-modal').style.display='flex';
+}
+function closeSetupModal(){
+  document.getElementById('setup-modal').style.display='none';
+}
+function _setupOpen(name){
+  closeSetupModal();
+  closeOrbExpanded();
+  openPanel(name);
+}
+
+// ══ SESSION ══════════════════════════════════════════════════════════════════
+let _sid = localStorage.getItem('atlas_sid') || '';
+async function ensureSession(){
+  if(!_sid){ try{ const d=await api('POST','/session/new',{}); _sid=d.session_id; localStorage.setItem('atlas_sid',_sid); }catch{} }
+}
+async function newChat(){
+  if(_sid){ try{ await api('POST','/session/clear',{session_id:_sid}); }catch{} }
+  _sid=''; localStorage.removeItem('atlas_sid');
+  document.getElementById('messages').innerHTML='';
+  await ensureSession(); fetchProactiveGreeting();
+}
+
+// ══ TOAST ════════════════════════════════════════════════════════════════════
+function toast(msg, isErr){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className = isErr ? 'toast err' : 'toast';
+  t.style.opacity='1';
+  if(isErr) logFrontendError(msg);
+  setTimeout(()=>t.style.opacity='0', 3000);
+}
+
+// ══ LOGS ═════════════════════════════════════════════════════════════════════
+const _feErrors=[];
+function logFrontendError(msg){
+  _feErrors.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+  const card=document.getElementById('fe-errors-card');
+  if(card) card.style.display='';
+}
+function clearFrontendErrors(){
+  _feErrors.length=0;
+  const el=document.getElementById('fe-errors');
+  const card=document.getElementById('fe-errors-card');
+  if(el) el.innerHTML='';
+  if(card) card.style.display='none';
+}
+window.addEventListener('error',e=>logFrontendError(`${e.message} (${e.filename}:${e.lineno})`));
+window.addEventListener('unhandledrejection',e=>logFrontendError(`Unhandled: ${e.reason}`));
+
+async function loadLogs(){
+  const feEl=document.getElementById('fe-errors');
+  if(feEl) feEl.innerHTML=_feErrors.length
+    ? _feErrors.slice().reverse().map(l=>`<div>${esc(l)}</div>`).join('')
+    : '<span style="opacity:.4">No frontend errors.</span>';
+  const el=document.getElementById('audit-log');
+  if(!el) return;
+  try{
+    const d=await api('GET','/logs?limit=300');
+    const lines=d.logs||[];
+    if(!lines.length){ el.innerHTML='<span style="opacity:.4">No entries yet.</span>'; return; }
+    el.innerHTML=lines.slice().reverse().map(l=>{
+      const isErr=l.includes('_error');
+      return `<div style="color:${isErr?'#ff8080':'var(--txm)'};border-bottom:1px solid rgba(255,255,255,.04);padding:2px 0">${esc(l)}</div>`;
+    }).join('');
+  }catch(e){ el.innerHTML=`<span style="color:var(--rd)">Failed: ${esc(e.message)}</span>`; }
+}
+
+// ══ PANEL MODAL ═══════════════════════════════════════════════════════════════
+let _activePanel=null;
+const _panelHome={};
+function openPanel(name){
+  if(name==='chat') return;
+  const panelEl=document.getElementById('tab-'+name);
+  if(!panelEl) return;
+  const body=document.getElementById('panel-modal-body');
+  if(!_panelHome[name]) _panelHome[name]=panelEl.parentElement;
+  body.innerHTML=''; body.appendChild(panelEl);
+  panelEl.classList.add('active');
+  document.getElementById('panel-modal').style.display='flex';
+  _activePanel=name;
+  if(name==='settings') loadSys();
+  if(name==='agents') loadAgents();
+  if(name==='logs') loadLogs();
+  if(name==='memory') loadMemory();
+  if(name==='files') fsBoot();
+  if(name==='tunnel') _tunSyncPanel();
+  if(name==='build') loadProjects();
+}
+function closePanel(){
+  if(!_activePanel) return;
+  const panelEl=document.getElementById('tab-'+_activePanel);
+  const home=_panelHome[_activePanel];
+  if(panelEl&&home){ panelEl.classList.remove('active'); home.appendChild(panelEl); }
+  document.getElementById('panel-modal').style.display='none';
+  document.getElementById('panel-modal-body').innerHTML='';
+  _activePanel=null;
+}
+function _modalBgClick(e){
+  if(e.target===document.getElementById('panel-modal')) closePanel();
+}
+function switchTab(name){ openPanel(name); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closePanel(); closeSetupModal(); } });
+
+// ══ FILE BROWSER ═════════════════════════════════════════════════════════════
+let _fsCwd='', _fsOpenFile=null;
+
+async function fsBoot(){
+  const info = await api('GET','/fs/info').catch(()=>({}));
+  const el = document.getElementById('fs-status-line');
+  if(el) el.innerHTML = `<span style="color:var(--ac)">Workspace:</span> ${info.workspace||'?'} &nbsp;·&nbsp; `+
+    `<span style="color:var(--ac)">Indexed:</span> ${info.indexed_files||0} files &nbsp;·&nbsp; `+
+    `<span style="color:var(--ac)">Write:</span> ${info.write_enabled?'<span style="color:#4f8">ON</span>':'<span style="color:#f84">OFF</span>'}`;
+  await fsLoadDir(_fsCwd||'');
+}
+
+async function fsLoadDir(rel){
+  _fsCwd=rel;
+  const cpEl=document.getElementById('fs-cur-path');
+  if(cpEl) cpEl.textContent='/'+rel;
+  const browser=document.getElementById('fs-browser');
+  if(!browser) return;
+  browser.innerHTML='<span class="empty">Loading...</span>';
+  const d=await api('GET',`/fs/list?path=${encodeURIComponent(rel)}`).catch(e=>({error:String(e)}));
+  if(d.error){ browser.innerHTML=`<span style="color:#f66">${d.error}</span>`; return; }
+  let html='';
+  if(rel) html+=`<div onclick="fsLoadDir('${parentPath(rel)}')" class="fs-row fs-back">⬆ ..</div>`;
+  (d.dirs||[]).forEach(dir=>{
+    html+=`<div class="fs-row" onclick="fsLoadDir('${dir.path}')">📁 <span>${dir.name}/</span></div>`;
+  });
+  (d.files||[]).forEach(f=>{
+    const kb=(f.size/1024).toFixed(1);
+    html+=`<div class="fs-row" onclick="fsOpenFile('${f.path}','${esc(f.name)}')">📄 <span style="flex:1">${f.name}</span><span class="fs-sz">${kb} kb</span></div>`;
+  });
+  if(!d.dirs?.length&&!d.files?.length) html='<span class="empty">Empty directory</span>';
+  browser.innerHTML=html;
+}
+
+function parentPath(p){ return p.includes('/')?p.split('/').slice(0,-1).join(''):'';}
+
+async function fsOpenFile(path,name){
+  const card=document.getElementById('fs-viewer-card');
+  const title=document.getElementById('fs-viewer-name');
+  const body=document.getElementById('fs-viewer-body');
+  const info=document.getElementById('fs-viewer-info');
+  if(!card) return;
+  _fsOpenFile={path,name};
+  title.textContent=path; body.textContent='Loading…'; info.textContent='';
+  card.style.display='block';
+  const d=await api('GET',`/fs/read?path=${encodeURIComponent(path)}`).catch(e=>({error:String(e)}));
+  if(d.error){ body.textContent='Error: '+d.error; return; }
+  body.textContent=d.content||'(empty)';
+  info.textContent=`${d.lines} lines · ${(d.size/1024).toFixed(1)} kb${d.truncated?' · TRUNCATED':''}`;
+}
+
+async function fsSearch(){
+  const q=document.getElementById('fs-search-q')?.value?.trim();
+  if(!q) return;
+  const res=document.getElementById('fs-search-results');
+  if(!res) return;
+  res.innerHTML='<span class="empty">Searching…</span>';
+  const d=await api('GET',`/fs/search?q=${encodeURIComponent(q)}&path=${encodeURIComponent(_fsCwd)}&max=30`).catch(e=>({error:String(e)}));
+  if(d.error){ res.innerHTML=`<span style="color:#f66">${d.error}</span>`; return; }
+  if(!d.results?.length){ res.innerHTML='<span class="empty">No results</span>'; return; }
+  res.innerHTML=d.results.map(r=>`
+    <div class="fs-row" style="flex-direction:column;align-items:flex-start;gap:2px" onclick="fsOpenFile('${r.path}','${r.path.split('/').pop()}')">
+      <span style="color:var(--ac);font-size:.6rem">${r.path} <span style="color:var(--txm)">:${r.line}</span></span>
+      <span style="font-family:var(--fm);font-size:.65rem;color:var(--txb)">${esc(r.snippet)}</span>
+    </div>`).join('');
+}
+
+async function fsIndexWorkspace(){
+  toast('Indexing workspace… this may take a while ⚡');
+  const d=await api('POST','/fs/index?path=&force=false').catch(e=>({error:String(e)}));
+  if(d.error) toast('Index error: '+d.error);
+  else toast(`Indexed ${d.indexed||0} files (${d.skipped||0} skipped, ${d.errors||0} errors)`);
+  const el=document.getElementById('fs-status-line');
+  if(el){ const info=await api('GET','/fs/info').catch(()=>({}));
+    el.innerHTML=`<span style="color:var(--ac)">Workspace:</span> ${info.workspace||'?'} &nbsp;·&nbsp; `+
+      `<span style="color:var(--ac)">Indexed:</span> ${info.indexed_files||0} files &nbsp;·&nbsp; `+
+      `<span style="color:var(--ac)">Write:</span> ${info.write_enabled?'<span style="color:#4f8">ON</span>':'<span style="color:#f84">OFF</span>'}`; }
+}
+
+function fsInjectToChat(){
+  if(!_fsOpenFile) return;
+  const body=document.getElementById('fs-viewer-body')?.textContent||'';
+  const inp=document.getElementById('msg-in');
+  if(!inp) return;
+  inp.value+=`\n\`\`\`\n// ${_fsOpenFile.path}\n${body.slice(0,8000)}\n\`\`\`\n`;
+  closePanel(); inp.focus();
+}
+
+// ══ MARKDOWN ═════════════════════════════════════════════════════════════════
+marked.setOptions({breaks:true,gfm:true});
+const _rnd=new marked.Renderer();
+_rnd.code=function(code,lang){
+  const l=lang||'';
+  const hi=hljs.getLanguage(l)?hljs.highlight(code,{language:l}).value:esc(code);
+  return `<div class="cblk">${l?`<span class="llbl">${l}</span>`:''}<pre><code class="hljs language-${l}">${hi}</code></pre><button class="cpybtn" onclick="cpyCode(this)">Copy</button></div>`;
+};
+_rnd.link=function(href,title,text){ return `<a href="${href}" target="_blank" rel="noopener noreferrer"${title?` title="${title}"`:''}>${text}</a>`; };
+marked.use({renderer:_rnd});
+function renderMd(text){
+  // Convert [IMAGE_URL] markers to inline images before markdown parsing
+  text = text.replace(/\[IMAGE_URL\]\s*(https?:\/\/\S+)/g, (_, url) =>
+    `\n\n<div class="gen-img-wrap"><img class="gen-img" src="${url}" alt="Generated image" loading="lazy" onclick="window.open('${url}','_blank')"><div class="gen-img-lbl">🖼️ Generated — click to open full size</div></div>\n\n`
+  );
+  return marked.parse(text);
+}
+function cpyCode(btn){ const c=btn.previousElementSibling.querySelector('code').innerText; navigator.clipboard.writeText(c).then(()=>{ btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy',1800); }); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ══ MESSAGES ══════════════════════════════════════════════════════════════════
+function appendMsg(role, text, isHtml=false){
+  const msgs=document.getElementById('messages');
+  const d=document.createElement('div'); d.className='msg '+role;
+  const cont=role==='atlas'?renderMd(text):isHtml?text:esc(text);
+  d.innerHTML=`<div class="lbl">${role==='user'?'YOU':'ATLAS'}</div><div class="bubble">${cont}</div>`;
+  msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight;
+  return d.querySelector('.bubble');
+}
+function appendMsgDiv(role){
+  const msgs=document.getElementById('messages');
+  const d=document.createElement('div'); d.className='msg '+role;
+  if(role==='atlas'){
+    d.innerHTML=`<div class="lbl">ATLAS</div><div class="bubble"></div><button class="copy-resp" onclick="copyResp(this)" title="Copy">⎘</button>`;
+  } else {
+    d.innerHTML=`<div class="lbl">YOU</div><div class="bubble"></div>`;
+  }
+  msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight;
+  return d;
+}
+
+// ══ CHAT INPUT ════════════════════════════════════════════════════════════════
+const ta=document.getElementById('msg-in');
+ta.addEventListener('input',()=>{ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,118)+'px'; });
+ta.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMsg(); } });
+
+// ══ SEND ══════════════════════════════════════════════════════════════════════
+async function sendMsg(){
+  const btn=document.getElementById('sendbtn');
+  const raw=ta.value.trim();
+  if(!raw&&!_file) return;
+  if(btn.disabled) return;
+  await ensureSession();
+  let disp=raw, prompt=raw;
+  let _imgB64='', _imgMime='';
+  if(_file){
+    const note=raw||(_file.isImage?'Describe this image.':'Analyze this file.');
+    if(_file.isImage){
+      // Extract base64 payload and mime type — send separately for vision API
+      const match=_file.content.match(/^data:([^;]+);base64,(.+)$/);
+      if(match){ _imgMime=match[1]; _imgB64=match[2]; }
+      prompt=note;
+      disp=`<img src="${_file.content}" style="max-width:220px;max-height:160px;border-radius:6px;display:block;margin-bottom:6px">\n${note}`;
+    }else{
+      prompt=`[File: ${_file.name}]\n\`\`\`\n${_file.content.slice(0,15000)}\n\`\`\`\n\n${note}`;
+      disp=`📎 ${_file.name}\n\n${note}`;
+    }
+    clearFile();
+  }
+  ta.value=''; ta.style.height='auto'; btn.disabled=true;
+  appendMsg('user', disp, /*isHtml=*/!!_imgB64);
+  const msgDiv=appendMsgDiv('atlas');
+  const bubble=msgDiv.querySelector('.bubble');
+  setOrb('thinking');
+  bubble.classList.add('dim');
+  bubble.innerHTML='<div class="typing-dots"><span></span><span></span><span></span></div>';
+  document.getElementById('messages').scrollTop=99999;
+
+  let rawText='';
+  try{
+    const resp=await fetch('/ask/stream',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-API-Key':apiKey},
+      body:JSON.stringify({prompt,session_id:_sid,image_b64:_imgB64,image_mime:_imgMime})
+    });
+    if(!resp.ok) throw new Error(resp.status);
+    const reader=resp.body.getReader(), dec=new TextDecoder();
+    let buf='', first=true;
+    while(true){
+      const{done,value}=await reader.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n'); buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data: ')) continue;
+        const ev=JSON.parse(line.slice(6));
+        if(ev.type==='session'&&ev.session_id!==_sid){ _sid=ev.session_id; localStorage.setItem('atlas_sid',_sid); }
+        else if(ev.type==='backend'){ checkStatus(); }
+        else if(ev.type==='thinking'){
+          // Just show 3-dot animation while thinking (discarded after response starts)
+          if(!bubble._thinkEl){
+            bubble._thinkEl=document.createElement('div');
+            bubble._thinkEl.className='typing-dots-inline';
+            bubble._thinkEl.innerHTML='<span></span><span></span><span></span>';
+            bubble.innerHTML='';
+            bubble.appendChild(bubble._thinkEl);
+            bubble.classList.remove('dim');
+          }
+        }
+        else if(ev.type==='token'){
+          if(first){ first=false; setOrb('speaking'); }
+          // Close the thinking block when real response starts
+          if(bubble._thinkEl && !bubble._thinkDone){
+            bubble._thinkDone=true;
+            // Remove cursor/placeholder, keep think block, append response after it
+            bubble._responseEl=document.createElement('div');
+            bubble.appendChild(bubble._responseEl);
+          }
+          rawText+=ev.text; bubble.classList.remove('dim');
+          const target=bubble._responseEl||bubble;
+          target.innerHTML=renderMd(rawText)+'<span class="cur">▋</span>';
+          document.getElementById('messages').scrollTop=99999;
+        }
+        else if(ev.type==='tool_call'){
+          const argsStr=JSON.stringify(ev.args||{}).slice(0,80);
+          const pill=document.createElement('div');
+          pill.className='tool-call'; pill.dataset.tool=ev.tool;
+          const icons={web_search:'🔍',web_fetch:'🌐',run_code:'⚙️',remember:'💾',recall:'🧠'};
+          pill.innerHTML=`<span>${icons[ev.tool]||'🛠️'}</span><span style="font-weight:600">${esc(ev.tool)}</span><span class="tc-args">${esc(argsStr)}</span><span>⏳</span>`;
+          bubble.appendChild(pill); bubble.classList.remove('dim');
+          document.getElementById('messages').scrollTop=99999;
+          rawText='';
+        }
+        else if(ev.type==='tool_result'){
+          const pill=[...bubble.querySelectorAll('.tool-call')].reverse().find(p=>p.dataset.tool===ev.tool);
+          if(pill){ const sp=pill.querySelector('span:last-child'); if(sp) sp.textContent='✅'; }
+          const res=document.createElement('details');
+          res.className='tool-result';
+          res.innerHTML=`<summary>${esc(ev.tool)} result</summary>${esc(ev.result||'')}`;
+          bubble.appendChild(res);
+          document.getElementById('messages').scrollTop=99999;
+        }
+        else if(ev.type==='error'){ rawText='⚠ '+ev.text; }
+      }
+    }
+  }catch(e){
+    rawText=e.message==='403'?'⚠ Invalid API key.':'⚠ Error reaching ATLAS.';
+  }
+  bubble.classList.remove('dim');
+  const openMatch=rawText.match(/\[OPEN:(\w+)\]/i);
+  if(openMatch){
+    rawText=rawText.replace(/\[OPEN:\w+\]/gi,'').trim();
+    setTimeout(()=>openPanel(openMatch[1].toLowerCase()),300);
+  }
+  // Render final response in correct target node
+  if(bubble._thinkEl && !bubble._thinkDone && rawText){
+    // Only thinking came through without a 'token' event (edge case)
+    bubble._responseEl=document.createElement('div');
+    bubble.appendChild(bubble._responseEl);
+  }
+  (bubble._responseEl||bubble).innerHTML=renderMd(rawText||'(no response)');
+  document.getElementById('messages').scrollTop=99999;
+  setOrb('idle'); btn.disabled=false; ta.focus();
+}
+
+// ══ EXPORT ═══════════════════════════════════════════════════════════════════
+function exportChat(){
+  const msgs=document.querySelectorAll('#messages .msg');
+  if(!msgs.length){ toast('No messages to export.'); return; }
+  const lines=['# ATLAS Conversation Export',`Exported: ${new Date().toLocaleString()}`,''];
+  msgs.forEach(m=>{
+    const isAtlas=m.classList.contains('atlas');
+    const bubble=m.querySelector('.bubble');
+    if(!bubble) return;
+    lines.push(`### ${isAtlas?'**ATLAS**':'**You**'}`);
+    lines.push(bubble.innerText||bubble.textContent);
+    lines.push('');
+  });
+  const blob=new Blob([lines.join('\n')],{type:'text/markdown'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`atlas-${new Date().toISOString().slice(0,10)}.md`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('Chat exported!');
+}
+
+// ══ FILE ══════════════════════════════════════════════════════════════════════
+let _file=null;
+function _loadImage(f){
+  const r=new FileReader();
+  r.onload=ev=>_setImageFile(f.name,ev.target.result);
+  r.readAsDataURL(f);
+}
+function _setImageFile(name, dataUrl){
+  _file={name,content:dataUrl,isImage:true};
+  document.getElementById('fname').textContent=name;
+  document.getElementById('ficon').style.display='none';
+  const thumb=document.getElementById('img-thumb');
+  thumb.src=dataUrl; thumb.style.display='block';
+  document.getElementById('fbadge').classList.add('show');
+}
+function _setTextFileBadge(name){
+  document.getElementById('fname').textContent=name;
+  document.getElementById('ficon').style.display='';
+  document.getElementById('img-thumb').style.display='none';
+  document.getElementById('fbadge').classList.add('show');
+}
+function _loadText(f){
+  if(f.name.toLowerCase().endsWith('.pdf')){
+    const r=new FileReader();
+    r.onload=async ev=>{
+      const b64=ev.target.result.split(',')[1];
+      try{
+        const d=await api('POST','/upload/text',{filename:f.name,content_b64:b64});
+        _file={name:f.name,content:d.text,isImage:false};
+        _setTextFileBadge(f.name);
+        toast(`PDF: ${d.chars} chars`);
+      }catch(e){ toast('PDF failed: '+e.message,true); }
+    };
+    r.readAsDataURL(f);
+  }else{
+    const r=new FileReader();
+    r.onload=ev=>{ _file={name:f.name,content:ev.target.result,isImage:false}; _setTextFileBadge(f.name); };
+    r.readAsText(f);
+  }
+}
+function handleFile(e){ const f=e.target.files[0]; if(!f) return; f.type.startsWith('image/')?_loadImage(f):_loadText(f); e.target.value=''; }
+function clearFile(){
+  _file=null;
+  document.getElementById('fbadge').classList.remove('show');
+  document.getElementById('fname').textContent='';
+  document.getElementById('ficon').style.display='';
+  const t=document.getElementById('img-thumb'); t.src=''; t.style.display='none';
+}
+document.addEventListener('paste',e=>{
+  const items=[...e.clipboardData.items];
+  const img=items.find(i=>i.type.startsWith('image/'));
+  if(img){ e.preventDefault(); _loadImage(img.getAsFile()); return; }
+  const txt=items.find(i=>i.type==='text/plain');
+  if(txt) txt.getAsString(s=>{
+    if(s.length>400){
+      _loadText(new File([new Blob([s],{type:'text/plain'})],'pasted.txt',{type:'text/plain'}));
+      e.preventDefault();
+      document.getElementById('msg-in').value=s.slice(0,400)+'...';
+    }
+  });
+});
+function setupDrop(){
+  const sc=document.getElementById('scene');
+  const dov=document.getElementById('drop-ov');
+  sc.addEventListener('dragover',e=>{e.preventDefault();dov.classList.add('show');});
+  sc.addEventListener('dragleave',e=>{if(!sc.contains(e.relatedTarget))dov.classList.remove('show');});
+  sc.addEventListener('drop',e=>{
+    e.preventDefault();dov.classList.remove('show');
+    const f=e.dataTransfer.files[0];if(!f)return;
+    f.type.startsWith('image/')?_loadImage(f):_loadText(f);
+  });
+}
+
+// ══ GREETING ══════════════════════════════════════════════════════════════════
+async function fetchProactiveGreeting(){
+  const overlay=document.getElementById('boot-overlay');
+  try{
+    const d=await api('POST','/session/greeting',{session_id:_sid});
+    if(d&&d.greeting) appendMsg('atlas',d.greeting);
+  }catch{}
+  const ta=document.getElementById('msg-in');
+  const btn=document.getElementById('sendbtn');
+  if(ta){ ta.disabled=false; ta.placeholder='Speak to ATLAS...'; }
+  if(btn) btn.disabled=false;
+  if(overlay){ overlay.classList.add('fade'); setTimeout(()=>overlay.style.display='none',520); }
+  if(ta) ta.focus();
+}
+
+// ══ COPY RESPONSE ═════════════════════════════════════════════════════════════
+function copyResp(btn){
+  const bubble=btn.closest('.msg').querySelector('.bubble');
+  navigator.clipboard.writeText(bubble.innerText||bubble.textContent).then(()=>{
+    const orig=btn.textContent; btn.textContent='COPIED!';
+    setTimeout(()=>btn.textContent=orig,1800);
+  });
+}
+
+// ══ MEMORY ═══════════════════════════════════════════════════════════════════
+let _memAll=[];
+async function loadMemory(){
+  const el=document.getElementById('mem-list'); if(!el) return;
+  try{
+    const d=await api('GET','/memory/list');
+    _memAll=d.entries||[]; renderMemory(_memAll);
+  }catch{ el.innerHTML='<span class="empty">Failed.</span>'; }
+}
+function renderMemory(entries){
+  const el=document.getElementById('mem-list'); if(!el) return;
+  if(!entries.length){ el.innerHTML='<span class="empty">No memories yet.</span>'; return; }
+  el.innerHTML=entries.map(e=>`
+    <div class="agcard" style="flex-direction:column;gap:4px;align-items:flex-start">
+      <div style="display:flex;justify-content:space-between;width:100%;gap:8px">
+        <span style="font-size:.66rem;color:var(--acd);font-family:var(--fm)">${esc(e.timestamp||'')} · ${esc(e.category||'general')}</span>
+        <button class="btn dng" style="padding:2px 7px;font-size:.62rem" onclick="deleteMemory(${e.id})">DEL</button>
+      </div>
+      <span style="font-size:.78rem;line-height:1.5">${esc(e.entry)}</span>
+    </div>`).join('');
+}
+function filterMemory(q){
+  if(!q.trim()){ renderMemory(_memAll); return; }
+  const lq=q.toLowerCase();
+  renderMemory(_memAll.filter(e=>(e.entry+' '+e.category).toLowerCase().includes(lq)));
+}
+async function deleteMemory(id){
+  if(!confirm('Delete?')) return;
+  try{ await api('DELETE','/memory/entry/'+id); toast('Deleted.'); loadMemory(); }catch{ toast('Failed.',true); }
+}
+async function addMemory(){
+  const txt=document.getElementById('mem-add-in').value.trim(); if(!txt) return;
+  try{ await api('POST','/memory/add',{entry:txt,category:'manual'}); document.getElementById('mem-add-in').value=''; toast('Added.'); loadMemory(); }catch{ toast('Failed.',true); }
+}
+
+// ══ AGENTS ════════════════════════════════════════════════════════════════════
+let _pendingAgent=null;
+async function buildAgent(){
+  const desc=document.getElementById('ag-desc').value.trim();
+  if(!desc) return toast('Describe the agent first.',true);
+  const btn=document.getElementById('ag-build-btn');
+  btn.disabled=true; btn.textContent='⚡ BUILDING...'; setOrb('thinking');
+  try{
+    const d=await api('POST','/agents/build',{description:desc});
+    _pendingAgent={name:d.name,description:desc,code:d.code};
+    document.getElementById('ag-code').textContent=d.code;
+    document.getElementById('ag-output').style.display='block';
+    toast('Review code then save.');
+  }catch{ toast('Build failed.',true); }
+  btn.disabled=false; btn.textContent='⚡ BUILD AGENT'; setOrb('idle');
+}
+async function saveAgent(){
+  if(!_pendingAgent) return;
+  try{ await api('POST','/agents/save',{name:_pendingAgent.name,description:_pendingAgent.description,code:_pendingAgent.code}); toast('Saved!'); discardAgent(); loadAgents(); }catch{ toast('Failed.',true); }
+}
+function discardAgent(){ _pendingAgent=null; document.getElementById('ag-output').style.display='none'; document.getElementById('ag-code').textContent=''; }
+async function loadAgents(){
+  try{
+    const d=await api('GET','/agents');
+    const el=document.getElementById('ag-list'); if(!el) return;
+    if(!d.agents||!d.agents.length){ el.innerHTML='<span class="empty">No agents yet.</span>'; return; }
+    el.innerHTML=d.agents.map(a=>`<div class="agcard"><span class="agn">⚡ ${esc(a.name)}</span><span class="agd">${esc(a.description||'')}</span><button class="btn dng" style="padding:3px 8px;font-size:.66rem" onclick="delAgent('${esc(a.name)}')">DEL</button></div>`).join('');
+  }catch{}
+}
+async function delAgent(name){
+  if(!confirm(`Delete "${name}"?`)) return;
+  try{ await api('DELETE','/agents/'+encodeURIComponent(name)); toast('Deleted.'); loadAgents(); }catch{ toast('Failed.',true); }
+}
+
+// ══ TRAINING ══════════════════════════════════════════════════════════════════
+let _trainCache=[];
+async function loadTraining(){
+  try{ const d=await api('GET','/training'); _trainCache=d.entries||[]; renderTraining(_trainCache); }catch{}
+}
+function renderTraining(items){
+  const el=document.getElementById('train-list'); if(!el) return;
+  if(!items.length){ el.innerHTML='<span class="empty">No entries yet.</span>'; return; }
+  el.innerHTML=items.map((item,i)=>{
+    const cat=typeof item==='object'?item.category:'manual';
+    const auto=cat==='auto-learned', sess=cat==='session-memory', imp=cat==='imported';
+    const icon=auto?'🤖':sess?'🧠':imp?'📥':'✋';
+    const text=typeof item==='string'?item:(item.entry||JSON.stringify(item));
+    return `<div class="tag ${auto?'auto':''}">${icon} ${esc(text)}<span class="x" onclick="delTrain(${i})">✕</span></div>`;
+  }).join('');
+}
+function filterTraining(q){
+  if(!q.trim()){ renderTraining(_trainCache); return; }
+  const ql=q.toLowerCase();
+  renderTraining(_trainCache.filter(item=>{ const t=typeof item==='string'?item:(item.entry||''); return t.toLowerCase().includes(ql); }));
+}
+async function exportTraining(){
+  try{
+    const resp=await fetch(BASE+'/training/export',{headers:{'X-API-Key':apiKey}});
+    const blob=await resp.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='atlas_training.json'; a.click();
+    URL.revokeObjectURL(url); toast('Exported!');
+  }catch{ toast('Export failed.',true); }
+}
+async function importTraining(input){
+  const file=input.files[0]; if(!file) return;
+  try{
+    const entries=JSON.parse(await file.text());
+    if(!Array.isArray(entries)) throw new Error('Expected array');
+    await api('POST','/training/import',{entries,merge:true});
+    toast(`Imported ${entries.length}!`); loadTraining();
+  }catch(e){ toast('Import failed: '+e.message,true); }
+  input.value='';
+}
+async function addTraining(){
+  const v=document.getElementById('train-in').value.trim(); if(!v) return;
+  try{ await api('POST','/training',{entry:v}); document.getElementById('train-in').value=''; toast('Saved!'); loadTraining(); }catch{ toast('Failed.',true); }
+}
+async function clearTraining(){
+  if(!confirm('Clear ALL training?')) return;
+  try{ await api('POST','/training/clear'); toast('Cleared.'); loadTraining(); }catch{ toast('Failed.',true); }
+}
+async function delTrain(i){
+  try{ const d=await api('GET','/training'); const e=d.entries||[]; e.splice(i,1); await api('POST','/training/replace',{entries:e}); toast('Deleted.'); loadTraining(); }catch{ toast('Failed.',true); }
+}
+
+// ══ TRAITS ════════════════════════════════════════════════════════════════════
+async function loadTraits(){
+  try{ const d=await api('GET','/traits'); renderTags('traits-list',d.traits||[],'trait'); }catch{}
+}
+async function addTrait(){
+  const v=document.getElementById('trait-in').value.trim(); if(!v) return;
+  try{ await api('POST','/traits',{trait:v}); document.getElementById('trait-in').value=''; toast('Added!'); loadTraits(); }catch{ toast('Failed.',true); }
+}
+function renderTags(id, items, type){
+  const el=document.getElementById(id); if(!el) return;
+  if(!items.length){ el.innerHTML='<span class="empty">None yet.</span>'; return; }
+  el.innerHTML=items.map((item,i)=>{
+    const text=typeof item==='string'?item:(item.entry||item.trait||JSON.stringify(item));
+    return `<div class="tag">${esc(text)}<span class="x" onclick="delItem('${type}',${i})">✕</span></div>`;
+  }).join('');
+}
+async function delItem(type, i){
+  try{
+    if(type==='trait'){ const d=await api('GET','/traits'); const t=d.traits||[]; t.splice(i,1); await api('POST','/traits/replace',{traits:t}); loadTraits(); toast('Deleted.'); }
+  }catch{ toast('Failed.',true); }
+}
+
+// ══ NICKNAME ══════════════════════════════════════════════════════════════════
+async function loadNickname(){
+  try{
+    const d=await api('GET','/nickname');
+    const el=document.getElementById('nick-cur'); if(el) el.textContent=d.preferred?'CURRENT: '+d.preferred:'NOT SET';
+    const sel=document.getElementById('nick-sel'); if(sel&&d.preferred) sel.value=d.preferred;
+  }catch{}
+}
+async function setNickname(){
+  const v=document.getElementById('nick-sel').value; if(!v) return;
+  try{ await api('POST','/nickname',{preferred:v}); toast('Nickname: '+v); loadNickname(); }catch{ toast('Failed.',true); }
+}
+
+// ══ PERSONA ═══════════════════════════════════════════════════════════════════
+async function loadPersona(){
+  try{ const d=await api('GET','/persona/summary'); const el=document.getElementById('persona-txt'); if(el) el.value=d.summary||''; }catch{}
+}
+async function savePersona(){
+  const v=document.getElementById('persona-txt').value.trim(); if(!v) return;
+  try{ await api('POST','/persona/summary',{summary:v}); toast('Persona saved!'); }catch{ toast('Failed.',true); }
+}
+
+// ══ TRUST ═════════════════════════════════════════════════════════════════════
+async function loadTrust(){
+  try{
+    const d=await api('GET','/trust/status');
+    const el=document.getElementById('trust-info');
+    if(el) el.innerHTML=`TRUSTED: <strong style="color:${d.trusted?'var(--gn)':'var(--rd)'}">${d.trusted?'YES ✓':'NO ✗'}</strong><br>SCOPE: ${(d.scope||[]).join(', ')||'—'}<br>NOTES: ${d.notes||'—'}`;
+  }catch{}
+}
+
+// ══ PASSPHRASE ════════════════════════════════════════════════════════════════
+async function changePass(){
+  const cur=document.getElementById('pass-cur').value;
+  const np=document.getElementById('pass-new').value;
+  const cn=document.getElementById('pass-cnf').value;
+  if(!cur||!np) return toast('Fill all fields.',true);
+  if(np!==cn) return toast('Passphrases do not match.',true);
+  if(np.length<4) return toast('Too short.',true);
+  try{
+    const r=await fetch(BASE+'/auth/set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current:cur,new_passphrase:np})});
+    if(!r.ok) throw new Error(r.status);
+    ['pass-cur','pass-new','pass-cnf'].forEach(id=>document.getElementById(id).value='');
+    toast('Passphrase updated!');
+  }catch(e){ toast(e.message==='401'?'Wrong passphrase.':'Failed.',true); }
+}
+
+// ══ SYSTEM INFO ═══════════════════════════════════════════════════════════════
+async function loadSys(){
+  const el=document.getElementById('sys-info'); if(!el||!apiKey) return;
+  try{
+    const d=await api('GET','/system/info');
+    const bar=(v,w=72,dng=90)=>`<div class="pbar"><div class="pfill${v>=dng?' dng':v>=w?' w':''}" style="width:${v}%"></div></div>`;
+    el.innerHTML=`
+      <div class="sysi"><div class="sys-lbl">CPU</div><div class="sys-val">${d.cpu_percent??'—'}%</div>${d.cpu_percent!=null?bar(d.cpu_percent):''}</div>
+      <div class="sysi"><div class="sys-lbl">RAM</div><div class="sys-val">${d.ram_used_gb??'—'}/${d.ram_total_gb??'?'}G</div>${d.ram_percent!=null?bar(d.ram_percent):''}</div>
+      <div class="sysi"><div class="sys-lbl">DISK</div><div class="sys-val">${d.disk_used_gb??'—'}/${d.disk_total_gb??'?'}G</div>${d.disk_percent!=null?bar(d.disk_percent,75,90):''}</div>
+      <div class="sysi"><div class="sys-lbl">PLATFORM</div><div class="sys-val" style="font-size:.76rem">${d.platform??'—'}</div><div style="font-size:.6rem;color:var(--txm);font-family:var(--fm);margin-top:3px">${d.time??''}</div></div>`;
+  }catch{ el.innerHTML='<span class="empty">Cannot load.</span>'; }
+}
+
+// ══ TUNNEL ════════════════════════════════════════════════════════════════════
+let _tunUrl = '';
+
+function _tunSetState(running, url){
+  // Settings card elements
+  const status  = document.getElementById('tun-status');
+  const urlEl   = document.getElementById('tun-url');
+  const toggle  = document.getElementById('tun-toggle');
+  const copyRow = document.getElementById('tun-copy-row');
+  // Tunnel panel elements
+  const pStatus = document.getElementById('tpnl-status');
+  const pUrl    = document.getElementById('tpnl-url');
+  const pWrap   = document.getElementById('tpnl-url-wrap');
+  const pCopy   = document.getElementById('tpnl-copy');
+  const pOpen   = document.getElementById('tpnl-open');
+  const toggle2 = document.getElementById('tun-toggle2');
+  // Widget elements
+  const wDot    = document.getElementById('w-tun-dot');
+  const wLbl    = document.getElementById('w-tun-lbl');
+  const wShort  = document.getElementById('w-tun-url-short');
+
+  _tunUrl = url || '';
+  const fullUrl = _tunUrl ? _tunUrl + '/ui/' : '';
+
+  if(running){
+    const shortHost = _tunUrl ? _tunUrl.replace('https://','').split('.')[0] : '';
+    if(status)  { status.textContent='● TUNNEL ON'; status.style.color='var(--gn)'; }
+    if(urlEl)   { urlEl.textContent=_tunUrl; urlEl.style.display='block'; }
+    if(copyRow)   copyRow.style.display='block';
+    if(toggle)    toggle.checked=true;
+    if(pStatus) { pStatus.textContent='● ONLINE'; pStatus.style.color='var(--gn)'; }
+    if(pUrl)      pUrl.textContent=fullUrl;
+    if(pWrap)     pWrap.style.display='block';
+    if(pCopy)     pCopy.style.display='inline-block';
+    if(pOpen)     pOpen.style.display='inline-block';
+    if(toggle2)   toggle2.checked=true;
+    if(wDot)    { wDot.textContent='🟢'; }
+    if(wLbl)    { wLbl.textContent='ONLINE'; wLbl.style.color='var(--gn)'; }
+    if(wShort)    wShort.textContent=shortHost||'ON';
+  } else {
+    if(status)  { status.textContent='● TUNNEL OFF'; status.style.color='var(--txm)'; }
+    if(urlEl)     urlEl.style.display='none';
+    if(copyRow)   copyRow.style.display='none';
+    if(toggle)    toggle.checked=false;
+    if(pStatus) { pStatus.textContent='● OFFLINE'; pStatus.style.color='var(--txm)'; }
+    if(pUrl)      pUrl.textContent='';
+    if(pWrap)     pWrap.style.display='none';
+    if(pCopy)     pCopy.style.display='none';
+    if(pOpen)     pOpen.style.display='none';
+    if(toggle2)   toggle2.checked=false;
+    if(wDot)    { wDot.textContent='⚫'; }
+    if(wLbl)    { wLbl.textContent='OFFLINE'; wLbl.style.color='var(--txm)'; }
+    if(wShort)    wShort.textContent='—';
+  }
+}
+
+function _tunSyncPanel(){ loadTunnelStatus(); }
+
+// ══ AUTONOMOUS BUILD ══════════════════════════════════════════════════════════
+let _buildEvtSource = null;
+
+async function loadProjects(){
+  const el = document.getElementById('build-projects-list');
+  if(!el) return;
+  try{
+    const d = await api('GET', '/projects');
+    if(!d.projects || !d.projects.length){
+      el.innerHTML='<span class="empty">No projects yet.</span>';
+      return;
+    }
+    el.innerHTML = d.projects.map(p=>`
+      <div class="agcard" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <div style="display:flex;align-items:center;gap:8px;width:100%">
+          <span class="agn">${p.name}</span>
+          <span style="font-size:.6rem;padding:2px 7px;border-radius:9px;background:${p.status==='done'?'rgba(63,185,80,.15)':'rgba(167,139,250,.15)'};color:${p.status==='done'?'var(--gn)':'#a78bfa'};font-family:var(--fm)">${p.status.toUpperCase()}</span>
+          <span style="font-size:.6rem;color:var(--txm);font-family:var(--fm);margin-left:auto">${p.steps} steps</span>
+        </div>
+        ${p.goal?`<div class="agd">${p.goal}</div>`:''}
+        ${p.files.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${p.files.map(f=>`<span style="font-family:var(--fm);font-size:.6rem;padding:1px 6px;background:rgba(255,255,255,.05);border:1px solid var(--br);border-radius:4px;color:var(--txm)">${f}</span>`).join('')}</div>`:''}
+      </div>
+    `).join('');
+  } catch(e){ el.innerHTML=`<span class="empty">Error: ${e.message}</span>`; }
+}
+
+function _buildLog(html){ 
+  const el=document.getElementById('build-log');
+  if(el){ el.innerHTML+=html; el.scrollTop=el.scrollHeight; }
+}
+
+function stopBuildTask(){
+  if(_buildEvtSource){ _buildEvtSource.close(); _buildEvtSource=null; }
+  document.getElementById('build-run-btn').disabled=false;
+  document.getElementById('build-stop-btn').style.display='none';
+  document.getElementById('build-status').textContent='Stopped.';
+}
+
+async function runBuildTask(){
+  const goal=(document.getElementById('build-goal')||{}).value?.trim();
+  if(!goal){ toast('Enter a goal first.'); return; }
+  if(_buildEvtSource) stopBuildTask();
+
+  document.getElementById('build-run-btn').disabled=true;
+  document.getElementById('build-stop-btn').style.display='';
+  const logCard=document.getElementById('build-log-card');
+  const logEl=document.getElementById('build-log');
+  const planEl=document.getElementById('build-plan');
+  const planList=document.getElementById('build-plan-list');
+  const filesOut=document.getElementById('build-files-out');
+  const filesList=document.getElementById('build-files-list');
+  const stepCtr=document.getElementById('build-step-counter');
+  const statusEl=document.getElementById('build-status');
+
+  logCard.style.display='';
+  logEl.innerHTML='';
+  planEl.style.display='none';
+  filesOut.style.display='none';
+  stepCtr.textContent='';
+  statusEl.textContent='Connecting...';
+
+  const url=`/task/run?goal=${encodeURIComponent(goal)}&X-API-Key=${encodeURIComponent(apiKey)}`;
+  _buildEvtSource = new EventSource(url);
+
+  _buildEvtSource.onmessage = e => {
+    let d;
+    try{ d=JSON.parse(e.data); }catch{ return; }
+
+    if(d.type==='start'){
+      statusEl.textContent=`Project: ${d.project}`;
+      _buildLog(`<span style="color:#4ec9b0">▶ GOAL: ${d.goal}</span>\n`);
+    } else if(d.type==='status'){
+      _buildLog(`<span style="color:var(--txm)">${d.text}</span>\n`);
+    } else if(d.type==='plan'){
+      planEl.style.display='';
+      planList.innerHTML=d.steps.map((s,i)=>`<li id="bstep-${i+1}" style="color:var(--txm)">${s}</li>`).join('');
+    } else if(d.type==='step_start'){
+      stepCtr.textContent=`Step ${d.step}/${d.total}`;
+      // Highlight current step in plan
+      if(d.step>1){ const prev=document.getElementById(`bstep-${d.step-1}`); if(prev) prev.style.color='var(--gn)'; }
+      const cur=document.getElementById(`bstep-${d.step}`); if(cur) cur.style.color='var(--ac)';
+      _buildLog(`\n<span style="color:var(--ac)">── Step ${d.step}: ${d.desc}</span>\n`);
+    } else if(d.type==='tool_call'){
+      const argsStr=Object.entries(d.args||{}).map(([k,v])=>`${k}=${JSON.stringify(v).substring(0,60)}`).join(', ');
+      _buildLog(`<span style="color:#a78bfa">  ⚙ ${d.tool}(${argsStr})</span>\n`);
+    } else if(d.type==='tool_result'){
+      _buildLog(`<span style="color:var(--txm)">  → ${(d.result||'').substring(0,200).replace(/\n/g,' ')}</span>\n`);
+    } else if(d.type==='step_done'){
+      const cur=document.getElementById(`bstep-${d.step}`); if(cur) cur.style.color='var(--gn)';
+      if(d.output) _buildLog(`<span style="color:var(--txb)">  ${d.output.substring(0,300)}</span>\n`);
+    } else if(d.type==='step_error'){
+      _buildLog(`<span style="color:var(--rd)">  ✗ Error: ${d.text}</span>\n`);
+    } else if(d.type==='error'){
+      _buildLog(`<span style="color:var(--rd)">✗ ${d.text}</span>\n`);
+    } else if(d.type==='done'){
+      _buildLog(`\n<span style="color:var(--gn)">✓ DONE — ${d.text}</span>\n`);
+      statusEl.textContent=`Done! ${d.files.length} file(s) built.`;
+      if(d.files.length){
+        filesOut.style.display='';
+        filesList.innerHTML=d.files.map(f=>`<span class="agcard" style="font-family:var(--fm);font-size:.68rem;padding:4px 10px;color:var(--gn)">${f}</span>`).join('');
+      }
+      stopBuildTask();
+      loadProjects();
+    }
+  };
+
+  _buildEvtSource.onerror = () => {
+    _buildLog(`<span style="color:var(--rd)">Connection error or stream ended.</span>\n`);
+    stopBuildTask();
+  };
+}
+
+async function loadTunnelStatus(){
+  if(!apiKey) return;
+  try{
+    const d = await api('GET', '/remote/status');
+    _tunSetState(d.running, d.url);
+  }catch{}
+}
+
+async function toggleTunnel(on){
+  const t1=document.getElementById('tun-toggle');
+  const t2=document.getElementById('tun-toggle2');
+  if(t1) t1.disabled=true;
+  if(t2) t2.disabled=true;
+  const pStatus=document.getElementById('tpnl-status');
+  try{
+    if(on){
+      if(pStatus){ pStatus.textContent='● STARTING...'; pStatus.style.color='var(--ac)'; }
+      const d = await api('POST', '/remote/start', {});
+      _tunSetState(true, d.url);
+      toast('Tunnel started! Copy the URL to access ATLAS remotely.');
+    } else {
+      await api('POST', '/remote/stop', {});
+      _tunSetState(false, '');
+      toast('Tunnel stopped.');
+    }
+  } catch{
+    toast('Tunnel error — cloudflared may not be installed.', true);
+    await loadTunnelStatus();
+  } finally {
+    if(t1) t1.disabled=false;
+    if(t2) t2.disabled=false;
+  }
+}
+
+function tunCopyUrl(){
+  if(!_tunUrl) return;
+  navigator.clipboard.writeText(_tunUrl+'/ui/').then(()=>toast('Public URL copied! Open it on any device.'));
+}
+function tunOpenUrl(){
+  if(_tunUrl) window.open(_tunUrl+'/ui/','_blank');
+}
+
+// ══ NETWORK PING ══════════════════════════════════════════════════════════════
+let _pingHistory = [];
+async function pingNet(){
+  const el=document.getElementById('w-net-ping');
+  const lbl=document.getElementById('w-net-lbl');
+  if(!el) return;
+  const t0=performance.now();
+  try{
+    await fetch('https://1.1.1.1/cdn-cgi/trace',{cache:'no-store',mode:'no-cors'});
+    const ms=Math.round(performance.now()-t0);
+    _pingHistory.push({ms,ok:true,ts:Date.now()});
+    if(_pingHistory.length>20) _pingHistory.shift();
+    el.textContent=ms+'ms';
+    el.style.color=ms<80?'var(--gn)':ms<200?'var(--txb)':'var(--rd)';
+    if(lbl) lbl.textContent='LATENCY · ONLINE';
+  }catch{
+    _pingHistory.push({ms:null,ok:false,ts:Date.now()});
+    if(_pingHistory.length>20) _pingHistory.shift();
+    el.textContent='—'; if(lbl) lbl.textContent='OFFLINE';
+  }
+}
+
+// ══ ATLAS UPTIME ══════════════════════════════════════════════════════════════
+async function updateUptime(){
+  const el=document.getElementById('ws-uptime'); if(!el||!apiKey) return;
+  try{
+    const d=await api('GET','/system/info');
+    if(d.uptime_seconds!=null){
+      const s=d.uptime_seconds;
+      const h=Math.floor(s/3600), m=Math.floor((s%3600)/60);
+      el.textContent=h>0?`${h}h ${m}m`:`${m}m`;
+    } else el.textContent='—';
+  }catch{ el.textContent='—'; }
+}
+
+// ══ MOON + SKY ════════════════════════════════════════════════════════════════
+function moonPhase(date){
+  // Synodic month ≈ 29.53059 days, reference new moon: Jan 6 2000
+  const ref=new Date(2000,0,6,18,14);
+  const diff=(date-ref)/(1000*60*60*24);
+  const cycle=diff%29.53059;
+  const norm=(cycle+29.53059)%29.53059;
+  const pct=norm/29.53059;
+  const phases=[
+    {max:.034,icon:'🌑',name:'NEW MOON'},
+    {max:.153,icon:'🌒',name:'WAXING CRESCENT'},
+    {max:.218,icon:'🌓',name:'FIRST QUARTER'},
+    {max:.347,icon:'🌔',name:'WAXING GIBBOUS'},
+    {max:.5,  icon:'🌕',name:'FULL MOON'},
+    {max:.597,icon:'🌖',name:'WANING GIBBOUS'},
+    {max:.653,icon:'🌗',name:'LAST QUARTER'},
+    {max:.847,icon:'🌘',name:'WANING CRESCENT'},
+    {max:1.0, icon:'🌑',name:'NEW MOON'},
+  ];
+  return phases.find(p=>pct<=p.max)||phases[phases.length-1];
+}
+
+async function loadSkyWidget(){
+  const mEl=document.getElementById('w-moon');
+  const mlEl=document.getElementById('w-moon-lbl');
+  const golEl=document.getElementById('w-golden');
+  const uvEl=document.getElementById('w-uv');
+  if(!mEl) return;
+  const now=new Date();
+  const phase=moonPhase(now);
+  mEl.textContent=phase.icon;
+  if(mlEl) mlEl.textContent=phase.name;
+  // Golden hour: roughly 1h after sunrise, derive from wttr UV data
+  try{
+    const r=await fetch('https://wttr.in/?format=j1');
+    const d=await r.json();
+    const c=d.current_condition[0];
+    if(uvEl) uvEl.textContent=c.uvIndex??'—';
+    // astronomy
+    const ast=d.weather?.[0]?.astronomy?.[0];
+    if(ast&&golEl){
+      const sr=ast.sunrise; // "06:14 AM"
+      const [timePart,ampm]=sr.split(' ');
+      let [h,m]=timePart.split(':').map(Number);
+      if(ampm==='PM'&&h!==12) h+=12;
+      if(ampm==='AM'&&h===12) h=0;
+      const goldenEnd=`${String(h+1).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      golEl.textContent=`${sr.replace(' ','')}-${goldenEnd}`;
+    }
+  }catch{ if(uvEl) uvEl.textContent='—'; if(golEl) golEl.textContent='—'; }
+}
+
+// ══ FILES WIDGET ══════════════════════════════════════════════════════════════
+async function loadFilesWidget(){
+  const info=await api('GET','/fs/info').catch(()=>null);
+  if(!info) return;
+  const el=document.getElementById('w-files-indexed');
+  const ws=document.getElementById('w-files-ws');
+  if(el) el.textContent=info.indexed_files??'—';
+  if(ws && info.workspace){
+    const parts=info.workspace.replace(/\/+$/,'').split('/');
+    ws.textContent=parts[parts.length-1]||info.workspace;
+  }
+}
+
+// ══ GITHUB ════════════════════════════════════════════════════════════════════
+let _ghUser=localStorage.getItem('atlas_gh_user')||'';
+let _ghTimer=null;
+function debGH(v){
+  _ghUser=v; localStorage.setItem('atlas_gh_user',v);
+  clearTimeout(_ghTimer); _ghTimer=setTimeout(loadGithub, 800);
+}
+async function loadGithub(){
+  const el=document.getElementById('w-github'); if(!el) return;
+  const inp=document.getElementById('gh-user-input');
+  if(inp&&!inp.value&&_ghUser) inp.value=_ghUser;
+  if(!_ghUser){ el.innerHTML='<span style="font-size:.56rem;color:var(--txm)">Enter username above</span>'; return; }
+  try{
+    const r=await fetch(`https://api.github.com/users/${encodeURIComponent(_ghUser)}/events/public?per_page=5`,{headers:{'Accept':'application/vnd.github+json'}});
+    if(!r.ok) throw new Error(r.status);
+    const evs=await r.json();
+    const shown=evs.slice(0,4);
+    if(!shown.length){ el.innerHTML='<span style="font-size:.56rem;color:var(--txm)">No recent activity</span>'; return; }
+    const icons={PushEvent:'⬆',CreateEvent:'✨',IssuesEvent:'🐛',PullRequestEvent:'🔀',WatchEvent:'⭐',ForkEvent:'🍴'};
+    el.innerHTML=shown.map(e=>{
+      const ico=icons[e.type]||'⬡';
+      const repo=e.repo?.name?.split('/')[1]||e.repo?.name||'';
+      const branch=e.payload?.ref?.replace('refs/heads/','')||'';
+      const msg=e.type==='PushEvent'
+        ? `${esc(repo)}${branch?` · ${esc(branch)}`:''}`
+        : esc(repo);
+      const dt=new Date(e.created_at);
+      const ago=_timeAgo(dt);
+      return `<div class="nh"><div class="nh-src">${ico} ${e.type.replace('Event','').toUpperCase()} · ${ago}</div>${msg}</div>`;
+    }).join('');
+  }catch(e){
+    el.innerHTML=`<span style="font-size:.56rem;color:var(--txm)">${e.message==='404'?'User not found':'Unavailable'}</span>`;
+  }
+}
+function _timeAgo(d){
+  const s=Math.round((Date.now()-d)/1000);
+  if(s<60) return s+'s ago';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+
+// ══ INIT ══════════════════════════════════════════════════════════════════════
+autoInit();
+</script>
+<!-- Anime.js CDN for modal animations -->
+<script src="https://cdn.jsdelivr.net/npm/animejs/dist/bundles/anime.umd.min.js"></script>
+<!-- Modal Dialog Animation System -->
+<script src="/ui/static/modal-dialog-animation.js"></script>
+</body>
+</html>

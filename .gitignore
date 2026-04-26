@@ -1,0 +1,50 @@
+# Python virtual environments (root and nested)
+.venv/
+venv/
+**/venv/
+**/.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Environment files with secrets
+.env
+*.env.local
+
+# Security / secrets
+secure/
+*.key
+*.pem
+*.pfx
+
+# Logs and runtime state
+*.log
+*.pid
+*.applied
+relay/.relay.*
+relay/.ngrok.*
+
+# Large binary / model files
+*.onnx
+*.gguf
+*.bin
+*.safetensors
+*.zip
+
+# Databases and ML artefacts
+*.sqlite3
+*.sqlite
+models/chroma_db/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+*.swp
