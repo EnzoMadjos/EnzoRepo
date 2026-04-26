@@ -1,0 +1,57 @@
+name: Run Council Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: 'Agent name (architect, code-assistant, test-engineer, debugger, etc)'
+        required: false
+        default: 'architect'
+      model:
+        description: 'Model alias (gpt-5-mini, gpt-4.1, claude-sonnet)'
+        required: false
+        default: 'gpt-5-mini'
+      prompt:
+        description: 'Prompt to send to the Council'
+        required: true
+      hybrid:
+        description: 'Use hybrid flow (mini then review)'
+        required: false
+        default: false
+      simulate:
+        description: 'Simulate only (no external API calls)'
+        required: false
+        default: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r services/requirements.txt
+
+      - name: Run controller
+        env:
+          GITHUB_TOKEN: ${{ secrets.COUNCIL_OF_SALESFORCE }}
+        run: |
+          . .venv/bin/activate
+          CMD="python3 services/controller.py --agent \"${{ github.event.inputs.agent }}\" --model \"${{ github.event.inputs.model }}\" --prompt \"${{ github.event.inputs.prompt }}\""
+          if [ "${{ github.event.inputs.hybrid }}" = "true" ]; then
+            CMD="$CMD --hybrid"
+          fi
+          if [ "${{ github.event.inputs.simulate }}" = "true" ]; then
+            CMD="$CMD --simulate"
+          fi
+          echo "Running: $CMD"
+          $CMD

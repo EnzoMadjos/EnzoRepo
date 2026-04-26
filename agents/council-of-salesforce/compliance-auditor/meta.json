@@ -1,0 +1,9 @@
+{
+  "name": "compliance-auditor",
+  "role": "Security Reviewer",
+  "version": "0.1",
+  "description": "Audits org security and produces remediation metadata.",
+  "inputs": ["profiles","permission_sets","sharing_rules","csp_settings"],
+  "outputs": ["findings","remediation_snippets","checklist"],
+  "safety": {"critical_issues_require_human_review": true}
+}

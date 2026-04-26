@@ -1,0 +1,6 @@
+# Council of Salesforce — service dependencies
+# Install with: pip install -r services/requirements.txt
+
+openai>=1.30.0          # GitHub Models API + standard OpenAI (OpenAI-compatible SDK)
+anthropic>=0.25.0       # Anthropic Claude API (optional — only needed if provider=anthropic)
+python-dotenv>=1.0.0    # Optional: load .env file for GITHUB_TOKEN / ANTHROPIC_API_KEY

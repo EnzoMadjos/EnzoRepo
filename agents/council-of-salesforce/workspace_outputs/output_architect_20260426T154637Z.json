@@ -1,0 +1,41 @@
+{
+  "start_agent": "architect",
+  "model": "gpt-5-mini",
+  "prompt": "Add Orders object linked to Account",
+  "responses": [
+    {
+      "agent": "architect",
+      "result": {
+        "summary": "[Simulated architect response using gpt-5-mini]\nPrompt excerpt: SYSTEM:\nYou are the Architect agent for the Council of Salesforce.\nYour role: design object models, relationships, indexes, and migration plans that minimize data loss and preserve backwards compatibi",
+        "files": [],
+        "actions": []
+      }
+    },
+    {
+      "agent": "code-assistant",
+      "result": {
+        "summary": "[Simulated code-assistant response using gpt-5-mini]\nPrompt excerpt: SYSTEM:\nYou are the Code Assistant agent for the Council of Salesforce.\nYour role: generate readable, bulk-safe, and testable Apex, Lightning Web Components, and Flow artifacts. Always follow Salesfor",
+        "files": [
+          {
+            "path": "force-app/main/default/classes/SampleClass.cls",
+            "content": "// Apex class skeleton"
+          }
+        ],
+        "actions": []
+      }
+    },
+    {
+      "agent": "test-engineer",
+      "result": {
+        "summary": "[Simulated test-engineer response using gpt-5-mini]\nPrompt excerpt: SYSTEM:\nYou are the Test Engineer agent. Create deterministic, maintainable Apex tests, data factories, and Jest tests for LWCs. Aim for realistic test data and clear setup/teardown.\nInclude commands ",
+        "files": [
+          {
+            "path": "force-app/main/default/classes/SampleClassTest.cls",
+            "content": "// Apex test skeleton"
+          }
+        ],
+        "actions": []
+      }
+    }
+  ]
+}

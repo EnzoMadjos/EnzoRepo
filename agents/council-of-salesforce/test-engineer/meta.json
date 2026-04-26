@@ -1,0 +1,9 @@
+{
+  "name": "test-engineer",
+  "role": "QA",
+  "version": "0.1",
+  "description": "Produces Apex tests, Jest tests, and data factories.",
+  "inputs": ["code_artifact","schema","test_requirements"],
+  "outputs": ["test_files","coverage_report","commands"],
+  "safety": {"allow_prod_ops": false}
+}

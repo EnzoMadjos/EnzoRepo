@@ -1,0 +1,9 @@
+{
+  "name": "ux-flow-designer",
+  "role": "UX",
+  "version": "0.1",
+  "description": "Creates LWC skeletons and Flow JSON with acceptance criteria.",
+  "inputs": ["user_journey","acceptance_criteria"],
+  "outputs": ["lwc_files","flow_json","checklist"],
+  "safety": {"allow_prod_ops": false}
+}

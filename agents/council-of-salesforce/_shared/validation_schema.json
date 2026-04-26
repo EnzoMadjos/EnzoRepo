@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent Output Validation",
+  "type": "object",
+  "properties": {
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "content": { "type": "string" }
+        },
+        "required": ["path","content"]
+      }
+    },
+    "summary": { "type": "string" },
+    "actions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["files","summary"]
+}
