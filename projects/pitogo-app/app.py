@@ -31,6 +31,7 @@ import auth
 import app_logger
 import config
 import discovery
+import patch_signing
 
 # ── App init ──────────────────────────────────────────────────────────────────
 
@@ -325,6 +326,26 @@ async def update_apply(
         app_logger.error("Patch download failed", exc=exc)
         raise HTTPException(status_code=502, detail=f"Could not download patch: {exc}")
 
+    # Download signature and verify (expecting URL + ".sig")
+    sig_path = config.BASE_DIR / "patch.zip.sig"
+    sig_ok = False
+    try:
+        sig_url = url + ".sig"
+        async with httpx.AsyncClient(timeout=10) as client:
+            r2 = await client.get(sig_url, headers=_relay_headers() if config.RELAY_URL else {})
+            if r2.status_code == 200 and r2.content:
+                sig_path.write_bytes(r2.content)
+                sig_ok = patch_signing.verify_signature(patch_path.read_bytes(), r2.content)
+    except Exception:
+        sig_ok = False
+
+    if not sig_ok:
+        patch_path.unlink(missing_ok=True)
+        if sig_path.exists():
+            sig_path.unlink(missing_ok=True)
+        app_logger.error("Patch signature verification failed or missing", username=session.username)
+        raise HTTPException(status_code=400, detail="Patch signature missing or verification failed.")
+
     updated, skipped = [], []
     try:
         with zipfile.ZipFile(patch_path) as zf:
@@ -338,6 +359,8 @@ async def update_apply(
         raise HTTPException(status_code=500, detail=f"Patch apply failed: {exc}")
     finally:
         patch_path.unlink(missing_ok=True)
+        if sig_path.exists():
+            sig_path.unlink(missing_ok=True)
 
     app_logger.info("Patch applied", username=session.username, files=updated)
 
@@ -358,6 +381,30 @@ async def update_apply(
         "restart_scheduled": bool(updated),
         "message": f"{len(updated)} file(s) updated. Refresh in a moment." if updated else "No files were updated.",
     })
+
+
+# ── Demo preview (dev-only) ─────────────────────────────────────────────────
+@app.get("/demo/preview")
+async def demo_preview(doc: str = "clearance") -> HTMLResponse:
+    """Render a sample document for UI/UX preview without auth (development convenience)."""
+    allowed = {"clearance", "residency", "indigency"}
+    if doc not in allowed:
+        raise HTTPException(status_code=400, detail=f"doc must be one of: {allowed}")
+    sample = {
+        "full_name": "Juan Dela Cruz",
+        "address": "Purok 1, Brgy. Pitogo",
+        "purpose": "For employment verification",
+        "extra": {"years": "5"},
+        "issued_by": "Punong Barangay Maria Santos",
+        "issued_at": time.strftime("%B %d, %Y"),
+    }
+    template_name = f"docs/{doc}.html"
+    try:
+        rendered = templates.get_template(template_name).render(**sample)
+    except Exception as exc:
+        app_logger.error("Demo render error", exc=exc, doc=doc)
+        raise HTTPException(status_code=500, detail=str(exc))
+    return HTMLResponse(rendered)
 
 
 # ── Utility ───────────────────────────────────────────────────────────────────

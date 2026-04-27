@@ -160,6 +160,7 @@
           </div>
           <div class="actions">
             <button class="btn btn-primary" onclick="printDoc('clearance')">🖨 Print Clearance</button>
+            <button class="btn btn-ghost btn-sm" style="margin-left:8px;" onclick="previewDoc('clearance')">👁 Preview</button>
           </div>
         </div>
       </div>
@@ -178,6 +179,7 @@
           </div>
           <div class="actions">
             <button class="btn btn-primary" onclick="printDoc('residency')">🖨 Print Certificate</button>
+            <button class="btn btn-ghost btn-sm" style="margin-left:8px;" onclick="previewDoc('residency')">👁 Preview</button>
           </div>
         </div>
       </div>
@@ -195,6 +197,7 @@
           </div>
           <div class="actions">
             <button class="btn btn-primary" onclick="printDoc('indigency')">🖨 Print Certificate</button>
+            <button class="btn btn-ghost btn-sm" style="margin-left:8px;" onclick="previewDoc('indigency')">👁 Preview</button>
           </div>
         </div>
       </div>
@@ -507,6 +510,10 @@ function showToast(msg, type='') {
 }
 
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// ── Preview ─────────────────────────────────────────────────────
+function previewDoc(type) {
+  window.open('/demo/preview?doc=' + encodeURIComponent(type), '_blank');
+}
 </script>
 </body>
 </html>
