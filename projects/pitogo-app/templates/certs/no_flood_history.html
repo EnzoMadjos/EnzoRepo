@@ -1,0 +1,6 @@
+{% extends 'certs/base_cert.html' %}
+{% block body %}
+<p style="text-align:center; font-weight:600;">CERTIFICATE OF NO FLOOD HISTORY</p>
+<p>This is to certify that the property located at <strong>{{ address }}</strong> has no recorded flood history as of <strong>{{ issued_at }}</strong>.</p>
+<p>Owner / Resident: {{ full_name }}</p>
+{% endblock %}

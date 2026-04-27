@@ -1,0 +1,10 @@
+{% extends 'certs/base_cert.html' %}
+{% block body %}
+<p style="text-align:center; font-weight:600;">SOCIAL SECURITY SYSTEM (SSS) MEMBERSHIP CERTIFICATE</p>
+<p>This is to certify that <strong>{{ full_name }}</strong> is a registered SSS member with the following details:</p>
+<ul>
+  <li>SSS No.: {{ sss_no or '—' }}</li>
+  <li>Membership Type: {{ membership_type or '—' }}</li>
+</ul>
+<p>Issued on {{ issued_at }} for {{ purpose or 'verification' }}.</p>
+{% endblock %}
