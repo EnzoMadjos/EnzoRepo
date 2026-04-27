@@ -90,7 +90,7 @@
 <body>
 
 <!-- ═══════════════════════  LOGIN  ════════════════════════════ -->
-<div id="login-screen">
+<div id="login-screen" {% raw %}{% endraw %}{% if demo_show_app %} style="display:none;" {% raw %}{% endif %}{% endraw %}>
   <div class="login-wrap">
     <div class="login-card">
       <h1>{{ app_name }}</h1>
@@ -111,7 +111,7 @@
 </div>
 
 <!-- ════════════════════════  APP  ═════════════════════════════ -->
-<div id="app-screen">
+<div id="app-screen" {% raw %}{% endraw %}{% if demo_show_app %} style="display:block;" {% raw %}{% endif %}{% endraw %}>
 
   <!-- Update banner -->
   <div id="update-banner">

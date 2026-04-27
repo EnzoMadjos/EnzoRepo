@@ -32,6 +32,7 @@ import app_logger
 import config
 import discovery
 import patch_signing
+from fastapi.responses import HTMLResponse
 
 # ── App init ──────────────────────────────────────────────────────────────────
 
@@ -405,6 +406,13 @@ async def demo_preview(doc: str = "clearance") -> HTMLResponse:
         app_logger.error("Demo render error", exc=exc, doc=doc)
         raise HTTPException(status_code=500, detail=str(exc))
     return HTMLResponse(rendered)
+
+
+# ── Design preview (server-rendered UI-only) ─────────────────────────────────
+@app.get("/design", response_class=HTMLResponse)
+async def design_page(request: Request) -> HTMLResponse:
+    """Render the main UI shell server-side for visual review (no auth required)."""
+    return templates.TemplateResponse("index.html", {"request": request, "app_name": config.APP_NAME, "demo_show_app": True})
 
 
 # ── Utility ───────────────────────────────────────────────────────────────────
