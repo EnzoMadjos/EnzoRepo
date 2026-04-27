@@ -1,9 +1,0 @@
-{
-  "name": "architect",
-  "role": "Lead Advisor",
-  "version": "0.1",
-  "description": "Designs object models, relationships and migration plans.",
-  "inputs": ["schema_subset","sample_records","business_rules"],
-  "outputs": ["metadata_snippets","migration_plan","summary"],
-  "safety": {"allow_prod_ops": false}
-}

@@ -1,4 +1,0 @@
-{
-  "model": "gpt-5-mini",
-  "description": "Code Assistant agent for Council of AppDev. Implements and refactors code, enforces RTK CLI usage."
-}

@@ -90,7 +90,7 @@
 <body>
 
 <!-- ═══════════════════════  LOGIN  ════════════════════════════ -->
-<div id="login-screen" {% raw %}{% endraw %}{% if demo_show_app %} style="display:none;" {% raw %}{% endif %}{% endraw %}>
+<div id="login-screen" {% if demo_show_app %}style="display:none;"{% endif %}>
   <div class="login-wrap">
     <div class="login-card">
       <h1>{{ app_name }}</h1>
@@ -111,7 +111,7 @@
 </div>
 
 <!-- ════════════════════════  APP  ═════════════════════════════ -->
-<div id="app-screen" {% raw %}{% endraw %}{% if demo_show_app %} style="display:block;" {% raw %}{% endif %}{% endraw %}>
+<div id="app-screen" {% if demo_show_app %}style="display:block;"{% endif %}>
 
   <!-- Update banner -->
   <div id="update-banner">
@@ -126,7 +126,7 @@
       <span id="relay-dot" title="Support server status"></span>
       <span id="relay-status-text" style="color:rgba(255,255,255,.7)">Support offline</span>
       <button class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.4);" onclick="openSupportModal()">⚙ Support</button>
-      <span id="topbar-user" style="color:rgba(255,255,255,.8);"></span>
+      <span id="topbar-user" style="color:rgba(255,255,255,.8);">{% if demo_show_app %}Demo User{% endif %}</span>
       <button class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.4);" onclick="doLogout()">Log out</button>
     </div>
   </div>
@@ -137,7 +137,7 @@
     <!-- Sidebar -->
     <nav class="sidebar">
       <div class="section-label">Documents</div>
-      <a onclick="showSection('sec-clearance')" id="nav-clearance">📄 Barangay Clearance</a>
+      <a onclick="showSection('sec-clearance')" id="nav-clearance" {% if demo_show_app %}class="active"{% endif %}>📄 Barangay Clearance</a>
       <a onclick="showSection('sec-residency')" id="nav-residency">🏠 Certificate of Residency</a>
       <a onclick="showSection('sec-indigency')" id="nav-indigency">📋 Certificate of Indigency</a>
       <div class="section-label">Admin</div>
@@ -149,7 +149,7 @@
     <div class="content">
 
       <!-- ── Barangay Clearance ── -->
-      <div class="content-section" id="sec-clearance">
+      <div class="content-section{% if demo_show_app %} active{% endif %}" id="sec-clearance">
         <div class="card">
           <h2>Barangay Clearance</h2>
           <div class="form-row">
@@ -167,7 +167,7 @@
       </div>
 
       <!-- ── Certificate of Residency ── -->
-      <div class="content-section" id="sec-residency">
+      <div class="content-section{% if demo_show_app %} active{% endif %}" id="sec-residency">
         <div class="card">
           <h2>Certificate of Residency</h2>
           <div class="form-row">
@@ -186,7 +186,7 @@
       </div>
 
       <!-- ── Certificate of Indigency ── -->
-      <div class="content-section" id="sec-indigency">
+      <div class="content-section{% if demo_show_app %} active{% endif %}" id="sec-indigency">
         <div class="card">
           <h2>Certificate of Indigency</h2>
           <div class="form-row">

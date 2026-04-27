@@ -1,4 +1,0 @@
-{
-  "model": "gpt-4.1",
-  "description": "Compliance Auditor agent for Council of AppDev. Reviews security and best practices, enforces RTK CLI usage."
-}

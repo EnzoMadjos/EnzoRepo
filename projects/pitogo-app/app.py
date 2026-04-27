@@ -32,6 +32,9 @@ import app_logger
 import config
 import discovery
 import patch_signing
+from api.residents import router as residents_router
+from api.certificate_types import router as certificate_types_router
+from api.certificates import router as certificates_router
 from fastapi.responses import HTMLResponse
 
 # ── App init ──────────────────────────────────────────────────────────────────
@@ -78,6 +81,12 @@ async def _startup() -> None:
 @app.on_event("shutdown")
 async def _shutdown() -> None:
     discovery.stop()
+
+
+# Register API routers
+app.include_router(residents_router)
+app.include_router(certificate_types_router)
+app.include_router(certificates_router)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

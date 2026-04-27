@@ -1,4 +1,0 @@
-{
-  "model": "gpt-5-mini",
-  "description": "Debugger agent for Council of AppDev. Diagnoses and fixes bugs, ensures RTK CLI usage."
-}

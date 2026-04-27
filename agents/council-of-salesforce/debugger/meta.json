@@ -1,9 +1,0 @@
-{
-  "name": "debugger",
-  "role": "Investigator",
-  "version": "0.1",
-  "description": "Analyzes logs and failing tests to propose fixes.",
-  "inputs": ["logs","failing_tests","recent_diffs"],
-  "outputs": ["root_cause","patch","repro_steps"],
-  "safety": {"allow_prod_ops": false}
-}

@@ -1,4 +1,0 @@
-{
-  "model": "gpt-5-mini",
-  "description": "Test Engineer agent for Council of AppDev. Designs and runs tests, ensures RTK CLI usage."
-}

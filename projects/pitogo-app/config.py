@@ -15,6 +15,7 @@ load_dotenv(BASE_DIR / ".env")
 APP_NAME              = os.getenv("APP_NAME", "PITOGO Barangay App")
 APP_PORT              = int(os.getenv("APP_PORT", "8300"))
 SESSION_EXPIRE_HOURS  = int(os.getenv("SESSION_EXPIRE_HOURS", "12"))
+BRGY_CODE             = os.getenv("BRGY_CODE", "PITOGO")
 
 # ── Peer discovery & auto-election ────────────────────────────────────────────
 # Port used for UDP broadcast discovery messages

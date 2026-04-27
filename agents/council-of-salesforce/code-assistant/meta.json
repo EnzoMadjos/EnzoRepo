@@ -1,9 +1,0 @@
-{
-  "name": "code-assistant",
-  "role": "Developer",
-  "version": "0.1",
-  "description": "Generates Apex, LWC, and Flow artifacts with tests.",
-  "inputs": ["schema","requirements","repo_layout"],
-  "outputs": ["files","tests","summary"],
-  "safety": {"allow_prod_ops": false}
-}
