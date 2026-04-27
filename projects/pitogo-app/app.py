@@ -35,6 +35,8 @@ import patch_signing
 from api.residents import router as residents_router
 from api.certificate_types import router as certificate_types_router
 from api.certificates import router as certificates_router
+from api.households import router as households_router
+from api.attachments import router as attachments_router
 from fastapi.responses import HTMLResponse
 
 # ── App init ──────────────────────────────────────────────────────────────────
@@ -87,6 +89,8 @@ async def _shutdown() -> None:
 app.include_router(residents_router)
 app.include_router(certificate_types_router)
 app.include_router(certificates_router)
+app.include_router(households_router)
+app.include_router(attachments_router)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
