@@ -48,3 +48,5 @@ Thumbs.db
 # IDE
 .vscode/settings.json
 *.swp
+*.accdb
+*.jar

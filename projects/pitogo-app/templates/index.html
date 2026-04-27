@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ app_name }}</title>
+  <style>
+    :root {
+      --bg: #f5f7fa; --card: #ffffff; --primary: #1a6fc4; --primary-dark: #145fa8;
+      --text: #1a1a2e; --muted: #6c757d; --border: #dee2e6;
+      --success: #28a745; --error: #dc3545; --warn: #ffc107;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Layout ── */
+    #login-screen, #app-screen { width: 100%; }
+    #app-screen { display: none; }
+
+    /* ── Login ── */
+    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-card  { background: var(--card); border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,.10); padding: 40px 36px; width: 100%; max-width: 380px; }
+    .login-card h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    .login-card p  { font-size: .82rem; color: var(--muted); margin-bottom: 28px; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: .8rem; font-weight: 600; margin-bottom: 5px; color: var(--muted); }
+    input[type=text], input[type=password] {
+      width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 7px;
+      font-size: .92rem; outline: none; transition: border .2s;
+    }
+    input:focus { border-color: var(--primary); }
+    .btn { display: inline-block; padding: 10px 20px; border: none; border-radius: 7px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+    .btn-primary  { background: var(--primary); color: #fff; width: 100%; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-ghost    { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-sm       { padding: 5px 12px; font-size: .8rem; }
+    .btn-danger   { background: var(--error); color: #fff; }
+    #login-error  { color: var(--error); font-size: .8rem; min-height: 18px; margin-top: 8px; }
+
+    /* ── Topbar ── */
+    .topbar { background: var(--primary); color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar h1 { font-size: 1.05rem; font-weight: 700; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; font-size: .82rem; }
+    #relay-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; display: inline-block; transition: background .3s; }
+    #relay-dot.online { background: #4cd137; }
+    #update-banner { display: none; background: var(--warn); color: #333; padding: 8px 20px; font-size: .85rem; align-items: center; gap: 10px; }
+
+    /* ── Main layout ── */
+    .main-wrap { display: flex; gap: 0; min-height: calc(100vh - 56px); }
+    .sidebar { width: 220px; flex-shrink: 0; background: var(--card); border-right: 1px solid var(--border); padding: 20px 0; }
+    .sidebar a { display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: .88rem; color: var(--text); text-decoration: none; cursor: pointer; transition: background .15s; }
+    .sidebar a:hover, .sidebar a.active { background: #e8f0fb; color: var(--primary); font-weight: 600; }
+    .sidebar .section-label { font-size: .7rem; font-weight: 700; color: var(--muted); padding: 14px 20px 4px; text-transform: uppercase; letter-spacing: .08em; }
+    .content { flex: 1; padding: 28px 32px; }
+
+    /* ── Cards / sections ── */
+    .content-section { display: none; }
+    .content-section.active { display: block; }
+    .card { background: var(--card); border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,.06); padding: 24px; margin-bottom: 20px; }
+    .card h2 { font-size: 1rem; margin-bottom: 16px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-row.full { grid-template-columns: 1fr; }
+    .form-row textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 7px; font-size: .88rem; min-height: 60px; resize: vertical; }
+    .form-row select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 7px; font-size: .88rem; }
+    .actions { display: flex; gap: 10px; margin-top: 14px; }
+
+    /* ── Log table ── */
+    .log-table { width: 100%; font-size: .78rem; border-collapse: collapse; }
+    .log-table th, .log-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+    .log-table th { background: #f0f3f7; font-weight: 700; color: var(--muted); font-size: .72rem; }
+    .log-level-ERROR { color: var(--error); font-weight: 700; }
+    .log-level-WARNING { color: var(--warn); }
+    .log-level-INFO { color: var(--muted); }
+
+    /* ── Support modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 12px; padding: 28px; width: 94%; max-width: 420px; position: relative; }
+    .modal h3 { margin-bottom: 8px; font-size: 1rem; }
+    .modal p  { font-size: .8rem; color: var(--muted); margin-bottom: 16px; line-height: 1.6; }
+    .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--muted); }
+    #relay-url-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: .84rem; margin-bottom: 12px; }
+    #relay-connect-status { font-size: .78rem; min-height: 16px; margin-bottom: 12px; color: var(--error); }
+
+    /* ── Toast ── */
+    #toast { position: fixed; bottom: 24px; right: 24px; background: #222; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: .85rem; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════  LOGIN  ════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1>{{ app_name }}</h1>
+      <p>Barangay Document Management System</p>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-username" placeholder="Enter username" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Log In</button>
+      <div id="login-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════  APP  ═════════════════════════════ -->
+<div id="app-screen">
+
+  <!-- Update banner -->
+  <div id="update-banner">
+    ⬆ An update is available. <button class="btn btn-ghost btn-sm" onclick="applyUpdate()">Apply Update</button>
+    <span id="update-status" style="font-size:.78rem;color:var(--muted);"></span>
+  </div>
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <h1>{{ app_name }}</h1>
+    <div class="topbar-right">
+      <span id="relay-dot" title="Support server status"></span>
+      <span id="relay-status-text" style="color:rgba(255,255,255,.7)">Support offline</span>
+      <button class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.4);" onclick="openSupportModal()">⚙ Support</button>
+      <span id="topbar-user" style="color:rgba(255,255,255,.8);"></span>
+      <button class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.4);" onclick="doLogout()">Log out</button>
+    </div>
+  </div>
+
+  <!-- Main layout -->
+  <div class="main-wrap">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="section-label">Documents</div>
+      <a onclick="showSection('sec-clearance')" id="nav-clearance">📄 Barangay Clearance</a>
+      <a onclick="showSection('sec-residency')" id="nav-residency">🏠 Certificate of Residency</a>
+      <a onclick="showSection('sec-indigency')" id="nav-indigency">📋 Certificate of Indigency</a>
+      <div class="section-label">Admin</div>
+      <a onclick="showSection('sec-logs')" id="nav-logs">🗒 Error Logs</a>
+      <a onclick="showSection('sec-server')" id="nav-server">🖥 Server Status</a>
+    </nav>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ── Barangay Clearance ── -->
+      <div class="content-section" id="sec-clearance">
+        <div class="card">
+          <h2>Barangay Clearance</h2>
+          <div class="form-row">
+            <div><label>Full Name</label><input type="text" id="clr-name" placeholder="Juan Dela Cruz" /></div>
+            <div><label>Address</label><input type="text" id="clr-address" placeholder="Purok 1, Brgy. Pitogo" /></div>
+          </div>
+          <div class="form-row full">
+            <div><label>Purpose</label><textarea id="clr-purpose" placeholder="For employment / business permit / etc."></textarea></div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="printDoc('clearance')">🖨 Print Clearance</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Certificate of Residency ── -->
+      <div class="content-section" id="sec-residency">
+        <div class="card">
+          <h2>Certificate of Residency</h2>
+          <div class="form-row">
+            <div><label>Full Name</label><input type="text" id="res-name" placeholder="Juan Dela Cruz" /></div>
+            <div><label>Address</label><input type="text" id="res-address" placeholder="Purok 1, Brgy. Pitogo" /></div>
+          </div>
+          <div class="form-row">
+            <div><label>Years of Residency</label><input type="text" id="res-years" placeholder="5 years" /></div>
+            <div><label>Purpose</label><input type="text" id="res-purpose" placeholder="For school enrollment" /></div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="printDoc('residency')">🖨 Print Certificate</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Certificate of Indigency ── -->
+      <div class="content-section" id="sec-indigency">
+        <div class="card">
+          <h2>Certificate of Indigency</h2>
+          <div class="form-row">
+            <div><label>Full Name</label><input type="text" id="ind-name" placeholder="Juan Dela Cruz" /></div>
+            <div><label>Address</label><input type="text" id="ind-address" placeholder="Purok 1, Brgy. Pitogo" /></div>
+          </div>
+          <div class="form-row full">
+            <div><label>Purpose</label><textarea id="ind-purpose" placeholder="For medical assistance / burial assistance / etc."></textarea></div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="printDoc('indigency')">🖨 Print Certificate</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Error Logs ── -->
+      <div class="content-section" id="sec-logs">
+        <div class="card">
+          <h2>Error Logs</h2>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button class="btn btn-ghost btn-sm" onclick="loadLogs()">↻ Refresh</button>
+            <button class="btn btn-primary btn-sm" onclick="openSendLogs()">📤 Send to Support</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--error);border-color:var(--error);" onclick="clearLogs()">Clear</button>
+          </div>
+          <div id="send-log-row" style="display:none;margin-bottom:10px;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="text" id="log-note" placeholder="Optional note for support team…" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:.82rem;" />
+            <button class="btn btn-primary btn-sm" id="send-log-btn" onclick="sendLogs()">Send</button>
+            <button class="btn btn-ghost btn-sm" onclick="closeSendLogs()">Cancel</button>
+          </div>
+          <div id="send-log-status" style="font-size:.8rem;min-height:16px;margin-bottom:8px;"></div>
+          <div style="overflow-x:auto;">
+            <table class="log-table">
+              <thead><tr><th>Time</th><th>Level</th><th>Message</th></tr></thead>
+              <tbody id="log-tbody"><tr><td colspan="3" style="color:var(--muted);font-size:.8rem;">Click Refresh to load logs.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Server Status ── -->
+      <div class="content-section" id="sec-server">
+        <div class="card">
+          <h2>Server Status</h2>
+          <div id="server-status-content" style="font-size:.88rem;line-height:2;">Loading…</div>
+          <div style="margin-top:12px;">
+            <button class="btn btn-ghost btn-sm" onclick="loadServerStatus()">↻ Refresh</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main-wrap -->
+</div><!-- /app-screen -->
+
+<!-- ══════════════  Support modal  ══════════════ -->
+<div class="modal-overlay" id="support-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeSupportModal()">✕</button>
+    <h3>Support Server Connection</h3>
+    <p>Your admin will share a URL. Paste it below to connect — this lets them receive your error logs and push updates.</p>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <span id="modal-relay-dot" style="width:9px;height:9px;border-radius:50%;background:#ccc;flex-shrink:0;"></span>
+      <span id="modal-relay-status" style="font-size:.8rem;color:var(--muted);flex:1;">Not connected.</span>
+    </div>
+    <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:5px;">Support URL</label>
+    <input id="relay-url-input" type="text" placeholder="https://xxxx.ngrok-free.app" />
+    <div id="relay-connect-status"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-ghost btn-sm" id="relay-disconnect-btn" onclick="relayDisconnect()" style="display:none;">Disconnect</button>
+      <button class="btn btn-primary btn-sm" id="relay-connect-btn" onclick="relayConnect()">Connect</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────
+let _token = localStorage.getItem('pitogo_token') || '';
+let _username = localStorage.getItem('pitogo_username') || '';
+
+function authHeader() { return { 'Authorization': 'Bearer ' + _token }; }
+
+// ── Startup ───────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (_token) {
+    showApp();
+  }
+  document.getElementById('login-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+});
+
+// ── Login / Logout ────────────────────────────────────────────
+async function doLogin() {
+  const u = document.getElementById('login-username').value.trim();
+  const p = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!u || !p) { errEl.textContent = 'Please enter username and password.'; return; }
+  try {
+    const r = await fetch('/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: u, password: p}),
+    });
+    const d = await r.json();
+    if (!r.ok) { errEl.textContent = d.detail || 'Login failed.'; return; }
+    _token    = d.token;
+    _username = d.display_name || d.username;
+    localStorage.setItem('pitogo_token', _token);
+    localStorage.setItem('pitogo_username', _username);
+    showApp();
+  } catch { errEl.textContent = 'Network error. Is the app running?'; }
+}
+
+function doLogout() {
+  fetch('/auth/logout', { method: 'POST', headers: authHeader() }).catch(()=>{});
+  _token = ''; _username = '';
+  localStorage.removeItem('pitogo_token');
+  localStorage.removeItem('pitogo_username');
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = '';
+  document.getElementById('login-password').value = '';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = '';
+  document.getElementById('topbar-user').textContent = _username;
+  showSection('sec-clearance');
+  checkRelayStatus();
+  setInterval(checkRelayStatus, 30000);
+}
+
+// ── Navigation ────────────────────────────────────────────────
+function showSection(id) {
+  document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.sidebar a').forEach(el => el.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+  const navId = 'nav-' + id.replace('sec-', '');
+  document.getElementById(navId)?.classList.add('active');
+  if (id === 'sec-logs') loadLogs();
+  if (id === 'sec-server') loadServerStatus();
+}
+
+// ── Document Print ────────────────────────────────────────────
+async function printDoc(type) {
+  let body = {};
+  if (type === 'clearance') {
+    body = { doc_type: 'clearance', full_name: v('clr-name'), address: v('clr-address'), purpose: v('clr-purpose') };
+  } else if (type === 'residency') {
+    body = { doc_type: 'residency', full_name: v('res-name'), address: v('res-address'), purpose: v('res-purpose'), extra: { years: v('res-years') } };
+  } else if (type === 'indigency') {
+    body = { doc_type: 'indigency', full_name: v('ind-name'), address: v('ind-address'), purpose: v('ind-purpose') };
+  }
+  if (!body.full_name || !body.address) { showToast('Fill in Full Name and Address.', 'warn'); return; }
+  try {
+    const r = await fetch('/documents/print', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', ...authHeader()},
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.detail || 'Print error.', 'error'); return; }
+    const win = window.open('', '_blank');
+    win.document.write(d.html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 400);
+  } catch(e) { showToast('Network error: ' + e, 'error'); }
+}
+
+function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
+
+// ── Logs ──────────────────────────────────────────────────────
+async function loadLogs() {
+  const tbody = document.getElementById('log-tbody');
+  tbody.innerHTML = '<tr><td colspan="3" style="color:var(--muted);font-size:.8rem;">Loading…</td></tr>';
+  try {
+    const r = await fetch('/admin/logs?n=100', { headers: authHeader() });
+    const logs = await r.json();
+    if (!logs.length) { tbody.innerHTML = '<tr><td colspan="3" style="color:var(--muted);">No logs.</td></tr>'; return; }
+    tbody.innerHTML = logs.map(e => `<tr>
+      <td style="white-space:nowrap;">${e.ts||'?'}</td>
+      <td class="log-level-${e.level||''}">${e.level||'?'}</td>
+      <td>${escHtml(e.msg||'')}</td>
+    </tr>`).join('');
+  } catch { tbody.innerHTML = '<tr><td colspan="3" style="color:var(--error);">Failed to load logs.</td></tr>'; }
+}
+
+async function clearLogs() {
+  if (!confirm('Clear all logs?')) return;
+  await fetch('/admin/logs', { method: 'DELETE', headers: authHeader() });
+  loadLogs();
+  showToast('Logs cleared.', 'success');
+}
+
+function openSendLogs() {
+  document.getElementById('send-log-row').style.display = 'flex';
+  document.getElementById('send-log-status').textContent = '';
+}
+function closeSendLogs() {
+  document.getElementById('send-log-row').style.display = 'none';
+  document.getElementById('send-log-status').textContent = '';
+  document.getElementById('log-note').value = '';
+}
+
+async function sendLogs() {
+  const note = document.getElementById('log-note').value.trim();
+  const statusEl = document.getElementById('send-log-status');
+  const btn = document.getElementById('send-log-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  statusEl.style.color = 'var(--muted)'; statusEl.textContent = 'Sending…';
+  try {
+    const r = await fetch('/admin/logs/report', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', ...authHeader()},
+      body: JSON.stringify({message: note}),
+    });
+    const d = await r.json();
+    if (r.ok) { statusEl.textContent = `✅ Sent (${d.lines} entries). Support team will review shortly.`; statusEl.style.color = 'var(--success)'; }
+    else       { statusEl.textContent = '✖ ' + (d.detail || 'Failed to send.'); statusEl.style.color = 'var(--error)'; }
+  } catch { statusEl.textContent = 'Network error.'; statusEl.style.color = 'var(--error)'; }
+  btn.disabled = false; btn.textContent = 'Send';
+}
+
+// ── Server Status ─────────────────────────────────────────────
+async function loadServerStatus() {
+  const el = document.getElementById('server-status-content');
+  el.textContent = 'Loading…';
+  try {
+    const r = await fetch('/status', { headers: authHeader() });
+    const d = await r.json();
+    el.innerHTML = `
+      <b>Role:</b> ${d.role === 'leader' ? '🟢 Leader (Backend Server)' : d.role === 'client' ? '🔵 Client' : '⚪ Unknown'}<br>
+      <b>Hostname:</b> ${d.hostname}<br>
+      <b>Local IP:</b> ${d.local_ip}<br>
+      <b>Port:</b> ${d.port}<br>
+      ${d.leader_addr ? `<b>Leader:</b> ${d.leader_addr[0]}:${d.leader_addr[1]}` : ''}
+    `;
+  } catch { el.textContent = 'Failed to load server status.'; }
+}
+
+// ── Relay / Support ───────────────────────────────────────────
+async function checkRelayStatus() {
+  try {
+    const r = await fetch('/admin/relay/status', { headers: authHeader() });
+    const d = await r.json();
+    const dot  = document.getElementById('relay-dot');
+    const text = document.getElementById('relay-status-text');
+    const mdot = document.getElementById('modal-relay-dot');
+    const mst  = document.getElementById('modal-relay-status');
+    if (d.online) {
+      dot.className = 'online'; text.textContent = 'Support online';
+      if (mdot) { mdot.style.background = '#4cd137'; mst.textContent = 'Support server online.'; }
+      document.getElementById('relay-disconnect-btn').style.display = '';
+      document.getElementById('relay-url-input').value = d.saved_url || '';
+      if (d.update_available) document.getElementById('update-banner').style.display = 'flex';
+    } else {
+      dot.className = ''; text.textContent = 'Support offline';
+      if (mdot) { mdot.style.background = '#ccc'; mst.textContent = 'Not connected.'; }
+      document.getElementById('relay-disconnect-btn').style.display = 'none';
+    }
+  } catch {}
+}
+
+function openSupportModal() { document.getElementById('support-modal').classList.add('open'); checkRelayStatus(); }
+function closeSupportModal() { document.getElementById('support-modal').classList.remove('open'); }
+
+async function relayConnect() {
+  const url = document.getElementById('relay-url-input').value.trim();
+  const st  = document.getElementById('relay-connect-status');
+  const btn = document.getElementById('relay-connect-btn');
+  if (!url) { st.textContent = 'Please enter a URL.'; return; }
+  btn.disabled = true; btn.textContent = 'Connecting…'; st.textContent = '';
+  try {
+    const r = await fetch('/admin/relay/connect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', ...authHeader()},
+      body: JSON.stringify({url}),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      showToast('Connected to support server ✓', 'success');
+      closeSupportModal();
+      checkRelayStatus();
+      if (d.update_available) document.getElementById('update-banner').style.display = 'flex';
+    } else { st.textContent = '✖ ' + (d.detail || 'Connection failed.'); st.style.color = 'var(--error)'; }
+  } catch { st.textContent = 'Network error.'; }
+  btn.disabled = false; btn.textContent = 'Connect';
+}
+
+async function relayDisconnect() {
+  await fetch('/admin/relay/disconnect', { method: 'POST', headers: authHeader() });
+  checkRelayStatus();
+  showToast('Disconnected from support server.', 'success');
+}
+
+// ── Updates ───────────────────────────────────────────────────
+async function applyUpdate() {
+  const st = document.getElementById('update-status');
+  st.textContent = 'Downloading and applying update…';
+  try {
+    const r = await fetch('/admin/update/apply', { method: 'POST', headers: authHeader() });
+    const d = await r.json();
+    if (r.ok) { st.textContent = d.message || 'Applied! Refreshing…'; setTimeout(() => location.reload(), 3000); }
+    else       { st.textContent = '✖ ' + (d.detail || 'Update failed.'); }
+  } catch(e) { st.textContent = 'Error: ' + e; }
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = type === 'error' ? 'var(--error)' : type === 'success' ? 'var(--success)' : '#333';
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

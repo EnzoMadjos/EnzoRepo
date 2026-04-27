@@ -1,0 +1,10 @@
+{
+  "tables": [],
+  "views": [],
+  "relationships": [],
+  "queries": [
+    {
+      "error": "net.ucanaccess.jdbc.UcanaccessSQLException: UCAExc:::5.0.1 user lacks privilege or object not found: MSYSOBJECTS in statement [SELECT MSysObjects.Name, MSysQueries.Expression FROM MSysObjects LEFT JOIN MSysQueries ON MSysObjects.Id = MSysQueries.ObjectId WHERE MSysObjects.Type=5 ORDER BY MSysObjects.Name]"
+    }
+  ]
+}

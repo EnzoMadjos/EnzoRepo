@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Certificate of Indigency</title>
+  <style>
+    body { font-family: "Times New Roman", serif; max-width: 720px; margin: 40px auto; padding: 0 40px; color: #111; }
+    .header { text-align: center; margin-bottom: 28px; }
+    .header h2 { font-size: 1.1rem; text-transform: uppercase; margin: 2px 0; }
+    .header h1 { font-size: 1.5rem; font-weight: bold; text-transform: uppercase; margin: 4px 0; }
+    .doc-title { text-align: center; font-size: 1.15rem; font-weight: bold; text-transform: uppercase; margin: 24px 0 20px; text-decoration: underline; }
+    .body-text { font-size: 1rem; line-height: 2; text-align: justify; margin-bottom: 16px; }
+    .signature-block { margin-top: 48px; }
+    .signature-line { border-top: 1px solid #111; width: 220px; margin-top: 40px; }
+    .footer-note { font-size: .78rem; color: #555; margin-top: 24px; }
+    @media print { body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Republic of the Philippines</h2>
+    <h2>Province of Zamboanga del Sur</h2>
+    <h1>Barangay Pitogo</h1>
+    <h2>Office of the Barangay Captain</h2>
+  </div>
+
+  <div class="doc-title">Certificate of Indigency</div>
+
+  <div class="body-text">
+    <p>TO WHOM IT MAY CONCERN:</p>
+    <br>
+    <p>
+      This is to certify that <strong>{{ full_name }}</strong>, a resident of <strong>{{ address }}</strong>,
+      belongs to an indigent family and does not have sufficient means to support their needs.
+    </p>
+    <br>
+    <p>
+      This certification is issued upon the request of the above-named person for the purpose of
+      <strong>{{ purpose }}</strong>.
+    </p>
+    <br>
+    <p>
+      Issued this {{ issued_at }} at Barangay Pitogo, Pagadian City, Zamboanga del Sur, Philippines.
+    </p>
+  </div>
+
+  <div class="signature-block">
+    <div class="signature-line"></div>
+    <div style="margin-top:6px;font-size:.9rem;"><strong>Barangay Captain / Authorized Official</strong></div>
+    <div style="font-size:.8rem;color:#555;">Issued by: {{ issued_by }}</div>
+  </div>
+
+  <div class="footer-note">
+    NOT VALID WITHOUT OFFICIAL DRY SEAL &nbsp;|&nbsp; OR No.: __________ &nbsp;|&nbsp; Date: {{ issued_at }}
+  </div>
+</body>
+</html>
