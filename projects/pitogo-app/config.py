@@ -35,3 +35,5 @@ LOG_WEBHOOK_URL = os.getenv("LOG_WEBHOOK_URL", "")
 
 # ── Update ────────────────────────────────────────────────────────────────────
 UPDATE_URL = os.getenv("UPDATE_URL", "")
+# Patch signing
+PATCH_PUBLIC_KEY_PATH = os.getenv("PATCH_PUBLIC_KEY_PATH", str(SECURE_DIR / "patch_public.pem"))
