@@ -104,6 +104,7 @@
         <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password" />
       </div>
       <button class="btn btn-primary" onclick="doLogin()">Log In</button>
+      <button class="btn btn-ghost" style="margin-left:8px;" onclick="enableDemo()">Try Demo</button>
       <div id="login-error"></div>
     </div>
   </div>
@@ -311,6 +312,16 @@ function doLogout() {
   document.getElementById('app-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = '';
   document.getElementById('login-password').value = '';
+}
+
+// ── Demo Mode (dev-only) ─────────────────────────────────────
+function enableDemo() {
+  _token = 'demo-token';
+  _username = 'Demo User';
+  localStorage.setItem('pitogo_token', _token);
+  localStorage.setItem('pitogo_username', _username);
+  showToast('Demo mode enabled — UI only', 'success');
+  showApp();
 }
 
 function showApp() {
