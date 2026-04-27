@@ -142,25 +142,15 @@ def generate_certificate_file(cert_id: str, db=Depends(get_db), session: auth.Se
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"render failed: {exc}")
 
-    # persist to secure storage
+    # persist to secure storage (HTML + optional PDF)
+    from pdf_renderer import render_and_store
+
     now = datetime.utcnow()
     dest_dir = config.SECURE_DIR / "storage" / "certificates" / now.strftime("%Y") / now.strftime("%m") / now.strftime("%d")
-    dest_dir.mkdir(parents=True, exist_ok=True)
     safe_base = ci.control_number.replace("/", "_")
-    html_path = dest_dir / f"{safe_base}.html"
-    html_path.write_text(rendered, encoding="utf-8")
+    stored = render_and_store(rendered, dest_dir, safe_base)
 
-    pdf_path = None
-    try:
-        # optional: convert to PDF if weasyprint is installed
-        from weasyprint import HTML
-
-        pdf_path = dest_dir / f"{safe_base}.pdf"
-        HTML(string=rendered).write_pdf(str(pdf_path))
-    except Exception:
-        pdf_path = None
-
-    ci.pdf_path = str(pdf_path if pdf_path else html_path)
+    ci.pdf_path = stored
     db.add(ci)
     db.commit()
     db.refresh(ci)
