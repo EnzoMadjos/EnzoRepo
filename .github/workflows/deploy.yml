@@ -69,8 +69,6 @@ jobs:
           set -e
           cd ~/enzo-app
 
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "enzomadjos" --password-stdin
-
           docker compose pull
           docker compose up -d --remove-orphans
 
@@ -89,8 +87,6 @@ jobs:
           echo "DEPLOY SUCCESS: enzo-app is running"
           docker ps --filter name=enzo-app --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
           ENDSSH
-        env:
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
   prune-old-images:
     name: Prune old GHCR images (keep latest 3)
