@@ -6,3 +6,4 @@ httpx==0.28.1
 cryptography==41.0.3
 SQLAlchemy==2.0.22
 alembic==1.11.2
+mammoth
