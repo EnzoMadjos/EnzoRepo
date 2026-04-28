@@ -96,6 +96,7 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     if: success()
+    continue-on-error: true
     steps:
       - name: Delete old package versions
         uses: actions/delete-package-versions@v5
