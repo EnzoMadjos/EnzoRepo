@@ -1,6 +1,6 @@
 {% extends 'certs/base_cert.html' %}
 {% block body %}
-<p style="text-align:center; font-weight:600;">BARANGAY BUSINESS CLEARANCE</p>
-<p>This is to certify that <strong>{{ business_name }}</strong>, owned by <strong>{{ owner_name }}</strong>, located at <strong>{{ address }}</strong>, is registered with Barangay Pitogo as of <strong>{{ issued_at }}</strong>.</p>
+<p style="text-align:center; font-weight:600;">BARANGAY: {{ household.barangay }}</p>
+<p>This is to certify that <strong>{{ business_name }}</strong>, owned by <strong>{{ owner_name }}</strong>, located at <strong>{{ address }}</strong>, is registered with Barangay: {{ household.barangay }}<strong>{{ issued_at }}</strong>.</p>
 <p>Purpose: {{ purpose }}</p>
 {% endblock %}

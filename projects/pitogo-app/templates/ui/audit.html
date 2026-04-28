@@ -1,0 +1,232 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Audit Log</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:18px;color:#111}
+    .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+    input,select{padding:8px;border:1px solid #ddd;border-radius:6px}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
+    .muted{color:#666;font-size:0.9rem}
+  </style>
+</head>
+<body>
+  <h2>Audit Log Viewer</h2>
+  <div class="card">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input id="q" placeholder="Search message or field" style="flex:1" />
+      <select id="level">
+        <option value="">All levels</option>
+        <option>INFO</option>
+        <option>WARNING</option>
+        <option>ERROR</option>
+      </select>
+      <label style="font-size:0.85rem">Start</label>
+      <input id="start" type="datetime-local" />
+      <label style="font-size:0.85rem">End</label>
+      <input id="end" type="datetime-local" />
+      <button onclick="loadLogs()">Refresh</button>
+      <button onclick="exportLogs('json')">Export JSON</button>
+      <button onclick="exportLogs('csv')">Export CSV</button>
+      <button onclick="importTemplates()">Import (dry-run)</button>
+      <button onclick="applyAllInject()">Apply All Inject</button>
+      <button onclick="undoAllInject()">Undo All</button>
+      <select id="archive_format">
+        <option value="zip">zip</option>
+        <option value="csv">csv</option>
+        <option value="json">json</option>
+      </select>
+      <label style="font-size:0.85rem"><input type="checkbox" id="clear_after" /> Clear after archive</label>
+      <button onclick="archiveLogs()">Archive Logs</button>
+    </div>
+    <div id="status" class="muted"></div>
+    <pre id="import_result" style="white-space:pre-wrap;max-height:120px;overflow:auto;background:#f7f7f7;padding:8px;border-radius:6px;margin-top:8px"></pre>
+    <div id="import_preview" style="margin-top:8px"></div>
+    <table id="log_table">
+      <thead><tr><th>Time</th><th>Level</th><th>Message</th><th>Details</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+  const token = localStorage.getItem('pitogo_token') || '';
+  const hdrs = token ? {'Authorization': 'Bearer '+token, 'Content-Type':'application/json'} : {'Content-Type':'application/json'};
+  function setStatus(msg){ document.getElementById('status').textContent = msg || ''; }
+
+  function renderDetails(extra){
+    if(!extra) return '';
+    try{ return JSON.stringify(extra); }catch(e){ return String(extra); }
+  }
+
+  async function loadLogs(){
+    setStatus('Loading logs...');
+    try{
+      const qv = document.getElementById('q').value.trim();
+      const level = document.getElementById('level').value;
+      const start = document.getElementById('start').value;
+      const end = document.getElementById('end').value;
+      const params = new URLSearchParams();
+      if(qv) params.append('q', qv);
+      if(level) params.append('level', level);
+      if(start) params.append('start', start);
+      if(end) params.append('end', end);
+      params.append('per_page', '500');
+      const r = await fetch('/admin/logs?' + params.toString(), {headers: hdrs});
+      const data = await r.json();
+      if(!r.ok){ setStatus('Failed to load logs'); return; }
+      const items = data.items || data;
+      const rows = (items || []).slice(0, 500);
+      const tbody = document.querySelector('#log_table tbody'); tbody.innerHTML = '';
+      rows.forEach(it => {
+        const tr = document.createElement('tr');
+        const tdTime = document.createElement('td'); tdTime.textContent = it.ts || '';
+        const tdLevel = document.createElement('td'); tdLevel.textContent = it.level || '';
+        const tdMsg = document.createElement('td'); tdMsg.textContent = it.msg || '';
+        const tdDetails = document.createElement('td'); tdDetails.textContent = renderDetails(it.extra || it);
+        tr.appendChild(tdTime); tr.appendChild(tdLevel); tr.appendChild(tdMsg); tr.appendChild(tdDetails);
+        tbody.appendChild(tr);
+      });
+      setStatus(`Showing ${rows.length} entries`);
+    }catch(e){ setStatus('Network or auth error'); }
+  }
+
+  async function exportLogs(format){
+    setStatus('Preparing export...');
+    try{
+      const qv = document.getElementById('q').value.trim();
+      const level = document.getElementById('level').value;
+      const start = document.getElementById('start').value;
+      const end = document.getElementById('end').value;
+      const params = new URLSearchParams();
+      if(qv) params.append('q', qv);
+      if(level) params.append('level', level);
+      if(start) params.append('start', start);
+      if(end) params.append('end', end);
+      params.append('per_page', '10000');
+      params.append('format', format);
+      const url = '/admin/logs?' + params.toString();
+      const r = await fetch(url, {headers: hdrs});
+      if(!r.ok){ setStatus('Export failed'); return; }
+      const blob = await r.blob();
+      const disp = r.headers.get('content-disposition') || '';
+      let filename = 'pitogo_logs.' + (format === 'csv' ? 'csv' : 'json');
+      const m = /filename=\"?([^\";]+)\"?/.exec(disp);
+      if(m) filename = m[1];
+      const urlObj = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = urlObj; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(urlObj), 30000);
+      setStatus('Export ready');
+    }catch(e){ setStatus('Network or auth error'); }
+  }
+
+  async function archiveLogs(){
+    setStatus('Archiving logs...');
+    try{
+      const format = document.getElementById('archive_format').value || 'zip';
+      const clear_after = document.getElementById('clear_after').checked;
+      const qv = document.getElementById('q').value.trim();
+      const level = document.getElementById('level').value;
+      const start = document.getElementById('start').value;
+      const end = document.getElementById('end').value;
+      const body = { format, clear_after };
+      if(qv) body.q = qv;
+      if(level) body.level = level;
+      if(start) body.start = start;
+      if(end) body.end = end;
+      const r = await fetch('/admin/logs/archive', {method:'POST', headers: hdrs, body: JSON.stringify(body)});
+      const j = await r.json();
+      if(!r.ok){ setStatus(j.detail || 'Archive failed'); return; }
+      setStatus('Archive created: '+j.archive);
+      // download archive via returned URL
+      if(j.download_url){
+        const f = await fetch(j.download_url, {headers: hdrs});
+        if(!f.ok){ setStatus('Archive created but failed to download'); return; }
+        const blob = await f.blob();
+        const urlObj = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = urlObj; a.download = j.archive.split('/').pop(); document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(urlObj), 30000);
+      }
+    }catch(e){ setStatus('Network or auth error'); }
+  }
+
+  async function importTemplates(){
+    setStatus('Running templates import (dry-run)...');
+    try{
+      const body = { dry_run: true, convert: false, inject: true };
+      const r = await fetch('/admin/templates/import', {method:'POST', headers: hdrs, body: JSON.stringify(body)});
+      const j = await r.json();
+      if(!r.ok){ setStatus(j.detail || 'Import failed'); return; }
+      document.getElementById('import_result').textContent = JSON.stringify(j, null, 2);
+      renderImportPreview(j.simulated_changes || []);
+      setStatus('Import dry-run completed');
+    }catch(e){ setStatus('Network or auth error'); }
+  }
+
+  function renderImportPreview(list){
+    const container = document.getElementById('import_preview'); container.innerHTML = '';
+    if(!list || !list.length){ container.innerHTML = '<div class="muted">No simulated changes</div>'; return; }
+    list.forEach(item => {
+      const div = document.createElement('div'); div.style.padding='8px'; div.style.border='1px solid #eee'; div.style.borderRadius='6px'; div.style.marginBottom='6px';
+      const title = document.createElement('div'); title.innerHTML = `<strong>${item.file}</strong> <button style="margin-left:8px" onclick="applyInject('${item.file.replace(/'/g, "\\'")}')">Apply</button> <button style="margin-left:6px" onclick="undoInject('${item.file.replace(/'/g, "\\'")}')">Undo</button>`;
+      div.appendChild(title);
+      const ul = document.createElement('ul'); (item.replacements||[]).forEach(rep => { const li = document.createElement('li'); li.textContent = rep.before + ' → ' + rep.after; ul.appendChild(li); });
+      div.appendChild(ul);
+      container.appendChild(div);
+    });
+  }
+
+  async function applyInject(file){
+    setStatus('Applying injection to '+file+'...');
+    try{
+      const body = { files: [file], apply_all: false, convert: false };
+      const r = await fetch('/admin/templates/apply', {method:'POST', headers: hdrs, body: JSON.stringify(body)});
+      const j = await r.json();
+      if(!r.ok){ setStatus(j.detail || 'Apply failed'); return; }
+      document.getElementById('import_result').textContent = JSON.stringify(j, null, 2);
+      setStatus('Applied: '+(j.patched||[]).join(', '));
+    }catch(e){ setStatus('Network or auth error'); }
+  }
+
+  async function applyAllInject(){
+    setStatus('Applying injection to all files...');
+    try{
+      const body = { files: [], apply_all: true, convert: false };
+      const r = await fetch('/admin/templates/apply', {method:'POST', headers: hdrs, body: JSON.stringify(body)});
+      const j = await r.json();
+      if(!r.ok){ setStatus(j.detail || 'Apply all failed'); return; }
+      document.getElementById('import_result').textContent = JSON.stringify(j, null, 2);
+      setStatus('Applied to '+(j.patched||[]).length+' files');
+    }catch(e){ setStatus('Network or auth error'); }
+  }
+
+  async function undoInject(file){
+    setStatus('Undoing '+file+'...');
+    try{
+      const body = { files: [file], undo_all: false };
+      const r = await fetch('/admin/templates/undo', {method:'POST', headers: hdrs, body: JSON.stringify(body)});
+      const j = await r.json();
+      if(!r.ok){ setStatus(j.detail || 'Undo failed'); return; }
+      document.getElementById('import_result').textContent = JSON.stringify(j, null, 2);
+      setStatus('Restored: '+(j.restored||[]).join(', '));
+    }catch(e){ setStatus('Network or auth error'); }
+  }
+
+  async function undoAllInject(){
+    setStatus('Undoing all backups...');
+    try{
+      const body = { files: [], undo_all: true };
+      const r = await fetch('/admin/templates/undo', {method:'POST', headers: hdrs, body: JSON.stringify(body)});
+      const j = await r.json();
+      if(!r.ok){ setStatus(j.detail || 'Undo all failed'); return; }
+      document.getElementById('import_result').textContent = JSON.stringify(j, null, 2);
+      setStatus('Restored '+(j.restored||[]).length+' files');
+    }catch(e){ setStatus('Network or auth error'); }
+  }
+
+  window.addEventListener('DOMContentLoaded', ()=>{ loadLogs(); });
+  </script>
+</body>
+</html>

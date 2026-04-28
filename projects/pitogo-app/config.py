@@ -38,3 +38,9 @@ LOG_WEBHOOK_URL = os.getenv("LOG_WEBHOOK_URL", "")
 UPDATE_URL = os.getenv("UPDATE_URL", "")
 # Patch signing
 PATCH_PUBLIC_KEY_PATH = os.getenv("PATCH_PUBLIC_KEY_PATH", str(SECURE_DIR / "patch_public.pem"))
+# Secret used to sign short-lived download URLs. Set this in your .env for stable behavior.
+DOWNLOAD_SECRET = os.getenv("DOWNLOAD_SECRET", "")
+
+# Directory to store archived logs/exports
+LOG_ARCHIVE_DIR = SECURE_DIR / "log_archives"
+LOG_ARCHIVE_DIR.mkdir(exist_ok=True)

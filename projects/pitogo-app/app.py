@@ -19,10 +19,14 @@ import os
 import shutil
 from pathlib import Path
 from typing import Optional
+import json
+from datetime import datetime
 
 import httpx
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status, Body
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+import mimetypes
+import utils
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -105,6 +109,167 @@ async def ui_households(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("ui/households.html", {"request": request, "app_name": config.APP_NAME})
 
 
+@app.get("/ui/certificate_preview", response_class=HTMLResponse)
+async def ui_certificate_preview(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("ui/certificate_preview.html", {"request": request, "app_name": config.APP_NAME})
+
+
+@app.get("/ui/audit", response_class=HTMLResponse)
+async def ui_audit(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("ui/audit.html", {"request": request, "app_name": config.APP_NAME})
+
+
+class ArchiveRequest(BaseModel):
+    q: Optional[str] = None
+    level: Optional[str] = None
+    start: Optional[str] = None
+    end: Optional[str] = None
+    format: str = 'zip'
+    clear_after: bool = False
+
+
+class ImportTemplatesRequest(BaseModel):
+    convert: bool = False
+    inject: bool = False
+    dry_run: bool = True
+
+
+class ApplyTemplatesRequest(BaseModel):
+    files: list[str] | None = None
+    apply_all: bool = False
+    convert: bool = False
+
+
+class UndoTemplatesRequest(BaseModel):
+    files: list[str] | None = None
+    undo_all: bool = False
+
+
+@app.post('/admin/logs/archive')
+async def archive_logs(
+    q: Optional[str] = None,
+    level: Optional[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    format: str = 'zip',
+    clear_after: bool = False,
+    body: Optional[ArchiveRequest] = Body(None),
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
+    """Archive logs into `config.LOG_ARCHIVE_DIR` and return a download URL.
+
+    Accepts JSON body with fields: `q`, `level`, `start`, `end`, `format`, `clear_after`.
+    Falls back to query params when body omitted for backward compatibility.
+    """
+
+    # prefer JSON body when provided (UI posts JSON). Keep query-param fallback.
+
+    entries = app_logger.get_recent(10000)
+
+    def parse_ts(s: Optional[str]):
+        if not s:
+            return None
+        try:
+            return datetime.fromisoformat(s)
+        except Exception:
+            for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+                try:
+                    return datetime.strptime(s, fmt)
+                except Exception:
+                    continue
+        return None
+
+    # effective params: prefer body values, else use query params
+    req_q = body.q if body and body.q is not None else q
+    req_level = body.level if body and body.level is not None else level
+    req_start = body.start if body and body.start is not None else start
+    req_end = body.end if body and body.end is not None else end
+    req_format = body.format if body and body.format is not None else format
+    req_clear_after = body.clear_after if body and body.clear_after is not None else clear_after
+
+    start_dt = parse_ts(req_start)
+    end_dt = parse_ts(req_end)
+
+    q_lower = req_q.lower() if req_q else None
+    filtered = []
+    for e in entries:
+        ets = None
+        try:
+            ets = datetime.fromisoformat(e.get('ts')) if e.get('ts') else None
+        except Exception:
+            ets = None
+        if start_dt and ets and ets < start_dt:
+            continue
+        if end_dt and ets and ets > end_dt:
+            continue
+        if req_level and e.get('level', '').upper() != req_level.upper():
+            continue
+        if q_lower:
+            if not ((e.get('msg') and q_lower in str(e.get('msg')).lower()) or q_lower in json.dumps(e).lower()):
+                continue
+        filtered.append(e)
+
+    timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
+    base_name = f'pitogo_logs_{timestamp}'
+    LOG_ARCHIVE_DIR = config.LOG_ARCHIVE_DIR
+    if req_format == 'json':
+        filename = f"{base_name}.json"
+        out_path = LOG_ARCHIVE_DIR / filename
+        out_path.write_text(json.dumps(filtered, ensure_ascii=False), encoding='utf-8')
+    elif req_format == 'csv':
+        import csv, io
+        filename = f"{base_name}.csv"
+        out_path = LOG_ARCHIVE_DIR / filename
+        sio = io.StringIO()
+        writer = csv.writer(sio)
+        writer.writerow(['ts', 'level', 'msg', 'extra'])
+        for it in filtered:
+            extra = it.get('extra') if isinstance(it.get('extra'), (dict, list)) else {k: v for k, v in it.items() if k not in ('ts', 'level', 'msg')}
+            writer.writerow([it.get('ts', ''), it.get('level', ''), it.get('msg', ''), json.dumps(extra, ensure_ascii=False)])
+        out_path.write_text(sio.getvalue(), encoding='utf-8')
+    else:
+        # zip default
+        import io, csv, zipfile
+        filename = f"{base_name}.zip"
+        out_path = LOG_ARCHIVE_DIR / filename
+        # create a zip containing a CSV of logs
+        with zipfile.ZipFile(out_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+            sio = io.StringIO()
+            writer = csv.writer(sio)
+            writer.writerow(['ts', 'level', 'msg', 'extra'])
+            for it in filtered:
+                extra = it.get('extra') if isinstance(it.get('extra'), (dict, list)) else {k: v for k, v in it.items() if k not in ('ts', 'level', 'msg')}
+                writer.writerow([it.get('ts', ''), it.get('level', ''), it.get('msg', ''), json.dumps(extra, ensure_ascii=False)])
+            zf.writestr(f"{base_name}.csv", sio.getvalue())
+
+    # optionally clear live logs
+    if req_clear_after:
+        try:
+            app_logger.clear_logs()
+            app_logger.info('Logs archived and cleared', username=session.username, archive=str(out_path))
+        except Exception:
+            pass
+
+    download_url = f"/admin/archives/{out_path.name}"
+    return JSONResponse({"archive": str(out_path), "download_url": download_url})
+
+
+@app.get('/admin/archives/{filename}')
+async def serve_archive(filename: str, session: auth.SessionData = Depends(auth.require_auth)):
+    target = config.LOG_ARCHIVE_DIR / filename
+    try:
+        target_resolved = target.resolve()
+        root = config.LOG_ARCHIVE_DIR.resolve()
+    except Exception:
+        raise HTTPException(status_code=404, detail='not found')
+    if not str(target_resolved).startswith(str(root)):
+        raise HTTPException(status_code=403, detail='access denied')
+    if not target_resolved.exists():
+        raise HTTPException(status_code=404, detail='not found')
+    mime = mimetypes.guess_type(str(target_resolved))[0] or 'application/octet-stream'
+    return FileResponse(path=str(target_resolved), media_type=mime, filename=target_resolved.name)
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _relay_headers() -> dict:
@@ -128,6 +293,15 @@ async def index(request: Request) -> HTMLResponse:
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class ArchiveRequest(BaseModel):
+    q: Optional[str] = None
+    level: Optional[str] = None
+    start: Optional[str] = None
+    end: Optional[str] = None
+    format: str = 'zip'
+    clear_after: bool = False
 
 
 @app.post("/auth/login")
@@ -167,6 +341,203 @@ async def server_status() -> JSONResponse:
         "local_ip":    local_ip,
         "port":        config.APP_PORT,
     })
+
+
+@app.get('/download/{token}')
+async def download_signed(token: str):
+    """Serve a signed short-lived download token without requiring auth.
+
+    Token verification is HMAC-based and uses `config.DOWNLOAD_SECRET`.
+    """
+    try:
+        payload = utils.verify_signed_token(token)
+    except Exception:
+        raise HTTPException(status_code=404, detail="invalid or expired token")
+
+    rel_path = payload.get('path')
+    if not rel_path:
+        raise HTTPException(status_code=404, detail="invalid token payload")
+
+    target = config.SECURE_DIR / Path(rel_path)
+    try:
+        target_resolved = target.resolve()
+        secure_root = config.SECURE_DIR.resolve()
+    except Exception:
+        raise HTTPException(status_code=404, detail="file not found")
+
+    if not str(target_resolved).startswith(str(secure_root)):
+        raise HTTPException(status_code=403, detail="access denied")
+    if not target_resolved.exists():
+        raise HTTPException(status_code=404, detail="file not found")
+
+    mime = mimetypes.guess_type(str(target_resolved))[0] or "application/octet-stream"
+    return FileResponse(path=str(target_resolved), media_type=mime, filename=target_resolved.name)
+
+
+@app.post('/admin/templates/import')
+async def import_templates_endpoint(
+    body: ImportTemplatesRequest,
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
+    """Run the DOCX -> HTML importer and optional placeholder injector.
+
+    - `convert`: run the DOCX converter (uses `tools/import_templates.py`)
+    - `inject`: run the placeholder injector (uses `tools/auto_inject_placeholders.py`)
+    - `dry_run`: when true, only report what would be done
+    """
+    root = config.BASE_DIR
+    src = root / 'templates' / 'docs' / 'source_documents'
+    dst = root / 'templates' / 'certs'
+    docx_files = sorted([p.name for p in src.glob('*.docx')]) if src.exists() else []
+    cert_files = sorted([p.name for p in dst.glob('*.html')]) if dst.exists() else []
+
+    result = {'docx_count': len(docx_files), 'docx_files': docx_files, 'cert_count': len(cert_files), 'certs': cert_files, 'actions': []}
+
+    if body.dry_run:
+        # simulate placeholder injection if requested
+        if body.inject:
+            try:
+                import tools.auto_inject_placeholders as injector
+                simulated = []
+                for p in sorted(dst.glob('*.html')):
+                    res = injector.simulate_inject_into_file(p)
+                    if res.get('patched'):
+                        # include up to first 3 replacements as preview
+                        simulated.append({'file': p.name, 'replacements': res.get('replacements')[:3]})
+                result['simulated_changes'] = simulated
+            except Exception as exc:
+                app_logger.error('Placeholder simulation failed', exc=exc, username=session.username)
+                raise HTTPException(status_code=500, detail=f'Simulation failed: {exc}')
+        result['actions'].append('dry_run')
+        return JSONResponse(result)
+
+    # perform actions
+    if body.convert:
+        try:
+            import tools.import_templates as importer
+            importer.main()
+            result['actions'].append('converted_docx')
+            app_logger.info('Templates converted', username=session.username, count=len(docx_files))
+        except Exception as exc:
+            app_logger.error('Template conversion failed', exc=exc, username=session.username)
+            raise HTTPException(status_code=500, detail=f'Conversion failed: {exc}')
+
+    if body.inject:
+        try:
+            import tools.auto_inject_placeholders as injector
+            injector.main()
+            result['actions'].append('injected_placeholders')
+            app_logger.info('Placeholder injection completed', username=session.username, count=len(cert_files))
+        except Exception as exc:
+            app_logger.error('Placeholder injection failed', exc=exc, username=session.username)
+            raise HTTPException(status_code=500, detail=f'Injection failed: {exc}')
+
+    return JSONResponse(result)
+
+
+@app.post('/admin/templates/apply')
+async def apply_templates_endpoint(
+    body: ApplyTemplatesRequest,
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
+    """Apply placeholder injection to specified files or all files.
+
+    - `files`: list of filenames under `templates/certs/` to process.
+    - `apply_all`: when true, process all cert HTML files.
+    - `convert`: when true, run the DOCX->HTML converter first.
+    """
+    root = config.BASE_DIR
+    src = root / 'templates' / 'docs' / 'source_documents'
+    dst = root / 'templates' / 'certs'
+
+    result = {'requested': body.dict(), 'patched': [], 'skipped': [], 'errors': {}}
+
+    if body.convert:
+        try:
+            import tools.import_templates as importer
+            importer.main()
+            app_logger.info('Templates converted (apply)', username=session.username)
+        except Exception as exc:
+            app_logger.error('Conversion (apply) failed', exc=exc, username=session.username)
+            raise HTTPException(status_code=500, detail=f'Conversion failed: {exc}')
+
+    try:
+        import tools.auto_inject_placeholders as injector
+    except Exception as exc:
+        app_logger.error('Injector import failed', exc=exc, username=session.username)
+        raise HTTPException(status_code=500, detail=f'Injector unavailable: {exc}')
+
+    targets = []
+    if body.apply_all:
+        targets = sorted(dst.glob('*.html'))
+    elif body.files:
+        for fn in body.files:
+            p = dst / fn
+            targets.append(p)
+    else:
+        raise HTTPException(status_code=400, detail='No files specified and apply_all is false')
+
+    for p in targets:
+        try:
+            if not p.exists():
+                result['skipped'].append(str(p.name))
+                continue
+            ok = injector.inject_into_file(p)
+            if ok:
+                result['patched'].append(str(p.name))
+            else:
+                result['skipped'].append(str(p.name))
+        except Exception as exc:
+            result['errors'][str(p.name)] = str(exc)
+
+    app_logger.info('Apply templates completed', username=session.username, patched=result['patched'])
+    return JSONResponse(result)
+
+
+@app.post('/admin/templates/undo')
+async def undo_templates_endpoint(
+    body: UndoTemplatesRequest,
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
+    """Restore `.bak` backups for specified files or all files.
+
+    - `files`: list of filenames under `templates/certs/` to restore.
+    - `undo_all`: when true, restore all `*.html.bak` backups.
+    Restores content from `file.html.bak` -> `file.html` and removes the `.bak` file.
+    """
+    root = config.BASE_DIR
+    dst = root / 'templates' / 'certs'
+
+    result = {'requested': body.dict(), 'restored': [], 'skipped': [], 'errors': {}}
+
+    targets = []
+    if body.undo_all:
+        targets = sorted(dst.glob('*.html.bak'))
+    elif body.files:
+        for fn in body.files:
+            p = dst / fn
+            targets.append(p.with_suffix(p.suffix + '.bak'))
+    else:
+        raise HTTPException(status_code=400, detail='No files specified and undo_all is false')
+
+    for bak in targets:
+        try:
+            if not bak.exists():
+                result['skipped'].append(str(bak.name))
+                continue
+            orig_path = Path(str(bak)[:-4]) if str(bak).endswith('.bak') else bak.with_suffix('')
+            data = bak.read_text(encoding='utf-8')
+            orig_path.write_text(data, encoding='utf-8')
+            try:
+                bak.unlink()
+            except Exception:
+                pass
+            result['restored'].append(str(orig_path.name))
+        except Exception as exc:
+            result['errors'][str(bak.name)] = str(exc)
+
+    app_logger.info('Undo templates completed', username=session.username, restored=result['restored'])
+    return JSONResponse(result)
 
 
 # ── Document printing ─────────────────────────────────────────────────────────
@@ -218,8 +589,89 @@ async def print_document(
 # ── Admin — logs ──────────────────────────────────────────────────────────────
 
 @app.get("/admin/logs")
-async def get_logs(n: int = 200, session: auth.SessionData = Depends(auth.require_auth)) -> JSONResponse:
-    return JSONResponse(app_logger.get_recent(n))
+async def get_logs(
+    n: int = 200,
+    q: Optional[str] = None,
+    level: Optional[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 200,
+    format: Optional[str] = None,
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
+    """Return recent logs with server-side filtering, pagination, and optional CSV export.
+
+    Query params:
+      - q: text search across message and fields
+      - level: log level filter (INFO, WARNING, ERROR)
+      - start / end: ISO timestamps to filter range (e.g. 2026-04-28T07:00:00)
+      - page / per_page: pagination
+      - format=csv: return a CSV attachment
+    """
+    # read generous number of recent entries for filtering
+    raw = app_logger.get_recent(max(n, 1000))
+    entries = list(raw)
+
+    def parse_ts(s: Optional[str]):
+        if not s:
+            return None
+        for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(s, fmt)
+            except Exception:
+                continue
+        try:
+            return datetime.fromisoformat(s)
+        except Exception:
+            return None
+
+    start_dt = parse_ts(start)
+    end_dt = parse_ts(end)
+
+    q_lower = q.lower() if q else None
+    filtered = []
+    for e in entries:
+        # parse entry timestamp
+        ets = None
+        try:
+            ets = datetime.fromisoformat(e.get("ts")) if e.get("ts") else None
+        except Exception:
+            ets = None
+        if start_dt and ets and ets < start_dt:
+            continue
+        if end_dt and ets and ets > end_dt:
+            continue
+        if level and e.get("level", "").upper() != level.upper():
+            continue
+        if q_lower:
+            # search in message and JSON representation
+            if not ((e.get("msg") and q_lower in str(e.get("msg")).lower()) or q_lower in json.dumps(e).lower()):
+                continue
+        filtered.append(e)
+
+    total = len(filtered)
+    per_page = max(1, min(per_page or 200, 1000))
+    page = max(1, page or 1)
+    start_i = (page - 1) * per_page
+    items = filtered[start_i : start_i + per_page]
+
+    if format and format.lower() == "csv":
+        import csv, io
+
+        sio = io.StringIO()
+        writer = csv.writer(sio)
+        writer.writerow(["ts", "level", "msg", "extra"])
+        for it in items:
+            extra = it.get("extra") if isinstance(it.get("extra"), (dict, list)) else {k: v for k, v in it.items() if k not in ("ts", "level", "msg")}
+            writer.writerow([it.get("ts", ""), it.get("level", ""), it.get("msg", ""), json.dumps(extra, ensure_ascii=False)])
+        text = sio.getvalue()
+        from fastapi.responses import Response
+
+        fn = f"pitogo_logs_{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}.csv"
+        return Response(content=text, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=\"{fn}\""})
+
+    return JSONResponse({"items": items, "page": page, "per_page": per_page, "total": total})
 
 
 @app.delete("/admin/logs")

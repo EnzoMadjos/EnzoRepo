@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Certificate Preview</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:18px;color:#111}
+    .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    input,select,textarea{padding:8px;border:1px solid #ddd;border-radius:6px}
+    button{padding:8px 12px;border-radius:6px;border:none;background:#1976d2;color:#fff}
+    label{font-size:0.9rem;color:#333}
+    .preview{border:1px solid #eee;padding:12px;margin-top:12px}
+    .col{flex:1;min-width:220px}
+  </style>
+</head>
+<body>
+  <h2>Certificate Preview & Edit</h2>
+  <div class="card">
+    <div style="margin-bottom:8px">Choose a recent certificate or paste an ID to preview and edit before finalizing.</div>
+    <div class="row" style="margin-bottom:8px">
+        <select id="cert_select" style="min-width:320px"></select>
+        <input id="cert_search" placeholder="Search control or resident name" />
+        <button onclick="loadRecentCertificates(1)">Search/Refresh</button>
+        <button onclick="prevPage()">Prev</button>
+        <button onclick="nextPage()">Next</button>
+        <span id="page_info" style="align-self:center"></span>
+        <input id="cert_id" placeholder="Or paste Certificate ID" style="flex:2" />
+      <button onclick="loadPreview()">Load Preview</button>
+      <button onclick="updatePreview()">Update Preview</button>
+      <button onclick="confirmGenerate()">Confirm & Generate</button>
+    </div>
+
+    <div id="status" style="color:#666;font-size:0.9rem;margin-bottom:8px"></div>
+
+    <div class="row">
+      <div class="col">
+        <h4>Editable Fields</h4>
+        <label>Issued By</label>
+        <input id="issued_by" />
+        <label>Purpose (meta.purpose)</label>
+        <input id="meta_purpose" />
+
+        <h5 style="margin-top:8px">Resident</h5>
+        <label>First name</label>
+        <input id="res_first" />
+        <label>Middle name</label>
+        <input id="res_middle" />
+        <label>Last name</label>
+        <input id="res_last" />
+        <label>Birthdate (YYYY-MM-DD)</label>
+        <input id="res_birth" />
+
+        <h5 style="margin-top:8px">Household</h5>
+        <label>Address line</label>
+        <input id="hh_address" />
+        <label>Barangay</label>
+        <input id="hh_barangay" />
+        <label>City</label>
+        <input id="hh_city" />
+      </div>
+
+      <div class="col">
+        <h4>Rendered Preview</h4>
+        <div id="rendered" class="preview">No preview loaded</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const token = localStorage.getItem('pitogo_token') || '';
+  const hdrs = token ? {'Authorization': 'Bearer '+token, 'Content-Type':'application/json'} : {'Content-Type':'application/json'};
+  const authHdrs = token ? {'Authorization': 'Bearer '+token} : {};
+
+  function setStatus(msg){ document.getElementById('status').textContent = msg || ''; }
+  let currentPage = 1;
+  const perPage = 10;
+
+  async function loadPreview(){
+    const id = document.getElementById('cert_id').value.trim();
+    if(!id){ setStatus('Enter a certificate ID'); return; }
+    setStatus('Loading preview...');
+    try{
+      const r = await fetch(`/api/certificates/${id}/preview`, {headers: hdrs});
+      const j = await r.json();
+      if(!r.ok){ setStatus(j.detail || 'Error'); return; }
+      fillContext(j.context);
+      document.getElementById('rendered').innerHTML = j.html;
+      setStatus('Preview loaded');
+    }catch(e){ setStatus('Network error'); }
+  }
+
+  async function loadRecentCertificates(page = 1){
+    const q = document.getElementById('cert_search').value.trim();
+    currentPage = page || 1;
+    setStatus('Loading recent certificates...');
+    try{
+      const params = new URLSearchParams({page: String(currentPage), per_page: String(perPage)});
+      if(q) params.append('q', q);
+      const r = await fetch('/api/certificates/recent?' + params.toString(), {headers: hdrs});
+      const data = await r.json();
+      if(!r.ok){ setStatus('Failed to load list'); return; }
+      const list = data.items || [];
+      const sel = document.getElementById('cert_select');
+      sel.innerHTML = '';
+      list.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = `${item.control_number} ${item.resident_full_name ? ' — ' + item.resident_full_name : ''}`;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', ()=>{
+        const id = sel.value; document.getElementById('cert_id').value = id; loadPreview();
+      });
+      document.getElementById('page_info').textContent = `Page ${data.page} • ${data.per_page} per page • ${data.total} total`;
+      setStatus('Recent certificates loaded');
+    }catch(e){ setStatus('Network error'); }
+  }
+
+  function prevPage(){ if(currentPage>1){ loadRecentCertificates(currentPage-1); } }
+  function nextPage(){ loadRecentCertificates(currentPage+1); }
+
+  function fillContext(ctx){
+    document.getElementById('issued_by').value = ctx.issued_by || '';
+    document.getElementById('meta_purpose').value = (ctx.meta && ctx.meta.purpose) || '';
+    const r = ctx.resident || {};
+    document.getElementById('res_first').value = r.first_name || '';
+    document.getElementById('res_middle').value = r.middle_name || '';
+    document.getElementById('res_last').value = r.last_name || '';
+    document.getElementById('res_birth').value = r.birthdate || '';
+    const h = ctx.household || {};
+    document.getElementById('hh_address').value = h.address_line || '';
+    document.getElementById('hh_barangay').value = h.barangay || '';
+    document.getElementById('hh_city').value = h.city || '';
+  }
+
+  function collectOverrides(){
+    const resident = { first_name: document.getElementById('res_first').value.trim(), middle_name: document.getElementById('res_middle').value.trim(), last_name: document.getElementById('res_last').value.trim(), birthdate: document.getElementById('res_birth').value.trim() };
+    const household = { address_line: document.getElementById('hh_address').value.trim(), barangay: document.getElementById('hh_barangay').value.trim(), city: document.getElementById('hh_city').value.trim() };
+    const issued_by = document.getElementById('issued_by').value.trim();
+    const meta = { purpose: document.getElementById('meta_purpose').value.trim() };
+    return { overrides: { resident, household, issued_by, meta } };
+  }
+
+  async function updatePreview(){
+    const id = document.getElementById('cert_id').value.trim();
+    if(!id){ setStatus('Enter certificate ID'); return; }
+    setStatus('Updating preview...');
+    try{
+      const body = collectOverrides();
+      const r = await fetch(`/api/certificates/${id}/preview`, {method:'POST', headers: hdrs, body: JSON.stringify(body)});
+      const j = await r.json();
+      if(!r.ok){ setStatus(j.detail || 'Error'); return; }
+      document.getElementById('rendered').innerHTML = j.html;
+      fillContext(j.context);
+      setStatus('Preview updated');
+    }catch(e){ setStatus('Network error'); }
+  }
+
+  async function confirmGenerate(){
+    const id = document.getElementById('cert_id').value.trim();
+    if(!id){ setStatus('Enter certificate ID'); return; }
+    setStatus('Generating file...');
+    try{
+      const body = collectOverrides();
+      const r = await fetch(`/api/certificates/${id}/generate`, {method:'POST', headers: hdrs, body: JSON.stringify(body)});
+      const j = await r.json();
+      if(!r.ok){ setStatus(j.detail || 'Error generating'); return; }
+      setStatus('Generated: '+(j.pdf_path || j.download_url || ''));
+      // If server provided a download URL, fetch it with auth and open as blob (works for PDFs and HTML)
+      if(j.download_url){
+        try{
+          const f = await fetch(j.download_url, {headers: authHdrs});
+          if(!f.ok){ setStatus('Generated but failed to fetch file'); return; }
+          const blob = await f.blob();
+          const url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          // revoke after 30s
+          setTimeout(()=>URL.revokeObjectURL(url), 30000);
+        }catch(e){ setStatus('Generated but failed to open file'); }
+      } else if(j.pdf_path){
+        // fallback — open stored path relative to project if possible
+        window.open('/' + j.pdf_path.split('/projects/pitogo-app/').pop() , '_blank');
+      }
+    }catch(e){ setStatus('Network error'); }
+  }
+
+  </script>
+  <script>window.addEventListener('DOMContentLoaded', ()=>{ loadRecentCertificates(); });</script>
+</body>
+</html>

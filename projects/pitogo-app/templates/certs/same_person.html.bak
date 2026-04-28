@@ -1,0 +1,6 @@
+{% extends 'certs/base_cert.html' %}
+{% block body %}
+<p style="text-align:center; font-weight:600;">CERTIFICATE OF IDENTITY / SAME PERSON</p>
+<p>This is to certify that <strong>{{ full_name }}</strong>, born on <strong>{{ date_of_birth }}</strong>, is the same person referenced in the records of Barangay Pitogo.</p>
+<p>Purpose: {{ purpose }}</p>
+{% endblock %}
