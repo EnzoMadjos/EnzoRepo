@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }} — Account</title>
+  <link rel="stylesheet" href="/static/css/app_ui.css">
+</head>
+<body>
+  <h1>Account</h1>
+  <div>
+    <label>Username: <span id="username">Loading...</span></label>
+    <label>Current password<br/><input id="current_pw" type="password" class="input" /></label>
+    <label>New password<br/><input id="new_pw" type="password" class="input" /></label>
+    <label>Confirm new password<br/><input id="confirm_pw" type="password" class="input" /></label>
+    <div style="margin-top:8px"><button id="changeBtn" class="btn btn-primary">Change password</button></div>
+  </div>
+
+  <script src="/static/js/ui_helpers.js"></script>
+  <script>
+    async function load(){
+      try{
+        const me = await fetchJson('/api/users/me', { headers: authHeaders() });
+        document.getElementById('username').textContent = me.username;
+      }catch(e){ showToast('Failed to get user: '+e.message, 'error'); }
+    }
+
+    document.getElementById('changeBtn').addEventListener('click', async ()=>{
+      const user = document.getElementById('username').textContent;
+      const cur = document.getElementById('current_pw').value;
+      const nw = document.getElementById('new_pw').value;
+      const conf = document.getElementById('confirm_pw').value;
+      if(!nw || nw.length < 6){ showToast('New password must be at least 6 characters', 'warn'); return; }
+      if(nw !== conf){ showToast('Passwords do not match', 'warn'); return; }
+      try{
+        await fetchJson('/api/users/'+user+'/password', { method:'POST', headers: authHeaders(), body: JSON.stringify({ new_password: nw, current_password: cur }) });
+        showToast('Password changed', 'success'); document.getElementById('current_pw').value=''; document.getElementById('new_pw').value=''; document.getElementById('confirm_pw').value='';
+      }catch(e){ showToast('Change failed: '+e.message, 'error'); }
+    });
+
+    load();
+  </script>
+</body>
+</html>

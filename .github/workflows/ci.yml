@@ -30,3 +30,5 @@ jobs:
       - name: Run lightweight tests
         run: |
           python projects/pitogo-app/tests/run_tests.py
+          python projects/pitogo-app/tests/users_test.py
+          python projects/pitogo-app/tests/generate_pdf_test.py

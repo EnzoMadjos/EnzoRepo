@@ -1,0 +1,13 @@
+body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin: 16px; color: #222; }
+h1,h2{ margin: 8px 0; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 8px 10px; border-bottom: 1px solid #eee; text-align: left; }
+.form-row { display:flex; gap:8px; align-items:center; }
+.input, input[type=text], input[type=password], select { padding:6px 8px; border:1px solid #ddd; border-radius:6px; }
+.btn { padding:8px 10px; border-radius:6px; border: none; cursor: pointer; }
+.btn-primary { background:#0366d6; color:#fff; }
+.btn-danger { background:#dc3545; color:#fff; }
+.btn-ghost { background:transparent; border:1px solid #ddd; }
+.small { font-size:0.9em; }
+.confirm-box .btn { min-width:72px; }
+@media (max-width:720px){ .form-row { flex-direction: column; align-items:flex-start; } }

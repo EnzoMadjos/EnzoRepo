@@ -41,6 +41,9 @@
     .topbar { background: var(--primary); color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
     .topbar h1 { font-size: 1.05rem; font-weight: 700; }
     .topbar-right { display: flex; align-items: center; gap: 12px; font-size: .82rem; }
+    .topbar-nav { display:flex; align-items:center; gap:10px; margin-left:12px; }
+    .topbar-nav a { color: rgba(255,255,255,.95); text-decoration:none; padding:6px 10px; border-radius:6px; font-weight:600; font-size:.9rem; }
+    .topbar-nav a:hover { background: rgba(255,255,255,.06); }
     #relay-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; display: inline-block; transition: background .3s; }
     #relay-dot.online { background: #4cd137; }
     #update-banner { display: none; background: var(--warn); color: #333; padding: 8px 20px; font-size: .85rem; align-items: center; gap: 10px; }
@@ -122,6 +125,12 @@
   <!-- Topbar -->
   <div class="topbar">
     <h1>{{ app_name }}</h1>
+    <div class="topbar-nav">
+      <a href="/ui/issue">Issue</a>
+      <a href="/ui/users">Users</a>
+      <a href="/ui/account">Account</a>
+      <a href="/ui/audit">Audit</a>
+    </div>
     <div class="topbar-right">
       <span id="relay-dot" title="Support server status"></span>
       <span id="relay-status-text" style="color:rgba(255,255,255,.7)">Support offline</span>

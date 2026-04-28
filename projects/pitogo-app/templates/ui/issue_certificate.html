@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }} — Issue Certificate</title>
+  <link rel="stylesheet" href="/static/css/app_ui.css">
+</head>
+<body>
+  <h1>Issue Certificate</h1>
+
+  <div id="form">
+    <label>Resident
+      <select id="residentSelect"><option>Loading...</option></select>
+    </label>
+
+    <label>Certificate Type
+      <select id="typeSelect"><option>Loading...</option></select>
+    </label>
+
+    <label>Purpose
+      <input id="purpose" type="text" placeholder="e.g. Employment, ID, Travel" class="input" />
+    </label>
+
+    <label>Address
+      <input id="address" type="text" placeholder="Address (prefilled from household)" class="input" />
+    </label>
+
+    <div style="margin-top:10px">
+      <button id="previewBtn" class="btn">Create Draft & Preview</button>
+      <button id="generateBtn" class="btn btn-primary">Generate Final</button>
+    </div>
+  </div>
+
+  <hr />
+  <h2>Preview</h2>
+  <iframe id="previewFrame" style="width:100%;height:640px;border:1px solid #ddd"></iframe>
+
+  <script src="/static/js/ui_helpers.js"></script>
+  <script>
+    async function loadData(){
+      try{
+        const types = await fetchJson('/api/certificate-types/', { headers: authHeaders() });
+        const residents = await fetchJson('/api/residents/', { headers: authHeaders() });
+
+        const tSel = document.getElementById('typeSelect'); tSel.innerHTML = '';
+        types.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name + ' ('+t.code+')'; tSel.appendChild(o); });
+
+        const rSel = document.getElementById('residentSelect'); rSel.innerHTML = '';
+        residents.forEach(r => { const o = document.createElement('option'); o.value = r.id; o.textContent = (r.first_name||'') + ' ' + (r.last_name||''); o.dataset.household = r.household_id || ''; rSel.appendChild(o); });
+
+        fillAddressFromResident();
+      }catch(e){ showToast('Failed to load data: '+e.message, 'error'); }
+    }
+
+    async function fillAddressFromResident(){
+      const rSel = document.getElementById('residentSelect');
+      const hid = rSel.value;
+      const addr = document.getElementById('address');
+      if(!hid){ addr.value = ''; return; }
+      try{
+        const h = await fetchJson('/api/households/' + hid, { headers: authHeaders() });
+        addr.value = [h.address_line, h.barangay, h.city].filter(Boolean).join(', ');
+      }catch(e){ addr.value = ''; }
+    }
+
+    document.getElementById('residentSelect').addEventListener('change', fillAddressFromResident);
+
+    document.getElementById('previewBtn').addEventListener('click', async ()=>{
+      try{
+        const ct = document.getElementById('typeSelect').value;
+        const res = document.getElementById('residentSelect').value;
+        const purpose = document.getElementById('purpose').value;
+        const address = document.getElementById('address').value;
+
+        const created = await fetchJson('/api/certificates/', { method:'POST', headers: Object.assign({}, authHeaders(), {'Content-Type':'application/json'}), body: JSON.stringify({ certificate_type_id: ct, resident_id: res, meta: { purpose: purpose, address: address } }) });
+        const pv = await fetchJson('/api/certificates/' + created.id + '/preview', { headers: authHeaders() });
+        const iframe = document.getElementById('previewFrame'); iframe.srcdoc = pv.html;
+      }catch(err){ showToast('Error: '+err.message, 'error'); }
+    });
+
+    document.getElementById('generateBtn').addEventListener('click', async ()=>{
+      try{
+        const ct = document.getElementById('typeSelect').value;
+        const res = document.getElementById('residentSelect').value;
+        const purpose = document.getElementById('purpose').value;
+        const address = document.getElementById('address').value;
+
+        const created = await fetchJson('/api/certificates/', { method:'POST', headers: Object.assign({}, authHeaders(), {'Content-Type':'application/json'}), body: JSON.stringify({ certificate_type_id: ct, resident_id: res, meta: { purpose: purpose, address: address } }) });
+        const gen = await fetchJson('/api/certificates/' + created.id + '/generate', { method:'POST', headers: authHeaders() });
+        showToast('Generated: ' + gen.download_url, 'success');
+        window.open(gen.download_url, '_blank');
+      }catch(err){ showToast('Error: '+err.message, 'error'); }
+    });
+
+    loadData();
+  </script>
+</body>
+</html>

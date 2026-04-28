@@ -41,6 +41,7 @@ from api.certificate_types import router as certificate_types_router
 from api.certificates import router as certificates_router
 from api.households import router as households_router
 from api.attachments import router as attachments_router
+from api.users import router as users_router
 from fastapi.responses import HTMLResponse
 from fastapi import Request
 from fastapi.responses import HTMLResponse
@@ -97,6 +98,7 @@ app.include_router(certificate_types_router)
 app.include_router(certificates_router)
 app.include_router(households_router)
 app.include_router(attachments_router)
+app.include_router(users_router)
 
 
 @app.get("/ui/residents", response_class=HTMLResponse)
@@ -114,6 +116,18 @@ async def ui_certificate_preview(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("ui/certificate_preview.html", {"request": request, "app_name": config.APP_NAME})
 
 
+@app.get("/ui/issue", response_class=HTMLResponse)
+async def ui_issue(request: Request) -> HTMLResponse:
+    """Simple issuance form: select resident and certificate type, preview and generate."""
+    return templates.TemplateResponse("ui/issue_certificate.html", {"request": request, "app_name": config.APP_NAME})
+
+
+@app.get("/ui/users", response_class=HTMLResponse)
+async def ui_users(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("ui/users.html", {"request": request, "app_name": config.APP_NAME})
+@app.get("/ui/account", response_class=HTMLResponse)
+async def ui_account(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("ui/account.html", {"request": request, "app_name": config.APP_NAME})
 @app.get("/ui/audit", response_class=HTMLResponse)
 async def ui_audit(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("ui/audit.html", {"request": request, "app_name": config.APP_NAME})

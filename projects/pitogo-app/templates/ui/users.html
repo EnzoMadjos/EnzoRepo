@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }} — Users</title>
+  <link rel="stylesheet" href="/static/css/app_ui.css">
+</head>
+<body>
+  <h1>Users</h1>
+
+  <section style="margin-bottom:12px">
+    <form id="createForm" class="form-row">
+      <input id="username" class="input" placeholder="username" required />
+      <input id="password" class="input" placeholder="password" required type="password" />
+      <input id="display" class="input" placeholder="display name" />
+      <select id="role" class="input"><option value="clerk">clerk</option><option value="admin">admin</option></select>
+      <button class="btn btn-primary" type="submit">Create</button>
+    </form>
+  </section>
+
+  <section style="margin-bottom:12px">
+    <div class="form-row">
+      <input id="q" class="input" placeholder="search users" />
+      <select id="perPage" class="input"><option value="10">10</option><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select>
+      <button id="searchBtn" class="btn">Search</button>
+      <button id="prevBtn" class="btn">Prev</button>
+      <button id="nextBtn" class="btn">Next</button>
+      <span id="pageInfo" class="small" style="margin-left:8px"></span>
+    </div>
+  </section>
+
+  <table id="usersTable" class="table">
+    <thead>
+      <tr><th>Username</th><th>Display</th><th>Role</th><th class="small">Actions</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="/static/js/ui_helpers.js"></script>
+  <script>
+    let CUR_PAGE = 1;
+    async function loadUsers(){
+      try{
+        const q = document.getElementById('q').value.trim();
+        const per = document.getElementById('perPage').value;
+        const resp = await fetchJson('/api/users/?' + new URLSearchParams({ q: q || '', page: CUR_PAGE, per_page: per }), { headers: authHeaders() });
+        const tb = document.querySelector('#usersTable tbody'); tb.innerHTML = '';
+        const users = resp.items || [];
+        users.forEach(u => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${u.username}</td><td><input class="display input" value="${u.display_name||''}" /></td><td><select class="role input"><option value="clerk">clerk</option><option value="admin">admin</option></select></td><td></td>`;
+          tr.querySelector('.role').value = u.role;
+
+          const actionsCell = tr.querySelector('td:last-child');
+          const saveBtn = document.createElement('button'); saveBtn.className = 'btn btn-ghost small'; saveBtn.textContent = 'Save';
+          saveBtn.addEventListener('click', async ()=>{
+            const display = tr.querySelector('.display').value;
+            const role = tr.querySelector('.role').value;
+            try{ await fetchJson('/api/users/'+u.username, { method:'PUT', headers: authHeaders(), body: JSON.stringify({ display_name: display, role }) }); showToast('Saved','success'); loadUsers(); }catch(e){ showToast('Save failed: '+e.message,'error'); }
+          });
+
+          const pwBtn = document.createElement('button'); pwBtn.className='btn small'; pwBtn.textContent='Reset PW';
+          pwBtn.addEventListener('click', async ()=>{
+            const np = prompt('Enter new password for ' + u.username);
+            if(!np) return;
+            try{ await fetchJson('/api/users/'+u.username+'/password', { method:'POST', headers: authHeaders(), body: JSON.stringify({ new_password: np }) }); showToast('Password reset','success'); }catch(e){ showToast('Reset failed: '+e.message,'error'); }
+          });
+
+          const delBtn = document.createElement('button'); delBtn.className='btn btn-danger small'; delBtn.textContent='Delete';
+          delBtn.addEventListener('click', async ()=>{
+            const ok = await showConfirm('Delete user ' + u.username + '?');
+            if(!ok) return;
+            try{ await fetchJson('/api/users/'+u.username, { method:'DELETE', headers: authHeaders() }); showToast('Deleted','success'); loadUsers(); }catch(e){ showToast('Delete failed: '+e.message,'error'); }
+          });
+
+          actionsCell.appendChild(saveBtn); actionsCell.appendChild(pwBtn); actionsCell.appendChild(delBtn);
+          tb.appendChild(tr);
+        });
+
+        const total = resp.total || 0; const per_page = resp.per_page || per; const page = resp.page || CUR_PAGE; const pages = Math.max(1, Math.ceil(total / per_page));
+        document.getElementById('pageInfo').textContent = `Page ${page} / ${pages} — ${total} users`;
+      }catch(e){ showToast('Load users failed: '+e.message,'error'); }
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', ()=>{ CUR_PAGE = 1; loadUsers(); });
+    document.getElementById('perPage').addEventListener('change', ()=>{ CUR_PAGE = 1; loadUsers(); });
+    document.getElementById('prevBtn').addEventListener('click', ()=>{ if(CUR_PAGE>1){ CUR_PAGE--; loadUsers(); }});
+    document.getElementById('nextBtn').addEventListener('click', ()=>{ CUR_PAGE++; loadUsers(); });
+
+    document.getElementById('createForm').addEventListener('submit', async function(ev){
+      ev.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const display = document.getElementById('display').value;
+      const role = document.getElementById('role').value;
+      if(!username || !password){ showToast('username and password required','warn'); return; }
+      try{
+        await fetchJson('/api/users/', { method:'POST', headers: authHeaders(), body: JSON.stringify({ username, password, role, display_name: display }) });
+        document.getElementById('username').value=''; document.getElementById('password').value=''; document.getElementById('display').value='';
+        showToast('User created','success'); loadUsers();
+      }catch(e){ showToast('Create failed: '+e.message,'error'); }
+    });
+
+    loadUsers();
+  </script>
+</body>
+</html>
