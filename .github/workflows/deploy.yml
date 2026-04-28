@@ -65,7 +65,7 @@ jobs:
       - name: Deploy via SSH (docker compose pull and up)
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} bash << 'ENDSSH'
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'bash -l' << 'ENDSSH'
           set -e
           cd ~/enzo-app
 
