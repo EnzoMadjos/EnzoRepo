@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }} — Residents</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:18px;color:#111}
+    .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+    .row{display:flex;gap:8px}
+    input,select{padding:8px;border:1px solid #ddd;border-radius:6px}
+    button{padding:8px 12px;border-radius:6px;border:none;background:#1976d2;color:#fff}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
+  </style>
+</head>
+<body>
+  <h2>Residents</h2>
+  <div class="card">
+    <div style="margin-bottom:10px">Create resident</div>
+    <div class="row" style="margin-bottom:8px">
+      <input id="first_name" placeholder="First name" />
+      <input id="last_name" placeholder="Last name" />
+      <input id="national_id" placeholder="National ID (optional)" />
+      <button onclick="createResident()">Create</button>
+    </div>
+    <div id="status" style="color:#666;font-size:0.9rem"></div>
+    <table id="res-table"><thead><tr><th>Name</th><th>National ID</th><th>Household</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <script>
+  const token = localStorage.getItem('pitogo_token') || '';
+  const hdrs = token ? {'Authorization': 'Bearer '+token, 'Content-Type':'application/json'} : {'Content-Type':'application/json'};
+
+  async function listResidents(){
+    const t = document.querySelector('#res-table tbody'); t.innerHTML = '<tr><td colspan=4>Loading…</td></tr>';
+    try{
+      const r = await fetch('/api/residents/', {headers: hdrs});
+      const data = await r.json();
+      if(!r.ok){ t.innerHTML = '<tr><td colspan=4>Error loading</td></tr>'; return; }
+      t.innerHTML = data.map(r => `<tr><td>${r.last_name}, ${r.first_name}</td><td>${r.national_id||''}</td><td>${r.household_id||''}</td><td><button onclick="deleteResident('${r.id}')">Delete</button></td></tr>`).join('');
+    }catch(e){ t.innerHTML = '<tr><td colspan=4>Network error</td></tr>'; }
+  }
+
+  async function createResident(){
+    const first = document.getElementById('first_name').value.trim();
+    const last = document.getElementById('last_name').value.trim();
+    const nid = document.getElementById('national_id').value.trim();
+    if(!first||!last){ document.getElementById('status').textContent='First and last required'; return; }
+    document.getElementById('status').textContent='Creating…';
+    try{
+      const r = await fetch('/api/residents/', {method:'POST', headers: hdrs, body: JSON.stringify({first_name:first,last_name:last,national_id:nid})});
+      const d = await r.json();
+      if(!r.ok){ document.getElementById('status').textContent = d.detail || 'Create failed'; return; }
+      document.getElementById('first_name').value=''; document.getElementById('last_name').value=''; document.getElementById('national_id').value='';
+      document.getElementById('status').textContent='Created';
+      listResidents();
+    }catch(e){ document.getElementById('status').textContent='Network error'; }
+  }
+
+  async function deleteResident(id){
+    if(!confirm('Delete resident?')) return;
+    await fetch('/api/residents/'+id, {method:'DELETE', headers: hdrs});
+    listResidents();
+  }
+
+  window.addEventListener('DOMContentLoaded', ()=>{ listResidents(); });
+  </script>
+</body>
+</html>

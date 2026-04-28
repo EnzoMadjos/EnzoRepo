@@ -38,6 +38,8 @@ from api.certificates import router as certificates_router
 from api.households import router as households_router
 from api.attachments import router as attachments_router
 from fastapi.responses import HTMLResponse
+from fastapi import Request
+from fastapi.responses import HTMLResponse
 
 # ── App init ──────────────────────────────────────────────────────────────────
 
@@ -91,6 +93,16 @@ app.include_router(certificate_types_router)
 app.include_router(certificates_router)
 app.include_router(households_router)
 app.include_router(attachments_router)
+
+
+@app.get("/ui/residents", response_class=HTMLResponse)
+async def ui_residents(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("ui/residents.html", {"request": request, "app_name": config.APP_NAME})
+
+
+@app.get("/ui/households", response_class=HTMLResponse)
+async def ui_households(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("ui/households.html", {"request": request, "app_name": config.APP_NAME})
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

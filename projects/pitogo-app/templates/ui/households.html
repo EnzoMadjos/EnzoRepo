@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }} — Households</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:18px;color:#111}
+    .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+    input,select{padding:8px;border:1px solid #ddd;border-radius:6px}
+    button{padding:8px 12px;border-radius:6px;border:none;background:#1976d2;color:#fff}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
+  </style>
+</head>
+<body>
+  <h2>Households</h2>
+  <div class="card">
+    <div style="margin-bottom:10px">Create household</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="address_line" placeholder="Address line" style="flex:2" />
+      <input id="barangay" placeholder="Barangay" style="width:160px" />
+      <input id="city" placeholder="City" style="width:160px" />
+      <button onclick="createHousehold()">Create</button>
+    </div>
+    <div id="status" style="color:#666;font-size:0.9rem"></div>
+    <table id="hh-table"><thead><tr><th>Address</th><th>Barangay</th><th>City</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <script>
+  const token = localStorage.getItem('pitogo_token') || '';
+  const hdrs = token ? {'Authorization': 'Bearer '+token, 'Content-Type':'application/json'} : {'Content-Type':'application/json'};
+
+  async function listHouseholds(){
+    const t = document.querySelector('#hh-table tbody'); t.innerHTML = '<tr><td colspan=4>Loading…</td></tr>';
+    try{
+      const r = await fetch('/api/households/', {headers: hdrs});
+      const data = await r.json();
+      if(!r.ok){ t.innerHTML = '<tr><td colspan=4>Error loading</td></tr>'; return; }
+      t.innerHTML = data.map(h => `<tr><td>${h.address_line}</td><td>${h.barangay}</td><td>${h.city}</td><td><button onclick="deleteHousehold('${h.id}')">Delete</button></td></tr>`).join('');
+    }catch(e){ t.innerHTML = '<tr><td colspan=4>Network error</td></tr>'; }
+  }
+
+  async function createHousehold(){
+    const address = document.getElementById('address_line').value.trim();
+    const barangay = document.getElementById('barangay').value.trim();
+    const city = document.getElementById('city').value.trim();
+    if(!address||!barangay||!city){ document.getElementById('status').textContent='All fields required'; return; }
+    document.getElementById('status').textContent='Creating…';
+    try{
+      const r = await fetch('/api/households/', {method:'POST', headers: hdrs, body: JSON.stringify({address_line:address,barangay:barangay,city:city})});
+      const d = await r.json();
+      if(!r.ok){ document.getElementById('status').textContent = d.detail || 'Create failed'; return; }
+      document.getElementById('address_line').value=''; document.getElementById('barangay').value=''; document.getElementById('city').value='';
+      document.getElementById('status').textContent='Created';
+      listHouseholds();
+    }catch(e){ document.getElementById('status').textContent='Network error'; }
+  }
+
+  async function deleteHousehold(id){
+    if(!confirm('Delete household?')) return;
+    const r = await fetch('/api/households/'+id, {method:'DELETE', headers: hdrs});
+    if(r.status===400){ alert('Household has members; reassign or remove members first'); }
+    listHouseholds();
+  }
+
+  window.addEventListener('DOMContentLoaded', ()=>{ listHouseholds(); });
+  </script>
+</body>
+</html>
