@@ -17,8 +17,8 @@ from pathlib import Path
 import config
 
 _LOG_FILE = config.SECURE_DIR / "app.log"
-_MAX_BYTES = 512_000   # 500 KB per file
-_BACKUP_COUNT = 3      # keep up to 3 rotated files
+_MAX_BYTES = 512_000  # 500 KB per file
+_BACKUP_COUNT = 3  # keep up to 3 rotated files
 
 
 class _JsonFormatter(logging.Formatter):
@@ -65,6 +65,7 @@ logger = _build_logger()
 # ---------------------------------------------------------------------------
 # Public helpers
 # ---------------------------------------------------------------------------
+
 
 def info(msg: str, **kwargs) -> None:
     logger.info(msg, extra={"extra": kwargs} if kwargs else {})

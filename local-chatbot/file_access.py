@@ -16,31 +16,75 @@ from typing import Optional
 
 # ── Config ───────────────────────────────────────────────────────────────────
 _DEFAULT_WORKSPACE = Path.home() / "ai-lab"
-_WORKSPACE_ROOT = Path(_os.environ.get("ATLAS_WORKSPACE", str(_DEFAULT_WORKSPACE))).resolve()
+_WORKSPACE_ROOT = Path(
+    _os.environ.get("ATLAS_WORKSPACE", str(_DEFAULT_WORKSPACE))
+).resolve()
 _WRITE_ENABLED = _os.environ.get("ATLAS_FS_WRITE", "0") == "1"
 
 # File extensions ATLAS is allowed to read
 _READABLE_EXTS = {
-    ".py", ".js", ".ts", ".jsx", ".tsx", ".html", ".css", ".scss",
-    ".json", ".yaml", ".yml", ".toml", ".env", ".cfg", ".ini",
-    ".md", ".txt", ".rst", ".sh", ".bash", ".zsh",
-    ".sql", ".csv", ".xml", ".apex", ".cls",
-    ".java", ".go", ".rs", ".c", ".cpp", ".h",
-    ".tf", ".hcl", ".dockerfile",
+    ".py",
+    ".js",
+    ".ts",
+    ".jsx",
+    ".tsx",
+    ".html",
+    ".css",
+    ".scss",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".env",
+    ".cfg",
+    ".ini",
+    ".md",
+    ".txt",
+    ".rst",
+    ".sh",
+    ".bash",
+    ".zsh",
+    ".sql",
+    ".csv",
+    ".xml",
+    ".apex",
+    ".cls",
+    ".java",
+    ".go",
+    ".rs",
+    ".c",
+    ".cpp",
+    ".h",
+    ".tf",
+    ".hcl",
+    ".dockerfile",
 }
 
 # Dirs to skip when listing/indexing
 _SKIP_DIRS = {
-    ".git", "__pycache__", "node_modules", ".venv", "venv", "env",
-    ".mypy_cache", ".pytest_cache", "dist", "build", ".next",
-    "chroma_db", "models", ".idea", ".vscode-server",
+    ".git",
+    "__pycache__",
+    "node_modules",
+    ".venv",
+    "venv",
+    "env",
+    ".mypy_cache",
+    ".pytest_cache",
+    "dist",
+    "build",
+    ".next",
+    "chroma_db",
+    "models",
+    ".idea",
+    ".vscode-server",
 }
 
-MAX_READ_BYTES = 256 * 1024   # 256 KB per file
+MAX_READ_BYTES = 256 * 1024  # 256 KB per file
 MAX_LIST_ITEMS = 200
 
 
 # ── Internal helpers ─────────────────────────────────────────────────────────
+
 
 def _safe_resolve(rel_path: str) -> Optional[Path]:
     """Resolve a relative path inside workspace; returns None if escape detected."""
@@ -57,6 +101,7 @@ def workspace_root() -> str:
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
+
 
 def list_dir(rel_path: str = "") -> dict:
     """List files and subdirectories at rel_path within the workspace."""
@@ -77,17 +122,23 @@ def list_dir(rel_path: str = "") -> dict:
                     dirs.append({"name": item.name, "path": rel})
             else:
                 if item.suffix.lower() in _READABLE_EXTS:
-                    files.append({
-                        "name": item.name,
-                        "path": rel,
-                        "size": item.stat().st_size,
-                        "ext": item.suffix.lower(),
-                    })
+                    files.append(
+                        {
+                            "name": item.name,
+                            "path": rel,
+                            "size": item.stat().st_size,
+                            "ext": item.suffix.lower(),
+                        }
+                    )
     except PermissionError:
         return {"error": "Permission denied"}
 
     return {
-        "path": str(target.relative_to(_WORKSPACE_ROOT)) if target != _WORKSPACE_ROOT else "",
+        "path": (
+            str(target.relative_to(_WORKSPACE_ROOT))
+            if target != _WORKSPACE_ROOT
+            else ""
+        ),
         "dirs": dirs,
         "files": files,
     }
@@ -165,11 +216,13 @@ def search_files(query: str, rel_path: str = "", max_results: int = 20) -> list[
             for i, line in enumerate(text.splitlines(), 1):
                 if pattern.search(line):
                     rel = str(fpath.relative_to(_WORKSPACE_ROOT))
-                    matches.append({
-                        "path": rel,
-                        "line": i,
-                        "snippet": line.strip()[:200],
-                    })
+                    matches.append(
+                        {
+                            "path": rel,
+                            "line": i,
+                            "snippet": line.strip()[:200],
+                        }
+                    )
                     if len(matches) >= max_results:
                         break
         except Exception:
@@ -191,11 +244,13 @@ def find_files(name_pattern: str, rel_path: str = "") -> list[dict]:
                 continue
             if fpath.is_file() and fpath.suffix.lower() in _READABLE_EXTS:
                 rel = str(fpath.relative_to(_WORKSPACE_ROOT))
-                results.append({
-                    "name": fpath.name,
-                    "path": rel,
-                    "size": fpath.stat().st_size,
-                })
+                results.append(
+                    {
+                        "name": fpath.name,
+                        "path": rel,
+                        "size": fpath.stat().st_size,
+                    }
+                )
     except Exception:
         pass
     return results

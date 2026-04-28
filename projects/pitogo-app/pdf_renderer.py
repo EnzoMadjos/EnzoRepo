@@ -3,12 +3,13 @@
 Attempts to render HTML to PDF using WeasyPrint or wkhtmltopdf if available.
 Falls back to storing the HTML file and returns that path.
 """
+
 from __future__ import annotations
 
-from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import Optional
 
 
@@ -32,7 +33,9 @@ def _wkhtmltopdf(html: str, pdf_path: Path) -> bool:
     if not wk:
         return False
     # write to a temp html file and call wkhtmltopdf
-    with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as tf:
+    with tempfile.NamedTemporaryFile(
+        "w", suffix=".html", delete=False, encoding="utf-8"
+    ) as tf:
         tf.write(html)
         tmpname = tf.name
     try:

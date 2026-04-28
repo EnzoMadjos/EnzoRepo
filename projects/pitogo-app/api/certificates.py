@@ -1,24 +1,22 @@
 from __future__ import annotations
 
+import mimetypes
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from sqlalchemy import func, or_
 import app_logger
-
-from api.deps import get_db
 import auth
 import config
-from models import CertificateIssue, CertificateType
-from node import get_node_id, get_node_short
-from models import Resident, Household
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
-from pathlib import Path
-import mimetypes
 import utils
+from api.deps import get_db
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from models import CertificateIssue, CertificateType, Household, Resident
+from node import get_node_id, get_node_short
+from pydantic import BaseModel
+from sqlalchemy import func, or_
 
 templates = Jinja2Templates(directory=str(config.BASE_DIR / "templates"))
 
@@ -34,29 +32,36 @@ class IssueRequest(BaseModel):
 
 
 class GenerateRequest(BaseModel):
-        """Optional overrides to apply to the template context before generating final output.
+    """Optional overrides to apply to the template context before generating final output.
 
-        Example:
-        {
-            "overrides": {
-                 "resident": {"first_name": "Corrected", "last_name": "Name"},
-                 "household": {"address_line": "New address"},
-                 "issued_by": "clerkuser",
-                 "meta": {"purpose": "clearance"}
-            }
+    Example:
+    {
+        "overrides": {
+             "resident": {"first_name": "Corrected", "last_name": "Name"},
+             "household": {"address_line": "New address"},
+             "issued_by": "clerkuser",
+             "meta": {"purpose": "clearance"}
         }
-        """
-        overrides: Optional[dict] = None
+    }
+    """
+
+    overrides: Optional[dict] = None
 
 
 @router.post("/", status_code=201)
-def create_certificate(body: IssueRequest, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def create_certificate(
+    body: IssueRequest,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     # resolve certificate type
     ct = None
     if body.certificate_type_id:
         ct = db.query(CertificateType).get(body.certificate_type_id)
     elif body.certificate_type_code:
-        ct = db.query(CertificateType).filter_by(code=body.certificate_type_code).first()
+        ct = (
+            db.query(CertificateType).filter_by(code=body.certificate_type_code).first()
+        )
     if not ct:
         raise HTTPException(status_code=400, detail="certificate type not found")
 
@@ -64,11 +69,15 @@ def create_certificate(body: IssueRequest, db=Depends(get_db), session: auth.Ses
     node_id = get_node_id()
     date_start = datetime(issued_at.year, issued_at.month, issued_at.day)
     date_end = date_start + timedelta(days=1)
-    max_seq = db.query(func.max(CertificateIssue.local_seq)).filter(
-        CertificateIssue.node_id == node_id,
-        CertificateIssue.issued_at >= date_start,
-        CertificateIssue.issued_at < date_end,
-    ).scalar()
+    max_seq = (
+        db.query(func.max(CertificateIssue.local_seq))
+        .filter(
+            CertificateIssue.node_id == node_id,
+            CertificateIssue.issued_at >= date_start,
+            CertificateIssue.issued_at < date_end,
+        )
+        .scalar()
+    )
     local_seq = (max_seq or 0) + 1
 
     node_short = get_node_short(6)
@@ -91,7 +100,11 @@ def create_certificate(body: IssueRequest, db=Depends(get_db), session: auth.Ses
     db.add(ci)
     db.commit()
     db.refresh(ci)
-    return {"id": ci.id, "control_number": ci.control_number, "issued_at": ci.issued_at.isoformat()}
+    return {
+        "id": ci.id,
+        "control_number": ci.control_number,
+        "issued_at": ci.issued_at.isoformat(),
+    }
 
 
 def _resident_dict(resident: Resident | None, issued_at=None) -> dict | None:
@@ -105,7 +118,11 @@ def _resident_dict(resident: Resident | None, issued_at=None) -> dict | None:
             age = now.year - dob.year - ((now.month, now.day) < (dob.month, dob.day))
         except Exception:
             age = None
-    full_name = " ".join(filter(None, [resident.first_name, resident.middle_name or "", resident.last_name])).strip()
+    full_name = " ".join(
+        filter(
+            None, [resident.first_name, resident.middle_name or "", resident.last_name]
+        )
+    ).strip()
     return {
         "id": resident.id,
         "first_name": resident.first_name,
@@ -134,7 +151,11 @@ def _household_dict(household: Household | None) -> dict | None:
 
 
 @router.get("/{cert_id}/preview")
-def preview_certificate(cert_id: str, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def preview_certificate(
+    cert_id: str,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     ci = db.query(CertificateIssue).get(cert_id)
     if not ci:
         raise HTTPException(status_code=404, detail="certificate not found")
@@ -170,7 +191,12 @@ def preview_certificate(cert_id: str, db=Depends(get_db), session: auth.SessionD
 
 
 @router.post("/{cert_id}/preview")
-def preview_certificate_with_overrides(cert_id: str, body: Optional[GenerateRequest] = None, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def preview_certificate_with_overrides(
+    cert_id: str,
+    body: Optional[GenerateRequest] = None,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     """Render the certificate with optional overrides but do not persist anything.
 
     This supports client-side edit -> preview -> confirm workflows.
@@ -205,7 +231,16 @@ def preview_certificate_with_overrides(cert_id: str, body: Optional[GenerateRequ
         if "resident" in ov and isinstance(ov["resident"], dict):
             rc = dict(resident_ctx or {})
             rc.update(ov["resident"])
-            fn = " ".join(filter(None, [rc.get("first_name"), rc.get("middle_name") or "", rc.get("last_name")])).strip()
+            fn = " ".join(
+                filter(
+                    None,
+                    [
+                        rc.get("first_name"),
+                        rc.get("middle_name") or "",
+                        rc.get("last_name"),
+                    ],
+                )
+            ).strip()
             rc["full_name"] = fn
             bd = rc.get("birthdate")
             if bd:
@@ -213,7 +248,11 @@ def preview_certificate_with_overrides(cert_id: str, body: Optional[GenerateRequ
                     dob = datetime.fromisoformat(bd).date()
                     rc["birthdate_fmt"] = dob.strftime("%B %d, %Y")
                     now_dt = ci.issued_at or datetime.utcnow()
-                    rc["age"] = now_dt.year - dob.year - ((now_dt.month, now_dt.day) < (dob.month, dob.day))
+                    rc["age"] = (
+                        now_dt.year
+                        - dob.year
+                        - ((now_dt.month, now_dt.day) < (dob.month, dob.day))
+                    )
                 except Exception:
                     pass
             resident_ctx = rc
@@ -248,7 +287,14 @@ def preview_certificate_with_overrides(cert_id: str, body: Optional[GenerateRequ
 
 
 @router.get("/recent")
-def list_recent_certificates(q: Optional[str] = None, certificate_type_id: Optional[str] = None, page: int = 1, per_page: int = 20, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def list_recent_certificates(
+    q: Optional[str] = None,
+    certificate_type_id: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 20,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     """Return a paginated list of recent certificate issues for the UI dropdown.
 
     Optional query params:
@@ -260,9 +306,15 @@ def list_recent_certificates(q: Optional[str] = None, certificate_type_id: Optio
     per_page = max(1, min(per_page or 20, 100))
     page = max(1, page or 1)
 
-    query = db.query(CertificateIssue).outerjoin(Resident).order_by(CertificateIssue.issued_at.desc())
+    query = (
+        db.query(CertificateIssue)
+        .outerjoin(Resident)
+        .order_by(CertificateIssue.issued_at.desc())
+    )
     if certificate_type_id:
-        query = query.filter(CertificateIssue.certificate_type_id == certificate_type_id)
+        query = query.filter(
+            CertificateIssue.certificate_type_id == certificate_type_id
+        )
     if q:
         # tokenized fuzzy-ish matching across control number and resident name
         tokens = [t.strip() for t in q.split() if t.strip()]
@@ -273,7 +325,9 @@ def list_recent_certificates(q: Optional[str] = None, certificate_type_id: Optio
             conds.append(Resident.first_name.ilike(like))
             conds.append(Resident.last_name.ilike(like))
             # also match concatenated first + last name
-            conds.append(func.concat(Resident.first_name, ' ', Resident.last_name).ilike(like))
+            conds.append(
+                func.concat(Resident.first_name, " ", Resident.last_name).ilike(like)
+            )
         if conds:
             query = query.filter(or_(*conds))
 
@@ -284,20 +338,30 @@ def list_recent_certificates(q: Optional[str] = None, certificate_type_id: Optio
     for ci in rows:
         resident = db.query(Resident).get(ci.resident_id) if ci.resident_id else None
         resident_ctx = _resident_dict(resident, ci.issued_at)
-        out.append({
-            "id": ci.id,
-            "control_number": ci.control_number,
-            "issued_at": ci.issued_at.isoformat(),
-            "pdf_path": ci.pdf_path,
-            "certificate_type_id": ci.certificate_type_id,
-            "resident_full_name": resident_ctx.get("full_name") if resident_ctx else None,
-        })
+        out.append(
+            {
+                "id": ci.id,
+                "control_number": ci.control_number,
+                "issued_at": ci.issued_at.isoformat(),
+                "pdf_path": ci.pdf_path,
+                "certificate_type_id": ci.certificate_type_id,
+                "resident_full_name": (
+                    resident_ctx.get("full_name") if resident_ctx else None
+                ),
+            }
+        )
 
-    return JSONResponse({"items": out, "page": page, "per_page": per_page, "total": total})
+    return JSONResponse(
+        {"items": out, "page": page, "per_page": per_page, "total": total}
+    )
 
 
 @router.get("/{cert_id}/file")
-def get_certificate_file(cert_id: str, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def get_certificate_file(
+    cert_id: str,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     """Serve the generated certificate HTML/PDF stored under secure storage.
 
     This endpoint requires authentication and validates the file path is under the configured secure directory.
@@ -321,7 +385,11 @@ def get_certificate_file(cert_id: str, db=Depends(get_db), session: auth.Session
 
 
 @router.get("/{cert_id}/render", response_class=HTMLResponse)
-def render_certificate(cert_id: str, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def render_certificate(
+    cert_id: str,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     ci = db.query(CertificateIssue).get(cert_id)
     if not ci:
         raise HTTPException(status_code=404, detail="certificate not found")
@@ -357,7 +425,12 @@ def render_certificate(cert_id: str, db=Depends(get_db), session: auth.SessionDa
 
 
 @router.post("/{cert_id}/generate")
-def generate_certificate_file(cert_id: str, body: Optional[GenerateRequest] = None, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def generate_certificate_file(
+    cert_id: str,
+    body: Optional[GenerateRequest] = None,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     """Render certificate HTML and save to disk. If WeasyPrint is available, also write a PDF.
 
     This is a conservative stub for Sprint 1 — stores HTML and updates `pdf_path`.
@@ -396,7 +469,16 @@ def generate_certificate_file(cert_id: str, body: Optional[GenerateRequest] = No
             rc = dict(resident_ctx or {})
             rc.update(ov["resident"])
             # recompute convenience fields
-            fn = " ".join(filter(None, [rc.get("first_name"), rc.get("middle_name") or "", rc.get("last_name")])).strip()
+            fn = " ".join(
+                filter(
+                    None,
+                    [
+                        rc.get("first_name"),
+                        rc.get("middle_name") or "",
+                        rc.get("last_name"),
+                    ],
+                )
+            ).strip()
             rc["full_name"] = fn
             bd = rc.get("birthdate")
             if bd:
@@ -404,7 +486,11 @@ def generate_certificate_file(cert_id: str, body: Optional[GenerateRequest] = No
                     dob = datetime.fromisoformat(bd).date()
                     rc["birthdate_fmt"] = dob.strftime("%B %d, %Y")
                     now_dt = ci.issued_at or datetime.utcnow()
-                    rc["age"] = now_dt.year - dob.year - ((now_dt.month, now_dt.day) < (dob.month, dob.day))
+                    rc["age"] = (
+                        now_dt.year
+                        - dob.year
+                        - ((now_dt.month, now_dt.day) < (dob.month, dob.day))
+                    )
                 except Exception:
                     pass
             resident_ctx = rc
@@ -429,7 +515,14 @@ def generate_certificate_file(cert_id: str, body: Optional[GenerateRequest] = No
     from pdf_renderer import render_and_store
 
     now = datetime.utcnow()
-    dest_dir = config.SECURE_DIR / "storage" / "certificates" / now.strftime("%Y") / now.strftime("%m") / now.strftime("%d")
+    dest_dir = (
+        config.SECURE_DIR
+        / "storage"
+        / "certificates"
+        / now.strftime("%Y")
+        / now.strftime("%m")
+        / now.strftime("%d")
+    )
     safe_base = ci.control_number.replace("/", "_")
     # pass the same computed contexts to renderer so placeholders match
     resident_ctx = _resident_dict(resident, ci.issued_at)
@@ -445,7 +538,14 @@ def generate_certificate_file(cert_id: str, body: Optional[GenerateRequest] = No
 
     # Audit log: record that the certificate was generated/finalized
     try:
-        app_logger.info("Certificate generated", username=session.username, cert_id=ci.id, control_number=ci.control_number, issued_by=issued_by, path=ci.pdf_path)
+        app_logger.info(
+            "Certificate generated",
+            username=session.username,
+            cert_id=ci.id,
+            control_number=ci.control_number,
+            issued_by=issued_by,
+            path=ci.pdf_path,
+        )
     except Exception:
         # logging must not break generation
         pass
@@ -454,13 +554,20 @@ def generate_certificate_file(cert_id: str, body: Optional[GenerateRequest] = No
 
 
 @router.post("/{cert_id}/signed_url")
-def create_signed_download(cert_id: str, ttl: int = 300, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def create_signed_download(
+    cert_id: str,
+    ttl: int = 300,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     """Create a short-lived signed URL to download the generated certificate file without further auth.
 
     Requires `DOWNLOAD_SECRET` to be set in config.
     """
     if not config.DOWNLOAD_SECRET:
-        raise HTTPException(status_code=500, detail="DOWNLOAD_SECRET is not configured on the server")
+        raise HTTPException(
+            status_code=500, detail="DOWNLOAD_SECRET is not configured on the server"
+        )
 
     ci = db.query(CertificateIssue).get(cert_id)
     if not ci or not ci.pdf_path:
@@ -483,5 +590,5 @@ def create_signed_download(cert_id: str, ttl: int = 300, db=Depends(get_db), ses
         raise HTTPException(status_code=500, detail=str(exc))
 
     url = f"/download/{token}"
-    expires_at = datetime.utcfromtimestamp(exp).isoformat() + 'Z'
+    expires_at = datetime.utcfromtimestamp(exp).isoformat() + "Z"
     return {"url": url, "expires_at": expires_at}

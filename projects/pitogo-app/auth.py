@@ -8,6 +8,7 @@ Flow:
   → Returns {token, username, role}
   All protected routes require:  Authorization: Bearer <token>
 """
+
 from __future__ import annotations
 
 import dataclasses
@@ -18,14 +19,14 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from fastapi import Header, HTTPException, status
-
 import config
+from fastapi import Header, HTTPException, status
 
 _USERS_FILE = config.SECURE_DIR / "users.json"
 
 
 # ── User store ────────────────────────────────────────────────────────────────
+
 
 def _load_users() -> dict:
     if _USERS_FILE.exists():
@@ -48,7 +49,7 @@ def _hash(password: str) -> str:
 
 def verify_user(username: str, password: str) -> Optional[dict]:
     users = _load_users()
-    user  = users.get(username)
+    user = users.get(username)
     if user and user.get("password_hash") == _hash(password):
         return user
     return None
@@ -56,12 +57,13 @@ def verify_user(username: str, password: str) -> Optional[dict]:
 
 # ── Session store ─────────────────────────────────────────────────────────────
 
+
 @dataclasses.dataclass
 class SessionData:
-    username:     str
-    role:         str
+    username: str
+    role: str
     display_name: str
-    expiry:       float
+    expiry: float
 
 
 _sessions: dict[str, SessionData] = {}
@@ -99,6 +101,7 @@ def invalidate_session(token: str) -> None:
 
 
 # ── FastAPI dependency ────────────────────────────────────────────────────────
+
 
 def require_auth(authorization: str = Header(default="")) -> SessionData:
     token = authorization.removeprefix("Bearer ").strip()

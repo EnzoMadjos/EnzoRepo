@@ -12,10 +12,9 @@ import json
 import re
 from typing import Any
 
-import httpx
-
 import app_logger
 import config
+import httpx
 
 # ---------------------------------------------------------------------------
 # System prompt — injected schema appended at call time
@@ -132,23 +131,46 @@ _SCHEMA_HEADER = "\n## Org Schema (use ONLY these API names)\n"
 
 # Common read-only / system fields to never inject into prompts
 _SYSTEM_FIELDS = {
-    "Id", "CreatedDate", "CreatedById", "LastModifiedDate", "LastModifiedById",
-    "SystemModstamp", "IsDeleted", "LastActivityDate", "LastViewedDate",
+    "Id",
+    "CreatedDate",
+    "CreatedById",
+    "LastModifiedDate",
+    "LastModifiedById",
+    "SystemModstamp",
+    "IsDeleted",
+    "LastActivityDate",
+    "LastViewedDate",
     "LastReferencedDate",
 }
 
 # Objects we always include in schema even if not mentioned in the script
 _ALWAYS_INCLUDE = {
-    "Account", "Contact", "Lead", "Opportunity", "Case", "Task", "Event",
-    "Contract", "Order", "Product2", "Pricebook2", "PricebookEntry",
-    "Quote", "Asset", "Campaign", "CampaignMember",
+    "Account",
+    "Contact",
+    "Lead",
+    "Opportunity",
+    "Case",
+    "Task",
+    "Event",
+    "Contract",
+    "Order",
+    "Product2",
+    "Pricebook2",
+    "PricebookEntry",
+    "Quote",
+    "Asset",
+    "Campaign",
+    "CampaignMember",
 }
 
 # Regex to find capitalized words that might be sObject names
 _LIKELY_OBJECT = re.compile(r"\b([A-Z][a-zA-Z0-9_]+)\b")
 _SF_ID = re.compile(r"\b([a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})\b")
 _STEP_LINE = re.compile(r"^\s*STEP\s*\d+\s*:\s*(.+)$", re.IGNORECASE | re.MULTILINE)
-_STEP_BLOCK = re.compile(r"^\s*STEP\s*(\d+)\s*:\s*(.+?)(?=^\s*STEP\s*\d+\s*:|\Z)", re.IGNORECASE | re.MULTILINE | re.DOTALL)
+_STEP_BLOCK = re.compile(
+    r"^\s*STEP\s*(\d+)\s*:\s*(.+?)(?=^\s*STEP\s*\d+\s*:|\Z)",
+    re.IGNORECASE | re.MULTILINE | re.DOTALL,
+)
 _CUSTOM_OBJECT = re.compile(r"\b([A-Za-z][A-Za-z0-9_]*__c)\b")
 _REF_STEP = re.compile(r"\$step(\d+)\.id")
 
@@ -171,7 +193,9 @@ def _build_object_lookup(all_objects: list[dict[str, Any]]) -> dict[str, str]:
     return lookup
 
 
-def _detect_mentioned_objects(script: str, all_objects: list[dict[str, Any]]) -> set[str]:
+def _detect_mentioned_objects(
+    script: str, all_objects: list[dict[str, Any]]
+) -> set[str]:
     """Detect objects mentioned in script using API names, labels, step headers, and custom objects."""
     lookup = _build_object_lookup(all_objects)
     mentioned: set[str] = set()
@@ -243,9 +267,8 @@ def _build_schema_context(script: str, client) -> str:
 # Validation pass
 # ---------------------------------------------------------------------------
 
-def _validate_plan(
-    plan: list[dict[str, Any]], client
-) -> list[dict[str, Any]]:
+
+def _validate_plan(plan: list[dict[str, Any]], client) -> list[dict[str, Any]]:
     """
     Check each step's field names against the org schema.
     Appends a 'warnings' list to steps with unknown fields.
@@ -289,6 +312,7 @@ def _validate_plan(
 # Script-shape adaptation
 # ---------------------------------------------------------------------------
 
+
 def _extract_step_blocks(test_script: str) -> list[tuple[int, str, str]]:
     blocks: list[tuple[int, str, str]] = []
     for step_no, chunk in _STEP_BLOCK.findall(test_script):
@@ -300,7 +324,9 @@ def _extract_step_blocks(test_script: str) -> list[tuple[int, str, str]]:
 
 
 def _extract_object_from_open_step(header: str) -> str:
-    match = re.search(r"open\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_]*)\s+record", header, re.IGNORECASE)
+    match = re.search(
+        r"open\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_]*)\s+record", header, re.IGNORECASE
+    )
     return match.group(1) if match else ""
 
 
@@ -330,7 +356,9 @@ def _extract_bullet_fields(body: str, object_name: str) -> dict[str, str]:
         if not line.startswith("-") or ":" not in line:
             continue
         key, value = line[1:].split(":", 1)
-        field_name = _canonicalize_ui_field_name(key.strip().removesuffix(" field"), object_name)
+        field_name = _canonicalize_ui_field_name(
+            key.strip().removesuffix(" field"), object_name
+        )
         field_value = value.strip()
         if field_name and field_value and not _SF_ID.fullmatch(field_value):
             fields[field_name] = field_value
@@ -343,7 +371,14 @@ def _plan_for_direct_id_flow(test_script: str) -> list[dict[str, Any]] | None:
     if not blocks:
         return None
 
-    open_block = next(((step_no, header, body) for step_no, header, body in blocks if "open" in header.lower() and "record" in header.lower()), None)
+    open_block = next(
+        (
+            (step_no, header, body)
+            for step_no, header, body in blocks
+            if "open" in header.lower() and "record" in header.lower()
+        ),
+        None,
+    )
     if not open_block:
         return None
 
@@ -354,10 +389,29 @@ def _plan_for_direct_id_flow(test_script: str) -> list[dict[str, Any]] | None:
         return None
 
     queried_fields = ["Id", "Name"]
-    look_step = next(((step_no, header, body) for step_no, header, body in blocks if header.lower().startswith("look for ")), None)
-    edit_step = next(((step_no, header, body) for step_no, header, body in blocks if any(token in header.lower() for token in ["edit", "update", "change", "modify", "set "])), None)
+    look_step = next(
+        (
+            (step_no, header, body)
+            for step_no, header, body in blocks
+            if header.lower().startswith("look for ")
+        ),
+        None,
+    )
+    edit_step = next(
+        (
+            (step_no, header, body)
+            for step_no, header, body in blocks
+            if any(
+                token in header.lower()
+                for token in ["edit", "update", "change", "modify", "set "]
+            )
+        ),
+        None,
+    )
 
-    look_field = _extract_field_name(look_step[1], "look for", object_name) if look_step else ""
+    look_field = (
+        _extract_field_name(look_step[1], "look for", object_name) if look_step else ""
+    )
     if look_field and look_field not in queried_fields:
         queried_fields.append(look_field)
 
@@ -378,36 +432,43 @@ def _plan_for_direct_id_flow(test_script: str) -> list[dict[str, Any]] | None:
     ]
 
     if look_step and look_field:
-        plan.append({
-            "step": len(plan) + 1,
-            "action": "query",
-            "object": object_name,
-            "label": f"Look for {look_field} field on {object_name}",
-            "soql": f"SELECT Id, {look_field} FROM {object_name} WHERE Id = '{record_id}'",
-            "fields": {},
-        })
+        plan.append(
+            {
+                "step": len(plan) + 1,
+                "action": "query",
+                "object": object_name,
+                "label": f"Look for {look_field} field on {object_name}",
+                "soql": f"SELECT Id, {look_field} FROM {object_name} WHERE Id = '{record_id}'",
+                "fields": {},
+            }
+        )
 
     if edit_step and edit_fields:
-        plan.append({
-            "step": len(plan) + 1,
-            "action": "update",
-            "object": object_name,
-            "label": f"Update {object_name} fields",
-            "record_id": record_id,
-            "fields": edit_fields,
-        })
+        plan.append(
+            {
+                "step": len(plan) + 1,
+                "action": "update",
+                "object": object_name,
+                "label": f"Update {object_name} fields",
+                "record_id": record_id,
+                "fields": edit_fields,
+            }
+        )
 
     if any("save" in header.lower() for _, header, _ in blocks):
-        plan.append({
-            "step": len(plan) + 1,
-            "action": "warning",
-            "object": object_name,
-            "label": f"Save {object_name} changes",
-            "fields": {},
-            "message": "Save is a UI action; the API update is already applied directly to the record.",
-        })
+        plan.append(
+            {
+                "step": len(plan) + 1,
+                "action": "warning",
+                "object": object_name,
+                "label": f"Save {object_name} changes",
+                "fields": {},
+                "message": "Save is a UI action; the API update is already applied directly to the record.",
+            }
+        )
 
     return plan if len(plan) > 1 else None
+
 
 def _plan_for_ui_link_flow(test_script: str) -> list[dict[str, Any]] | None:
     """
@@ -428,7 +489,10 @@ def _plan_for_ui_link_flow(test_script: str) -> list[dict[str, Any]] | None:
     if not opp_id or not acct_id:
         return None
 
-    looks_like_link_flow = any(k in text for k in ["link", "select the account", "save the update", "edit the account"])
+    looks_like_link_flow = any(
+        k in text
+        for k in ["link", "select the account", "save the update", "edit the account"]
+    )
     if not looks_like_link_flow:
         return None
 
@@ -477,12 +541,18 @@ def _normalize_actions(plan: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
         # Normalize common pseudo field emitted by some prompts/scripts
         fields = fixed.get("fields", {})
-        if isinstance(fields, dict) and "Account" in fields and "AccountId" not in fields:
+        if (
+            isinstance(fields, dict)
+            and "Account" in fields
+            and "AccountId" not in fields
+        ):
             fixed["fields"] = {**fields, "AccountId": fields["Account"]}
             fixed["fields"].pop("Account", None)
 
         if mapped == "warning" and action == "save" and "message" not in fixed:
-            fixed["message"] = "Save is a UI action; update was already applied via API."
+            fixed["message"] = (
+                "Save is a UI action; update was already applied via API."
+            )
 
         normalized.append(fixed)
     return normalized
@@ -510,24 +580,30 @@ def _sanitize_step_references(plan: list[dict[str, Any]]) -> list[dict[str, Any]
     sanitized: list[dict[str, Any]] = []
     for i, step in enumerate(plan, start=1):
         step_no = int(step.get("step", i) or i)
-        targets = [step.get("record_id", ""), step.get("soql", ""), step.get("fields", {})]
+        targets = [
+            step.get("record_id", ""),
+            step.get("soql", ""),
+            step.get("fields", {}),
+        ]
         bad_refs: list[int] = []
         for t in targets:
             bad_refs.extend(_find_invalid_refs(t, step_no))
 
         if bad_refs:
             bad_refs = sorted(set(bad_refs))
-            sanitized.append({
-                "step": step_no,
-                "action": "warning",
-                "object": step.get("object", ""),
-                "label": step.get("label", f"Step {step_no}"),
-                "fields": {},
-                "message": (
-                    f"Invalid step reference(s) {', '.join(f'$step{r}.id' for r in bad_refs)} "
-                    f"in step {step_no}. Use only previous-step IDs."
-                ),
-            })
+            sanitized.append(
+                {
+                    "step": step_no,
+                    "action": "warning",
+                    "object": step.get("object", ""),
+                    "label": step.get("label", f"Step {step_no}"),
+                    "fields": {},
+                    "message": (
+                        f"Invalid step reference(s) {', '.join(f'$step{r}.id' for r in bad_refs)} "
+                        f"in step {step_no}. Use only previous-step IDs."
+                    ),
+                }
+            )
             continue
 
         sanitized.append(step)
@@ -537,6 +613,7 @@ def _sanitize_step_references(plan: list[dict[str, Any]]) -> list[dict[str, Any]
 # ---------------------------------------------------------------------------
 # Ollama call + JSON extraction
 # ---------------------------------------------------------------------------
+
 
 def _call_ollama(system_prompt: str, user_prompt: str) -> str:
     payload = {
@@ -560,12 +637,13 @@ def _extract_json(raw: str) -> list[dict[str, Any]]:
     end = cleaned.rfind("]")
     if start == -1 or end == -1:
         raise ValueError(f"No JSON array found in LLM output:\n{raw}")
-    return json.loads(cleaned[start: end + 1])
+    return json.loads(cleaned[start : end + 1])
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def plan(test_script: str, client=None) -> list[dict[str, Any]]:
     """

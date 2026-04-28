@@ -8,6 +8,7 @@ How it works:
   4. Elected server sends heartbeat broadcasts every HEARTBEAT_INTERVAL seconds.
   5. Clients watching heartbeats trigger re-election after HEARTBEAT_MISSES misses.
 """
+
 from __future__ import annotations
 
 import socket
@@ -15,15 +16,15 @@ import threading
 import time
 from typing import Callable, Optional
 
-import config
 import app_logger
+import config
 
 MAGIC_DISCOVER = b"PITOGO_DISCOVER"
-MAGIC_SERVER   = b"PITOGO_SERVER"
+MAGIC_SERVER = b"PITOGO_SERVER"
 
-_role: str = "unknown"          # "leader" | "client" | "unknown"
-_leader_addr: Optional[tuple]   = None   # (host, port) of current leader
-_stop_event   = threading.Event()
+_role: str = "unknown"  # "leader" | "client" | "unknown"
+_leader_addr: Optional[tuple] = None  # (host, port) of current leader
+_stop_event = threading.Event()
 
 
 def get_role() -> str:
@@ -35,6 +36,7 @@ def get_leader() -> Optional[tuple]:
 
 
 # ── Discovery ─────────────────────────────────────────────────────────────────
+
 
 def _broadcast_discover(sock: socket.socket) -> Optional[tuple]:
     """Broadcast DISCOVER for DISCOVERY_TIMEOUT_SEC. Return (host, port) if leader found."""
@@ -62,10 +64,11 @@ def _broadcast_discover(sock: socket.socket) -> Optional[tuple]:
 
 # ── Heartbeat broadcaster (leader role) ───────────────────────────────────────
 
+
 def _heartbeat_sender(sock: socket.socket, app_port: int) -> None:
     """Leader broadcasts its address as a heartbeat."""
-    my_ip  = _get_local_ip()
-    msg    = f"PITOGO_SERVER:{my_ip}:{app_port}".encode()
+    my_ip = _get_local_ip()
+    msg = f"PITOGO_SERVER:{my_ip}:{app_port}".encode()
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     while not _stop_event.is_set():
         try:
@@ -76,6 +79,7 @@ def _heartbeat_sender(sock: socket.socket, app_port: int) -> None:
 
 
 # ── Heartbeat watcher (client role) ───────────────────────────────────────────
+
 
 def _heartbeat_watcher(
     sock: socket.socket,
@@ -104,6 +108,7 @@ def _heartbeat_watcher(
 
 # ── Utility ───────────────────────────────────────────────────────────────────
 
+
 def _get_local_ip() -> str:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -116,6 +121,7 @@ def _get_local_ip() -> str:
 
 
 # ── Main entrypoint ───────────────────────────────────────────────────────────
+
 
 def start(
     app_port: int,
@@ -147,7 +153,7 @@ def start(
     leader = _broadcast_discover(disc_sock)
 
     if leader:
-        _role        = "client"
+        _role = "client"
         _leader_addr = leader
         app_logger.info("Discovery: found leader", host=leader[0], port=leader[1])
         on_became_client(leader)

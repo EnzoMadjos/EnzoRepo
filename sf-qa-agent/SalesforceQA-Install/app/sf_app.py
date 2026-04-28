@@ -7,22 +7,30 @@ from __future__ import annotations
 import json
 from typing import Optional
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from sse_starlette.sse import EventSourceResponse
-from simple_salesforce import Salesforce
-from simple_salesforce.exceptions import SalesforceAuthenticationFailed
-
-import auth
 import app_logger
+import auth
 import config
 import file_parser
 import llm_planner
 import org_profiles
 import sf_executor
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from sf_client import SalesforceClient
+from simple_salesforce import Salesforce
+from simple_salesforce.exceptions import SalesforceAuthenticationFailed
+from sse_starlette.sse import EventSourceResponse
 
 # ---------------------------------------------------------------------------
 # App init
@@ -40,6 +48,7 @@ if _static_dir.exists():
 # Routes — public
 # ---------------------------------------------------------------------------
 
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("qa.html", {"request": request})
@@ -53,6 +62,7 @@ async def health() -> JSONResponse:
 @app.get("/info")
 async def info(request: Request) -> JSONResponse:
     import socket
+
     hostname = socket.gethostname()
     try:
         local_ip = socket.gethostbyname(hostname)
@@ -64,18 +74,21 @@ async def info(request: Request) -> JSONResponse:
     except Exception:
         local_ip = "127.0.0.1"
     port = config.APP_PORT
-    return JSONResponse({
-        "hostname": hostname,
-        "local_ip": local_ip,
-        "port": port,
-        "local_url": f"http://localhost:{port}",
-        "network_url": f"http://{local_ip}:{port}",
-    })
+    return JSONResponse(
+        {
+            "hostname": hostname,
+            "local_ip": local_ip,
+            "port": port,
+            "local_url": f"http://localhost:{port}",
+            "network_url": f"http://{local_ip}:{port}",
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # Routes — auth
 # ---------------------------------------------------------------------------
+
 
 @app.post("/auth/login")
 async def login(body: dict) -> JSONResponse:
@@ -87,7 +100,10 @@ async def login(body: dict) -> JSONResponse:
     consumer_secret: str = body.get("consumer_secret", "").strip()
 
     if not username or not password:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username and password are required")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username and password are required",
+        )
 
     base_url = f"https://{'test' if domain == 'test' else 'login'}.salesforce.com"
 
@@ -95,6 +111,7 @@ async def login(body: dict) -> JSONResponse:
     if consumer_key and consumer_secret:
         try:
             import httpx as _httpx
+
             resp = _httpx.post(
                 f"{base_url}/services/oauth2/token",
                 data={
@@ -109,16 +126,24 @@ async def login(body: dict) -> JSONResponse:
             if resp.status_code != 200:
                 err = resp.json().get("error_description", resp.text)
                 app_logger.error("OAuth login failed", username=username, detail=err)
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Salesforce OAuth failed: {err}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"Salesforce OAuth failed: {err}",
+                )
             oauth_data = resp.json()
             instance_url: str = oauth_data["instance_url"]
             access_token: str = oauth_data["access_token"]
-            org_id: str = oauth_data.get("id", "").split("/")[-2] if "id" in oauth_data else ""
+            org_id: str = (
+                oauth_data.get("id", "").split("/")[-2] if "id" in oauth_data else ""
+            )
         except HTTPException:
             raise
         except Exception as exc:
             app_logger.error("OAuth connection error", exc=exc, username=username)
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"OAuth connection error: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"OAuth connection error: {exc}",
+            )
     else:
         # Fall back to SOAP login via simple_salesforce
         try:
@@ -156,22 +181,27 @@ async def login(body: dict) -> JSONResponse:
         access_token=access_token,
     )
     app_logger.info("Login successful", username=username, instance_url=instance_url)
-    return JSONResponse({
-        "token": token,
-        "username": username,
-        "org_id": org_id,
-        "instance_url": instance_url,
-    })
+    return JSONResponse(
+        {
+            "token": token,
+            "username": username,
+            "org_id": org_id,
+            "instance_url": instance_url,
+        }
+    )
 
 
 @app.post("/auth/logout")
-async def logout(session: auth.SessionData = Depends(auth.require_auth)) -> JSONResponse:
+async def logout(
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
     return JSONResponse({"status": "logged out"})
 
 
 # ---------------------------------------------------------------------------
 # Routes — org profiles
 # ---------------------------------------------------------------------------
+
 
 @app.get("/profiles")
 async def get_profiles() -> JSONResponse:
@@ -185,7 +215,9 @@ async def save_profile_route(
 ) -> JSONResponse:
     name: str = body.get("name", "").strip()
     if not name:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Profile name is required")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Profile name is required"
+        )
     profile = {
         "username": body.get("username", ""),
         "password": body.get("password", ""),
@@ -205,16 +237,20 @@ async def get_profile_route(
 ) -> JSONResponse:
     profile = org_profiles.load_profile(name)
     if profile is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found"
+        )
     # Never return password/secret to frontend — auto-login instead
-    return JSONResponse({
-        "username": profile.get("username", ""),
-        "domain": profile.get("domain", "login"),
-        "consumer_key": profile.get("consumer_key", ""),
-        "has_password": bool(profile.get("password")),
-        "has_security_token": bool(profile.get("security_token")),
-        "has_consumer_secret": bool(profile.get("consumer_secret")),
-    })
+    return JSONResponse(
+        {
+            "username": profile.get("username", ""),
+            "domain": profile.get("domain", "login"),
+            "consumer_key": profile.get("consumer_key", ""),
+            "has_password": bool(profile.get("password")),
+            "has_security_token": bool(profile.get("security_token")),
+            "has_consumer_secret": bool(profile.get("consumer_secret")),
+        }
+    )
 
 
 @app.post("/profiles/{name}/login")
@@ -222,16 +258,20 @@ async def login_with_profile(name: str) -> JSONResponse:
     """Log in using a saved org profile (credentials retrieved from encrypted storage)."""
     profile = org_profiles.load_profile(name)
     if profile is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found"
+        )
     # Re-use the same login logic by delegating to the login route body
-    return await login({
-        "username": profile.get("username", ""),
-        "password": profile.get("password", ""),
-        "security_token": profile.get("security_token", ""),
-        "domain": profile.get("domain", "login"),
-        "consumer_key": profile.get("consumer_key", ""),
-        "consumer_secret": profile.get("consumer_secret", ""),
-    })
+    return await login(
+        {
+            "username": profile.get("username", ""),
+            "password": profile.get("password", ""),
+            "security_token": profile.get("security_token", ""),
+            "domain": profile.get("domain", "login"),
+            "consumer_key": profile.get("consumer_key", ""),
+            "consumer_secret": profile.get("consumer_secret", ""),
+        }
+    )
 
 
 @app.delete("/profiles/{name}")
@@ -241,13 +281,16 @@ async def delete_profile_route(
 ) -> JSONResponse:
     found = org_profiles.delete_profile(name)
     if not found:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found"
+        )
     return JSONResponse({"status": "deleted", "name": name})
 
 
 # ---------------------------------------------------------------------------
 # Routes — protected
 # ---------------------------------------------------------------------------
+
 
 @app.post("/run-test")
 async def run_test(
@@ -261,7 +304,10 @@ async def run_test(
     Uses the logged-in user's Salesforce session.
     """
     if not scenario and not file:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide scenario text or upload a file")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide scenario text or upload a file",
+        )
 
     # Parse input
     if file:
@@ -269,29 +315,57 @@ async def run_test(
         try:
             script_text = file_parser.parse_bytes(file.filename or "", raw_bytes)
         except (ValueError, RuntimeError) as exc:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            )
     else:
         script_text = file_parser.parse_text(scenario or "")
 
     if not script_text.strip():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Test script is empty")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Test script is empty"
+        )
 
     # Build SF client from this user's session
     sf_client = SalesforceClient.from_session(session)
 
     async def event_stream():
-        yield {"data": json.dumps({"type": "status", "message": f"Connected to org: {session.instance_url}"})}
-        yield {"data": json.dumps({"type": "status", "message": "Planning test from script..."})}
+        yield {
+            "data": json.dumps(
+                {
+                    "type": "status",
+                    "message": f"Connected to org: {session.instance_url}",
+                }
+            )
+        }
+        yield {
+            "data": json.dumps(
+                {"type": "status", "message": "Planning test from script..."}
+            )
+        }
 
         try:
             plan = llm_planner.plan(script_text)
         except Exception as exc:
             app_logger.error("Planning failed", exc=exc, username=session.username)
-            yield {"data": json.dumps({"type": "error", "message": f"Planning failed: {exc}"})}
+            yield {
+                "data": json.dumps(
+                    {"type": "error", "message": f"Planning failed: {exc}"}
+                )
+            }
             return
 
-        yield {"data": json.dumps({"type": "status", "message": f"Plan ready — {len(plan)} step(s). Executing..."})}
-        app_logger.info("Executing test plan", username=session.username, steps=len(plan))
+        yield {
+            "data": json.dumps(
+                {
+                    "type": "status",
+                    "message": f"Plan ready — {len(plan)} step(s). Executing...",
+                }
+            )
+        }
+        app_logger.info(
+            "Executing test plan", username=session.username, steps=len(plan)
+        )
 
         for event in sf_executor.execute(plan, sf_client):
             yield {"data": json.dumps(event)}
@@ -304,6 +378,7 @@ async def run_test(
 # ---------------------------------------------------------------------------
 # Routes — admin (requires auth)
 # ---------------------------------------------------------------------------
+
 
 @app.get("/admin/logs")
 async def admin_logs(
@@ -329,8 +404,8 @@ async def admin_get_prompt(
 ) -> JSONResponse:
     """Return the current LLM system prompt."""
     import llm_planner
-    return JSONResponse({"prompt": llm_planner._SYSTEM_PROMPT})
 
+    return JSONResponse({"prompt": llm_planner._SYSTEM_PROMPT})
 
 
 @app.post("/admin/prompt")
@@ -343,9 +418,16 @@ async def admin_set_prompt(
     Changes are in-memory only — they reset on server restart.
     """
     import llm_planner
+
     new_prompt: str = body.get("prompt", "").strip()
     if not new_prompt:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Prompt cannot be empty")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Prompt cannot be empty"
+        )
     llm_planner._SYSTEM_PROMPT = new_prompt
-    app_logger.info("System prompt updated by user", username=session.username, length=len(new_prompt))
+    app_logger.info(
+        "System prompt updated by user",
+        username=session.username,
+        length=len(new_prompt),
+    )
     return JSONResponse({"status": "updated", "length": len(new_prompt)})

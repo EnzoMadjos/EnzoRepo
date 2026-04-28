@@ -3,14 +3,15 @@ Database helper for PITOGO app (SQLite + SQLAlchemy).
 
 Provides `engine`, `SessionLocal`, and `init_db(Base)` to create tables.
 """
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
+
+import config
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
-import config
-
 
 DB_PATH = config.SECURE_DIR / "pitogo.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -46,4 +47,3 @@ def init_db(Base) -> None:
 
 def get_session():
     return SessionLocal()
-

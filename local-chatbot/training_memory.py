@@ -37,11 +37,13 @@ def save_training(training: List[Dict[str, Any]]) -> None:
 
 def add_training(entry: str, category: str = "training") -> None:
     training = load_training()
-    training.append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "category": category,
-        "entry": entry.strip(),
-    })
+    training.append(
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "category": category,
+            "entry": entry.strip(),
+        }
+    )
     save_training(training)
 
 
@@ -57,5 +59,8 @@ def get_training_summary(max_items: int = 10, max_chars_per_item: int = 300) -> 
     training = load_training()
     if not training:
         return ""
-    lines = [f"- [{item['category']}] {item['entry'][:max_chars_per_item]}" for item in training[-max_items:]]
+    lines = [
+        f"- [{item['category']}] {item['entry'][:max_chars_per_item]}"
+        for item in training[-max_items:]
+    ]
     return "\n".join(lines)

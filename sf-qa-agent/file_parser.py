@@ -27,7 +27,9 @@ def parse_bytes(filename: str, data: bytes) -> str:
     if ext == ".pdf":
         return _parse_pdf(data)
 
-    raise ValueError(f"Unsupported file type: '{ext}'. Please upload .txt, .docx, or .pdf.")
+    raise ValueError(
+        f"Unsupported file type: '{ext}'. Please upload .txt, .docx, or .pdf."
+    )
 
 
 def parse_text(text: str) -> str:

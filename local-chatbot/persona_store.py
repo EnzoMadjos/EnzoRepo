@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from settings import SECURE_ATLAS_FOLDER_CANDIDATES, PERSONA_SUMMARY_NAME
+from settings import PERSONA_SUMMARY_NAME, SECURE_ATLAS_FOLDER_CANDIDATES
 
 
 def get_secure_atlas_folder() -> Optional[Path]:

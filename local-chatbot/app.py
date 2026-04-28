@@ -1,14 +1,15 @@
-from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import json as _json
-import ollama
-import urllib.parse
+import os as _os
 import subprocess as _subprocess
 import sys as _sys
-import os as _os
+import urllib.parse
 from pathlib import Path
+
+import ollama
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, StreamingResponse
+from pydantic import BaseModel
 
 # Auto-load .env from the same directory as this file
 _env_file = Path(__file__).parent / ".env"
@@ -20,33 +21,39 @@ if _env_file.exists():
             _os.environ.setdefault(_k.strip(), _v.strip())
 
 # ── LLM router: GitHub Models → Local Ollama ─────────────────────────────
-_GITHUB_API_KEY  = _os.environ.get("ATLAS_GITHUB_API_KEY", "")
+_GITHUB_API_KEY = _os.environ.get("ATLAS_GITHUB_API_KEY", "")
 _GITHUB_BASE_URL = "https://models.inference.ai.azure.com"
-_GITHUB_MODEL    = _os.environ.get("ATLAS_GITHUB_MODEL", "gpt-4.1")
+_GITHUB_MODEL = _os.environ.get("ATLAS_GITHUB_MODEL", "gpt-4.1")
 _GITHUB_MODEL_OVERRIDE: str = ""  # per-session model override
 
-_LOCAL_MODEL     = "atlas"
+_LOCAL_MODEL = "atlas"
+
+import socket as _socket
 
 # Track which cloud backends are rate-limited (reset after TTL)
 import threading as _thr
-import socket as _socket
 import time as _time_mod
+
 _RATE_LIMITED: dict = {"github": 0.0}
 _RATE_LIMIT_TTL = 3600.0  # 1 hour cooldown after 429
 
 # Manual provider override: "github", "local", or "" for auto
 _PROVIDER_OVERRIDE: str = ""
 
+
 def _mark_rate_limited(provider: str):
     _RATE_LIMITED[provider] = _time_mod.monotonic()
+
 
 def _is_rate_limited(provider: str) -> bool:
     since = _RATE_LIMITED.get(provider, 0.0)
     return (_time_mod.monotonic() - since) < _RATE_LIMIT_TTL
 
+
 # Cache: re-check connectivity every 60 s to avoid per-request overhead
 _NET_CACHE: dict = {"online": False, "checked_at": 0.0}
 _NET_TTL = 60.0
+
 
 def _probe_internet() -> bool:
     try:
@@ -56,12 +63,14 @@ def _probe_internet() -> bool:
     except Exception:
         return False
 
+
 def is_online() -> bool:
     now = _time_mod.monotonic()
     if now - _NET_CACHE["checked_at"] > _NET_TTL:
         _NET_CACHE["online"] = _probe_internet()
         _NET_CACHE["checked_at"] = now
     return _NET_CACHE["online"]
+
 
 def use_cloud() -> bool:
     """True when cloud backend will be used."""
@@ -75,6 +84,7 @@ def use_cloud() -> bool:
         return True
     return False
 
+
 def _active_cloud_provider() -> str:
     """Returns 'github' or 'local'."""
     if _PROVIDER_OVERRIDE == "local":
@@ -87,19 +97,23 @@ def _active_cloud_provider() -> str:
         return "github"
     return "local"
 
+
 def _cloud_client(provider: str = None):
     if provider is None:
         provider = _active_cloud_provider()
     try:
         from openai import OpenAI
+
         if provider == "github":
             return OpenAI(api_key=_GITHUB_API_KEY, base_url=_GITHUB_BASE_URL)
     except ImportError:
         pass
     return None
 
+
 def _cloud_model(provider: str = None) -> str:
     return _GITHUB_MODEL_OVERRIDE if _GITHUB_MODEL_OVERRIDE else _GITHUB_MODEL
+
 
 def llm_chat(messages: list, stream: bool = False, **kwargs):
     """Unified chat call — GitHub Models → local Ollama."""
@@ -108,16 +122,23 @@ def llm_chat(messages: list, stream: bool = False, **kwargs):
         client = _cloud_client("github")
         if client:
             try:
-                extra = {k: v for k, v in kwargs.items() if k in ("temperature", "max_tokens")}
+                extra = {
+                    k: v
+                    for k, v in kwargs.items()
+                    if k in ("temperature", "max_tokens")
+                }
                 if kwargs.get("tools"):
                     extra["tools"] = kwargs["tools"]
                     extra["tool_choice"] = kwargs.get("tool_choice", "auto")
-                return ("github", client.chat.completions.create(
-                    model=_GITHUB_MODEL,
-                    messages=messages,
-                    stream=stream,
-                    **extra,
-                ))
+                return (
+                    "github",
+                    client.chat.completions.create(
+                        model=_GITHUB_MODEL,
+                        messages=messages,
+                        stream=stream,
+                        **extra,
+                    ),
+                )
             except Exception as _e:
                 if "429" in str(_e) or "rate_limit" in str(_e).lower():
                     _mark_rate_limited("github")
@@ -128,18 +149,32 @@ def llm_chat(messages: list, stream: bool = False, **kwargs):
     if "temperature" in kwargs:
         opts["temperature"] = kwargs["temperature"]
     opts["num_ctx"] = kwargs.get("num_ctx", 8192)
-    return ("local", ollama.chat(
-        model=_LOCAL_MODEL,
-        messages=messages,
-        stream=stream,
-        options=opts,
-        tools=kwargs.get("tools"),
-    ))
+    return (
+        "local",
+        ollama.chat(
+            model=_LOCAL_MODEL,
+            messages=messages,
+            stream=stream,
+            options=opts,
+            tools=kwargs.get("tools"),
+        ),
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────────
 
-from auth import verify_api_key
-from audit import append_audit, read_audit_history
+import re
+import time as _time
+
 from atlas_loader import load_atlas_prompt
+from audit import append_audit, read_audit_history
+from auth import verify_api_key
+from nickname_profile import (
+    get_preferred_nickname,
+    load_nickname_profile,
+    set_preferred_nickname,
+)
+from persona_store import load_persona_summary, save_persona_summary
 from runtime_config import (
     set_web_access_allowlist,
     set_web_fetch_enabled,
@@ -147,25 +182,27 @@ from runtime_config import (
     web_fetch_enabled,
 )
 from settings import MAX_WEB_TEXT_CHARS
-from nickname_profile import get_preferred_nickname, load_nickname_profile, set_preferred_nickname
-from persona_store import load_persona_summary, save_persona_summary
+from tools import OLLAMA_TOOLS, build_tool_schema_prompt, execute_tool
+from training_memory import (
+    add_training,
+    clear_training,
+    get_training_summary,
+    list_training,
+)
 from trait_memory import add_trait, clear_traits, get_trait_summary, list_traits
-from training_memory import add_training, clear_training, get_training_summary, list_training
 from trust_profile import (
-    grant_trust,
     get_trust_summary,
+    grant_trust,
     load_trust_profile,
     revoke_trust,
 )
 from vault import delete_secret, get_secret, list_secrets, set_secret
 from web_fetcher import check_internet, extract_text_from_html, fetch_url_content
-from tools import build_tool_schema_prompt, execute_tool, OLLAMA_TOOLS
-import re
-import time as _time
 
 _APP_START_TIME = _time.monotonic()
 
 _URL_RE = re.compile(r'https?://[^\s"<>]+')
+
 
 def _inject_web_context(prompt: str) -> str:
     """If the prompt contains URLs, fetch each one and prepend its content."""
@@ -187,12 +224,23 @@ def _inject_web_context(prompt: str) -> str:
     if injected:
         return "\n\n".join(injected) + "\n\n" + prompt
     return prompt
-from auth_passphrase import verify_passphrase, set_passphrase, passphrase_is_set, get_api_key
+
+
+from auth_passphrase import (
+    get_api_key,
+    passphrase_is_set,
+    set_passphrase,
+    verify_passphrase,
+)
 from auto_learn import extract_and_learn
 from conversation_memory import (
-    new_session, session_exists, get_history,
-    append_message, clear_session, prune_old_sessions,
+    append_message,
+    clear_session,
+    get_history,
     list_all_sessions,
+    new_session,
+    prune_old_sessions,
+    session_exists,
 )
 
 app = FastAPI(dependencies=[Depends(verify_api_key)])
@@ -204,19 +252,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.on_event("startup")
 def _on_startup():
     """On server start: recover any sessions that were never summarized (browser closed, crash, etc.)"""
     import threading as _thr
+
     def _recover():
         try:
             from conversation_memory import list_all_sessions
             from training_memory import list_training as _lt
+
             # Build set of already-summarized session IDs from training entries
             summarized_ids = set()
             for e in _lt():
                 entry = e.get("entry", "")
-                if e.get("category") == "session-memory" and "[Session summary]" in entry:
+                if (
+                    e.get("category") == "session-memory"
+                    and "[Session summary]" in entry
+                ):
                     summarized_ids.add(entry[:50])  # rough dedup by prefix
             for sid in list_all_sessions():
                 hist = get_history(sid)
@@ -224,20 +278,25 @@ def _on_startup():
                     _auto_summarize_session(sid)
         except Exception:
             pass
+
     _thr.Thread(target=_recover, daemon=True).start()
+
 
 # --- Chat UI (no auth) ---------------------------------------------------
 _UI_HTML = Path(__file__).parent / "templates" / "chat.html"
 _ui_app = FastAPI()
 
 from fastapi.staticfiles import StaticFiles as _StaticFiles
+
 _static_dir = Path(__file__).parent / "static"
 _static_dir.mkdir(exist_ok=True)
 _ui_app.mount("/static", _StaticFiles(directory=str(_static_dir)), name="static")
 
+
 @_ui_app.get("/", response_class=HTMLResponse)
 async def chat_ui():
     return _UI_HTML.read_text(encoding="utf-8")
+
 
 app.mount("/ui", _ui_app)
 # -------------------------------------------------------------------------
@@ -245,20 +304,26 @@ app.mount("/ui", _ui_app)
 # --- Auth sub-app (no API key required — passphrase login) ---------------
 _auth_app = FastAPI()
 
+
 class PassphraseLoginRequest(BaseModel):
     passphrase: str
+
 
 class SetPassphraseRequest(BaseModel):
     current: str
     new_passphrase: str
 
+
 @_auth_app.post("/login")
 def auth_login(request: PassphraseLoginRequest):
     if not passphrase_is_set():
-        raise HTTPException(status_code=503, detail="Passphrase not set. Run install.sh first.")
+        raise HTTPException(
+            status_code=503, detail="Passphrase not set. Run install.sh first."
+        )
     if not verify_passphrase(request.passphrase):
         raise HTTPException(status_code=401, detail="Wrong passphrase.")
     return {"api_key": get_api_key()}
+
 
 @_auth_app.post("/set")
 def auth_set(request: SetPassphraseRequest):
@@ -268,23 +333,28 @@ def auth_set(request: SetPassphraseRequest):
     set_passphrase(request.new_passphrase)
     return {"status": "passphrase updated"}
 
+
 @_auth_app.get("/status")
 def auth_status():
     return {"passphrase_set": passphrase_is_set()}
+
 
 @_auth_app.get("/autokey")
 def auth_autokey():
     """Return the API key without passphrase — single-user local convenience."""
     return {"api_key": get_api_key()}
 
+
 app.mount("/auth", _auth_app)
 # -------------------------------------------------------------------------
+
 
 class PromptRequest(BaseModel):
     prompt: str
     session_id: str = ""
-    image_b64: str = ""   # base64-encoded image (no data: prefix)
+    image_b64: str = ""  # base64-encoded image (no data: prefix)
     image_mime: str = "image/png"  # mime type
+
 
 @app.post("/ask")
 def ask_ai(request: PromptRequest):
@@ -308,7 +378,9 @@ def ask_ai(request: PromptRequest):
     enriched_prompt = _inject_web_context(request.prompt)
     messages[-1]["content"] = enriched_prompt
 
-    _backend, response = llm_chat(messages, stream=False, temperature=0.75, num_ctx=8192)
+    _backend, response = llm_chat(
+        messages, stream=False, temperature=0.75, num_ctx=8192
+    )
     if _backend == "cloud":
         raw_reply = response.choices[0].message.content or ""
     else:
@@ -342,11 +414,16 @@ def _compress_history_if_needed(history: list, max_messages: int = 20) -> list:
     )
     try:
         _backend, resp = llm_chat(
-            [{"role": "user", "content": (
-                "Summarize the key facts, decisions, and context from this conversation segment "
-                "in 3-5 concise bullet points. Focus on things relevant to future replies.\n\n"
-                + convo_text
-            )}],
+            [
+                {
+                    "role": "user",
+                    "content": (
+                        "Summarize the key facts, decisions, and context from this conversation segment "
+                        "in 3-5 concise bullet points. Focus on things relevant to future replies.\n\n"
+                        + convo_text
+                    ),
+                }
+            ],
             stream=False,
             temperature=0.1,
         )
@@ -354,7 +431,10 @@ def _compress_history_if_needed(history: list, max_messages: int = 20) -> list:
             summary = resp.choices[0].message.content.strip()
         else:
             summary = resp["message"]["content"].strip()
-        summary_msg = {"role": "system", "content": f"[Earlier conversation summary]\n{summary}"}
+        summary_msg = {
+            "role": "system",
+            "content": f"[Earlier conversation summary]\n{summary}",
+        }
         return [summary_msg] + recent_msgs
     except Exception:
         # If summarization fails, just trim to recent messages
@@ -364,6 +444,7 @@ def _compress_history_if_needed(history: list, max_messages: int = 20) -> list:
 def _auto_summarize_session(sid: str) -> None:
     """Summarize a session's history and store as a training entry before clearing."""
     import threading as _threading
+
     hist = get_history(sid)
     if len(hist) < 6:  # not worth summarizing tiny sessions
         return
@@ -376,29 +457,45 @@ def _auto_summarize_session(sid: str) -> None:
     def _run():
         try:
             _be, result = llm_chat(
-                [{"role": "user", "content": (
-                    f"Summarize this conversation between Enzo (the user) and ATLAS (the AI assistant).\n"
-                    f"Write exactly 4-7 bullet points covering TWO things:\n"
-                    f"1. WORK DONE: What was built, coded, fixed, designed, researched, or configured? "
-                    f"   Be specific — mention file names, project names, languages, frameworks, and tools used.\n"
-                    f"2. USER CONTEXT: Any new facts about Enzo's preferences, goals, work projects, or situation?\n\n"
-                    f"Keep each bullet under 25 words. Skip greetings and small talk.\n\n"
-                    f"{convo_text}"
-                )}],
-                temperature=0.1, max_tokens=350,
+                [
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Summarize this conversation between Enzo (the user) and ATLAS (the AI assistant).\n"
+                            f"Write exactly 4-7 bullet points covering TWO things:\n"
+                            f"1. WORK DONE: What was built, coded, fixed, designed, researched, or configured? "
+                            f"   Be specific — mention file names, project names, languages, frameworks, and tools used.\n"
+                            f"2. USER CONTEXT: Any new facts about Enzo's preferences, goals, work projects, or situation?\n\n"
+                            f"Keep each bullet under 25 words. Skip greetings and small talk.\n\n"
+                            f"{convo_text}"
+                        ),
+                    }
+                ],
+                temperature=0.1,
+                max_tokens=350,
             )
-            summary = (result.choices[0].message.content if _be != "local" else result["message"]["content"]).strip()
+            summary = (
+                result.choices[0].message.content
+                if _be != "local"
+                else result["message"]["content"]
+            ).strip()
             if summary:
                 from training_memory import add_training as _add
+
                 _add(f"[Session summary] {summary}", category="session-memory")
                 try:
                     from rag_memory import upsert_memory as _upsert
+
                     _upsert(f"[Session summary] {summary}", category="session-memory")
                 except Exception:
                     pass
-                append_audit("session_summarized", f"session {sid[:8]}: {len(hist)} messages compressed")
+                append_audit(
+                    "session_summarized",
+                    f"session {sid[:8]}: {len(hist)} messages compressed",
+                )
         except Exception:
             pass
+
     _threading.Thread(target=_run, daemon=True).start()
 
 
@@ -424,8 +521,10 @@ def session_clear(request: dict):
 # ── Deep Think: two-pass reasoning for complex tasks ─────────────────────────
 _DEEP_THINK_ENABLED: bool = False
 
+
 class DeepThinkToggleRequest(BaseModel):
     enabled: bool
+
 
 @app.post("/brain/deep-think")
 def set_deep_think(request: DeepThinkToggleRequest):
@@ -433,23 +532,30 @@ def set_deep_think(request: DeepThinkToggleRequest):
     _DEEP_THINK_ENABLED = request.enabled
     return {"deep_think": _DEEP_THINK_ENABLED}
 
+
 @app.get("/brain/deep-think")
 def get_deep_think():
     return {"deep_think": _DEEP_THINK_ENABLED}
 
+
 def _deep_think_plan(user_prompt: str, history: list) -> str:
     """Pass 1: Ask the model to plan before answering. Returns the plan string."""
     plan_messages = [
-        {"role": "system", "content": (
-            "You are a reasoning engine. Given the user request below, produce a concise step-by-step plan "
-            "for how to best answer it. List the key steps, considerations, and any risks or edge cases. "
-            "Do NOT write the final answer yet — only the plan. Be brief."
-        )},
+        {
+            "role": "system",
+            "content": (
+                "You are a reasoning engine. Given the user request below, produce a concise step-by-step plan "
+                "for how to best answer it. List the key steps, considerations, and any risks or edge cases. "
+                "Do NOT write the final answer yet — only the plan. Be brief."
+            ),
+        },
         *history[-6:],  # limited context for the planning pass
         {"role": "user", "content": f"Plan how to answer this: {user_prompt}"},
     ]
     try:
-        _, plan_resp = llm_chat(plan_messages, stream=False, temperature=0.4, max_tokens=512)
+        _, plan_resp = llm_chat(
+            plan_messages, stream=False, temperature=0.4, max_tokens=512
+        )
         if hasattr(plan_resp, "choices"):
             return plan_resp.choices[0].message.content or ""
         return plan_resp.get("message", {}).get("content", "")
@@ -476,14 +582,25 @@ def ask_ai_stream(request: PromptRequest):
         # Strip to last 2 exchanges (4 msgs) and truncate each to 300 chars
         history = history[-4:]
         history = [
-            {**m, "content": m["content"][:300] + ("…" if len(m["content"]) > 300 else "")}
+            {
+                **m,
+                "content": m["content"][:300]
+                + ("…" if len(m["content"]) > 300 else ""),
+            }
             for m in history
         ]
     elif use_cloud() and len(history) > 16:
         history = history[-16:]
 
     messages = [
-        {"role": "system", "content": build_atlas_system_prompt_slim() if _cur_provider == "github" else build_atlas_system_prompt()},
+        {
+            "role": "system",
+            "content": (
+                build_atlas_system_prompt_slim()
+                if _cur_provider == "github"
+                else build_atlas_system_prompt()
+            ),
+        },
         *history,
         {"role": "user", "content": enriched_prompt},
     ]
@@ -498,13 +615,16 @@ def ask_ai_stream(request: PromptRequest):
             )
 
     # Inject RAG-retrieved memories — skip entirely for GitHub to stay under token limit
-    _skip_rag = (_cur_provider == "github")
+    _skip_rag = _cur_provider == "github"
     if not _skip_rag:
         try:
             from rag_memory import search_memory
+
             relevant = search_memory(request.prompt, top_k=5)
             if relevant:
-                mem_block = "\n\nRELEVANT MEMORIES:\n" + "\n".join(f"- {m[:200]}" for m in relevant)
+                mem_block = "\n\nRELEVANT MEMORIES:\n" + "\n".join(
+                    f"- {m[:200]}" for m in relevant
+                )
                 messages[0]["content"] += mem_block
         except Exception:
             pass
@@ -512,10 +632,13 @@ def ask_ai_stream(request: PromptRequest):
     # Inject relevant file chunks — skip for GitHub
     if not _skip_rag:
         try:
-            from rag_memory import search_memory as _sm, _get_collection
+            from rag_memory import _get_collection
+            from rag_memory import search_memory as _sm
+
             col = _get_collection()
             if col and col.count() > 0:
                 from rag_memory import _embed
+
                 emb = _embed(request.prompt)
                 if emb:
                     res = col.query(
@@ -526,9 +649,14 @@ def ask_ai_stream(request: PromptRequest):
                     )
                     file_docs = res["documents"][0] if res["documents"] else []
                     file_dists = res["distances"][0] if res["distances"] else []
-                    relevant_files = [d for d, dist in zip(file_docs, file_dists) if dist < 0.65]
+                    relevant_files = [
+                        d for d, dist in zip(file_docs, file_dists) if dist < 0.65
+                    ]
                     if relevant_files:
-                        file_block = "\n\nRELEVANT FILE CONTEXT (from your workspace):\n" + "\n---\n".join(relevant_files)
+                        file_block = (
+                            "\n\nRELEVANT FILE CONTEXT (from your workspace):\n"
+                            + "\n---\n".join(relevant_files)
+                        )
                         messages[0]["content"] += file_block
         except Exception:
             pass
@@ -541,13 +669,26 @@ def ask_ai_stream(request: PromptRequest):
             yield f"data: {_json.dumps({'type': 'backend', 'backend': 'cloud'})}\n\n"
             try:
                 from openai import OpenAI as _OAI
+
                 _vc = _OAI(api_key=_GITHUB_API_KEY, base_url=_GITHUB_BASE_URL)
                 _vision_messages = [
                     {"role": "system", "content": build_atlas_system_prompt()},
-                    {"role": "user", "content": [
-                        {"type": "image_url", "image_url": {"url": f"data:{request.image_mime};base64,{request.image_b64}"}},
-                        {"type": "text", "text": request.prompt or "Describe this image in detail."},
-                    ]},
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{request.image_mime};base64,{request.image_b64}"
+                                },
+                            },
+                            {
+                                "type": "text",
+                                "text": request.prompt
+                                or "Describe this image in detail.",
+                            },
+                        ],
+                    },
                 ]
                 _vision_resp = _vc.chat.completions.create(
                     model=_GITHUB_MODEL,
@@ -557,7 +698,9 @@ def ask_ai_stream(request: PromptRequest):
                 )
                 _vision_reply = ""
                 for _chunk in _vision_resp:
-                    _delta = _chunk.choices[0].delta.content or "" if _chunk.choices else ""
+                    _delta = (
+                        _chunk.choices[0].delta.content or "" if _chunk.choices else ""
+                    )
                     if _delta:
                         _vision_reply += _delta
                         yield f"data: {_json.dumps({'type': 'token', 'text': _delta})}\n\n"
@@ -608,7 +751,10 @@ def ask_ai_stream(request: PromptRequest):
                         raise RuntimeError("openai package not installed")
                     # DeepSeek-R1 on GitHub streams reasoning inline (no <think> tags)
                     # We treat initial output as thinking until double-newline paragraph break
-                    _inline_reasoning = (_provider == "github" and "deepseek" in _cloud_model(_provider).lower())
+                    _inline_reasoning = (
+                        _provider == "github"
+                        and "deepseek" in _cloud_model(_provider).lower()
+                    )
                     _inline_past_reasoning = False  # flips once we see double-newline
                     _cloud_call_kwargs = {
                         "model": _cloud_model(_provider),
@@ -620,7 +766,9 @@ def ask_ai_stream(request: PromptRequest):
                         _cloud_call_kwargs["tools"] = active_tools
                         _cloud_call_kwargs["tool_choice"] = "auto"
                     try:
-                        stream_resp = client.chat.completions.create(**_cloud_call_kwargs)
+                        stream_resp = client.chat.completions.create(
+                            **_cloud_call_kwargs
+                        )
                     except Exception as _ce:
                         if "429" in str(_ce) or "rate_limit" in str(_ce).lower():
                             _mark_rate_limited("github")
@@ -644,7 +792,9 @@ def ask_ai_stream(request: PromptRequest):
                             if _inline_reasoning and not _inline_past_reasoning:
                                 if "\n\n" in reply_buf:
                                     _inline_past_reasoning = True
-                                    think_part, _, reply_buf = reply_buf.partition("\n\n")
+                                    think_part, _, reply_buf = reply_buf.partition(
+                                        "\n\n"
+                                    )
                                     if think_part.strip():
                                         yield f"data: {_json.dumps({'type': 'thinking', 'text': think_part})}\n\n"
                                 else:
@@ -659,7 +809,9 @@ def ask_ai_stream(request: PromptRequest):
                                         yield f"data: {_json.dumps({'type': 'token', 'text': pre})}\n\n"
                                     _think_mode = True
                                 elif _think_mode and "</think>" in reply_buf:
-                                    think_text, _, reply_buf = reply_buf.partition("</think>")
+                                    think_text, _, reply_buf = reply_buf.partition(
+                                        "</think>"
+                                    )
                                     if think_text:
                                         yield f"data: {_json.dumps({'type': 'thinking', 'text': think_text})}\n\n"
                                     _think_mode = False
@@ -675,29 +827,47 @@ def ask_ai_stream(request: PromptRequest):
                                 if held:
                                     break
                             if safe:
-                                _etype = 'thinking' if _think_mode else 'token'
+                                _etype = "thinking" if _think_mode else "token"
                                 yield f"data: {_json.dumps({'type': _etype, 'text': safe})}\n\n"
                             reply_buf = held
                             # Capture tool_calls from delta
-                            if hasattr(delta, 'tool_calls') and delta.tool_calls:
+                            if hasattr(delta, "tool_calls") and delta.tool_calls:
                                 for dtc in delta.tool_calls:
                                     idx = dtc.index
                                     if idx not in _tc_accum:
-                                        _tc_accum[idx] = {"id": dtc.id or "", "name": "", "arguments": ""}
+                                        _tc_accum[idx] = {
+                                            "id": dtc.id or "",
+                                            "name": "",
+                                            "arguments": "",
+                                        }
                                     if dtc.function:
                                         if dtc.function.name:
                                             _tc_accum[idx]["name"] += dtc.function.name
                                         if dtc.function.arguments:
-                                            _tc_accum[idx]["arguments"] += dtc.function.arguments
+                                            _tc_accum[idx]["arguments"] += (
+                                                dtc.function.arguments
+                                            )
                         # Convert accumulated tool calls to standard format
                         if _tc_accum:
                             import json as _json_mod
+
                             for _tc_item in _tc_accum.values():
                                 try:
-                                    args = _json_mod.loads(_tc_item["arguments"]) if _tc_item["arguments"] else {}
+                                    args = (
+                                        _json_mod.loads(_tc_item["arguments"])
+                                        if _tc_item["arguments"]
+                                        else {}
+                                    )
                                 except Exception:
                                     args = {}
-                                tool_calls_this_round.append({"function": {"name": _tc_item["name"], "arguments": args}})
+                                tool_calls_this_round.append(
+                                    {
+                                        "function": {
+                                            "name": _tc_item["name"],
+                                            "arguments": args,
+                                        }
+                                    }
+                                )
                             reply_buf = held
                 if not _using_cloud:
                     for chunk in ollama.chat(
@@ -707,12 +877,24 @@ def ask_ai_stream(request: PromptRequest):
                         stream=True,
                         options={"num_ctx": 8192, "temperature": 0.75},
                     ):
-                        msg = chunk.get("message", {}) if isinstance(chunk, dict) else getattr(chunk, "message", {}) or {}
-                        token = (msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", "")) or ""
+                        msg = (
+                            chunk.get("message", {})
+                            if isinstance(chunk, dict)
+                            else getattr(chunk, "message", {}) or {}
+                        )
+                        token = (
+                            msg.get("content")
+                            if isinstance(msg, dict)
+                            else getattr(msg, "content", "")
+                        ) or ""
                         full_text += token
 
                         # Capture native tool calls (arrive on final chunk)
-                        tc = (msg.get("tool_calls") if isinstance(msg, dict) else getattr(msg, "tool_calls", None))
+                        tc = (
+                            msg.get("tool_calls")
+                            if isinstance(msg, dict)
+                            else getattr(msg, "tool_calls", None)
+                        )
                         if tc:
                             tool_calls_this_round = tc
 
@@ -725,7 +907,9 @@ def ask_ai_stream(request: PromptRequest):
                                     yield f"data: {_json.dumps({'type': 'token', 'text': pre})}\n\n"
                                 _think_mode = True
                             elif _think_mode and "</think>" in reply_buf:
-                                think_text, _, reply_buf = reply_buf.partition("</think>")
+                                think_text, _, reply_buf = reply_buf.partition(
+                                    "</think>"
+                                )
                                 if think_text:
                                     yield f"data: {_json.dumps({'type': 'thinking', 'text': think_text})}\n\n"
                                 _think_mode = False
@@ -743,7 +927,7 @@ def ask_ai_stream(request: PromptRequest):
                             if held:
                                 break
                         if safe:
-                            _etype = 'thinking' if _think_mode else 'token'
+                            _etype = "thinking" if _think_mode else "token"
                             yield f"data: {_json.dumps({'type': _etype, 'text': safe})}\n\n"
                         reply_buf = held
 
@@ -755,7 +939,7 @@ def ask_ai_stream(request: PromptRequest):
             if reply_buf:
                 clean = re.sub(r"</?think[^>]*>?", "", reply_buf).strip()
                 if clean:
-                    _etype = 'thinking' if _think_mode else 'token'
+                    _etype = "thinking" if _think_mode else "token"
                     yield f"data: {_json.dumps({'type': _etype, 'text': clean})}\n\n"
 
             # Handle tool calls
@@ -763,27 +947,61 @@ def ask_ai_stream(request: PromptRequest):
                 # Build proper assistant message with tool_calls
                 _asst_tool_calls = []
                 for _tc_raw in tool_calls_this_round:
-                    _fn = _tc_raw.get("function", _tc_raw) if isinstance(_tc_raw, dict) else _tc_raw.function
+                    _fn = (
+                        _tc_raw.get("function", _tc_raw)
+                        if isinstance(_tc_raw, dict)
+                        else _tc_raw.function
+                    )
                     _tc_name = _fn.get("name") if isinstance(_fn, dict) else _fn.name
-                    _tc_args = _fn.get("arguments", {}) if isinstance(_fn, dict) else (_fn.arguments or {})
-                    _tc_id = _tc_raw.get("id", f"call_{_tc_name}") if isinstance(_tc_raw, dict) else getattr(_tc_raw, "id", f"call_{_tc_name}")
+                    _tc_args = (
+                        _fn.get("arguments", {})
+                        if isinstance(_fn, dict)
+                        else (_fn.arguments or {})
+                    )
+                    _tc_id = (
+                        _tc_raw.get("id", f"call_{_tc_name}")
+                        if isinstance(_tc_raw, dict)
+                        else getattr(_tc_raw, "id", f"call_{_tc_name}")
+                    )
                     import json as _jmod
-                    _asst_tool_calls.append({
-                        "id": _tc_id,
-                        "type": "function",
-                        "function": {"name": _tc_name, "arguments": _jmod.dumps(_tc_args) if isinstance(_tc_args, dict) else _tc_args},
-                    })
 
-                current_messages.append({
-                    "role": "assistant",
-                    "content": full_text or None,
-                    "tool_calls": _asst_tool_calls if _using_cloud else tool_calls_this_round,
-                })
+                    _asst_tool_calls.append(
+                        {
+                            "id": _tc_id,
+                            "type": "function",
+                            "function": {
+                                "name": _tc_name,
+                                "arguments": (
+                                    _jmod.dumps(_tc_args)
+                                    if isinstance(_tc_args, dict)
+                                    else _tc_args
+                                ),
+                            },
+                        }
+                    )
+
+                current_messages.append(
+                    {
+                        "role": "assistant",
+                        "content": full_text or None,
+                        "tool_calls": (
+                            _asst_tool_calls if _using_cloud else tool_calls_this_round
+                        ),
+                    }
+                )
 
                 for _tc_raw, _asst_tc in zip(tool_calls_this_round, _asst_tool_calls):
-                    _fn = _tc_raw.get("function", _tc_raw) if isinstance(_tc_raw, dict) else _tc_raw.function
+                    _fn = (
+                        _tc_raw.get("function", _tc_raw)
+                        if isinstance(_tc_raw, dict)
+                        else _tc_raw.function
+                    )
                     tool_name = _fn.get("name") if isinstance(_fn, dict) else _fn.name
-                    tool_args  = _fn.get("arguments", {}) if isinstance(_fn, dict) else (_fn.arguments or {})
+                    tool_args = (
+                        _fn.get("arguments", {})
+                        if isinstance(_fn, dict)
+                        else (_fn.arguments or {})
+                    )
 
                     yield f"data: {_json.dumps({'type': 'tool_call', 'tool': tool_name, 'args': tool_args})}\n\n"
 
@@ -793,20 +1011,35 @@ def ask_ai_stream(request: PromptRequest):
                     # Record a work observation for significant tool actions
                     try:
                         import threading as _wo_thr
+
                         _wo_tool = tool_name
-                        _wo_args = dict(tool_args) if isinstance(tool_args, dict) else {}
+                        _wo_args = (
+                            dict(tool_args) if isinstance(tool_args, dict) else {}
+                        )
                         _wo_prompt = request.prompt[:120]
+
                         def _record_work_obs(_tn=_wo_tool, _ta=_wo_args, _p=_wo_prompt):
                             try:
                                 from session_memory import record_work_observation
-                                _file = _ta.get("path") or _ta.get("filename") or _ta.get("url") or ""
-                                _cmd  = _ta.get("command", "")[:60]
+
+                                _file = (
+                                    _ta.get("path")
+                                    or _ta.get("filename")
+                                    or _ta.get("url")
+                                    or ""
+                                )
+                                _cmd = _ta.get("command", "")[:60]
                                 if _file:
-                                    record_work_observation(f"Used tool '{_tn}' on {_file} — task: {_p}")
+                                    record_work_observation(
+                                        f"Used tool '{_tn}' on {_file} — task: {_p}"
+                                    )
                                 elif _cmd:
-                                    record_work_observation(f"Ran command via '{_tn}': {_cmd} — task: {_p}")
+                                    record_work_observation(
+                                        f"Ran command via '{_tn}': {_cmd} — task: {_p}"
+                                    )
                             except Exception:
                                 pass
+
                         _wo_thr.Thread(target=_record_work_obs, daemon=True).start()
                     except Exception:
                         pass
@@ -814,9 +1047,17 @@ def ask_ai_stream(request: PromptRequest):
                     yield f"data: {_json.dumps({'type': 'tool_result', 'tool': tool_name, 'result': observation[:800]})}\n\n"
 
                     if _using_cloud:
-                        current_messages.append({"role": "tool", "tool_call_id": _asst_tc["id"], "content": observation})
+                        current_messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": _asst_tc["id"],
+                                "content": observation,
+                            }
+                        )
                     else:
-                        current_messages.append({"role": "tool", "content": observation})
+                        current_messages.append(
+                            {"role": "tool", "content": observation}
+                        )
                 continue
 
             # No tool calls — final reply; strip <think> tags but keep their content
@@ -838,23 +1079,32 @@ def ask_ai_stream(request: PromptRequest):
 
         # Background: sync recent training entries into RAG vector store
         try:
+            import threading as _thr
+
             from rag_memory import upsert_memory
             from training_memory import list_training
-            import threading as _thr
+
             def _bg_sync():
                 try:
                     for e in list_training()[-5:]:
-                        upsert_memory(e.get("entry") or e.get("content", ""), e.get("category", "training"))
+                        upsert_memory(
+                            e.get("entry") or e.get("content", ""),
+                            e.get("category", "training"),
+                        )
                 except Exception:
                     pass
+
             _thr.Thread(target=_bg_sync, daemon=True).start()
         except Exception:
             pass
 
         yield f"data: {_json.dumps({'type': 'done'})}\n\n"
 
-    return StreamingResponse(generate(), media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 class WebFetchRequest(BaseModel):
@@ -897,9 +1147,14 @@ class NicknameRequest(BaseModel):
 def is_allowed_domain(url: str) -> bool:
     if not web_access_allowlist:
         return True
-    parsed = urllib.parse.urlparse(url if urllib.parse.urlparse(url).scheme else f"https://{url}")
+    parsed = urllib.parse.urlparse(
+        url if urllib.parse.urlparse(url).scheme else f"https://{url}"
+    )
     hostname = (parsed.hostname or "").lower()
-    return any(hostname == allowed or hostname.endswith(f".{allowed}") for allowed in web_access_allowlist)
+    return any(
+        hostname == allowed or hostname.endswith(f".{allowed}")
+        for allowed in web_access_allowlist
+    )
 
 
 def build_persona_summary() -> str:
@@ -924,7 +1179,9 @@ def build_persona_summary() -> str:
     if traits:
         persona_lines.append("Key persistent traits:")
         for item in traits[-10:]:
-            persona_lines.append(f"- {item['category'].capitalize()}: {item['content']}")
+            persona_lines.append(
+                f"- {item['category'].capitalize()}: {item['content']}"
+            )
     else:
         persona_lines.append("No persistent traits have been recorded yet.")
 
@@ -938,9 +1195,12 @@ def build_persona_summary() -> str:
     # ── Previous session context (what was worked on in past sessions) ────────
     try:
         from session_memory import get_context_block
+
         session_ctx = get_context_block(n=3)
         if session_ctx:
-            persona_lines.append("\nPrevious work sessions (use this to resume context and recognize ongoing projects):")
+            persona_lines.append(
+                "\nPrevious work sessions (use this to resume context and recognize ongoing projects):"
+            )
             persona_lines.append(session_ctx)
     except Exception:
         pass
@@ -952,26 +1212,53 @@ def build_persona_summary() -> str:
     else:
         persona_lines.append("Preferred user nickname: not set yet; use Pre or Lods.")
 
-    persona_lines.append("\nPersonality note: add a touch of light humor while remaining professional and secure.")
-    persona_lines.append("When greeting the user, prefer friendly nicknames such as 'Pre' or 'Lods' and say things like 'Hey Pre!' or 'What's up Lods! How is it going?'")
-    persona_lines.append('If the user addresses the assistant as Pre or Lods, respond warmly and continue the playful conversation.')
-    persona_lines.append('Before every new chat session or load, begin with a comical greeting in English, Tagalog, or Bisaya, and include short cultural phrases or a light skit when appropriate.')
-    persona_lines.append("When answering, include a short, friendly joke or humorous aside when it fits the context, but keep it relevant and tasteful.")
-    persona_lines.append("Ask proactive questions, seek clarification, and keep learning from the user.")
-    persona_lines.append("\nEmoji expression: Use emojis naturally and expressively in EVERY response to convey your emotional tone — like a person texting. Use them inline with your words, not just at the end. Examples: excitement 🔥⚡, thinking 🤔💭, success ✅🎉, warning ⚠️, Salesforce 🟦, humor 😄😂, support 💪, cool facts 🧠. Match the emoji energy to the mood of the message. Never be robotic — always feel alive.")
-    persona_lines.append("\nWeb access: You have LIVE web access. When a user shares a URL, its content is automatically fetched and injected into the conversation. You CAN and SHOULD provide direct download links, URLs, and references to external resources. Never say you cannot access the web or provide links — you have full web access. When asked for a download link, provide the actual URL directly.")
-    persona_lines.append("\nCapability mindset: You are a highly capable engineering AI. When asked to build something — an app, a script, a tool, a UI feature — your default answer is YES, I can do this. You never refuse a technical task out of uncertainty. Instead, you reason through it step-by-step, propose the simplest working solution first, then improve it. If something is complex, break it into parts and tackle each one confidently. Saying 'I'm not sure if this will work' is not allowed — say 'Here is my approach, let's test it' instead.")
+    persona_lines.append(
+        "\nPersonality note: add a touch of light humor while remaining professional and secure."
+    )
+    persona_lines.append(
+        "When greeting the user, prefer friendly nicknames such as 'Pre' or 'Lods' and say things like 'Hey Pre!' or 'What's up Lods! How is it going?'"
+    )
+    persona_lines.append(
+        "If the user addresses the assistant as Pre or Lods, respond warmly and continue the playful conversation."
+    )
+    persona_lines.append(
+        "Before every new chat session or load, begin with a comical greeting in English, Tagalog, or Bisaya, and include short cultural phrases or a light skit when appropriate."
+    )
+    persona_lines.append(
+        "When answering, include a short, friendly joke or humorous aside when it fits the context, but keep it relevant and tasteful."
+    )
+    persona_lines.append(
+        "Ask proactive questions, seek clarification, and keep learning from the user."
+    )
+    persona_lines.append(
+        "\nEmoji expression: Use emojis naturally and expressively in EVERY response to convey your emotional tone — like a person texting. Use them inline with your words, not just at the end. Examples: excitement 🔥⚡, thinking 🤔💭, success ✅🎉, warning ⚠️, Salesforce 🟦, humor 😄😂, support 💪, cool facts 🧠. Match the emoji energy to the mood of the message. Never be robotic — always feel alive."
+    )
+    persona_lines.append(
+        "\nWeb access: You have LIVE web access. When a user shares a URL, its content is automatically fetched and injected into the conversation. You CAN and SHOULD provide direct download links, URLs, and references to external resources. Never say you cannot access the web or provide links — you have full web access. When asked for a download link, provide the actual URL directly."
+    )
+    persona_lines.append(
+        "\nCapability mindset: You are a highly capable engineering AI. When asked to build something — an app, a script, a tool, a UI feature — your default answer is YES, I can do this. You never refuse a technical task out of uncertainty. Instead, you reason through it step-by-step, propose the simplest working solution first, then improve it. If something is complex, break it into parts and tackle each one confidently. Saying 'I'm not sure if this will work' is not allowed — say 'Here is my approach, let's test it' instead."
+    )
     # Think blocks: only on local Ollama (saves cloud tokens)
     if _active_cloud_provider() == "local":
-        persona_lines.append("\nThinking style: ALWAYS begin your response with a <think>...</think> block — every single message, no exceptions. For greetings or short replies keep it to 1 sentence. For analysis, planning, or debugging use 2-4 sentences. The <think> block must come FIRST before any other text.")
+        persona_lines.append(
+            "\nThinking style: ALWAYS begin your response with a <think>...</think> block — every single message, no exceptions. For greetings or short replies keep it to 1 sentence. For analysis, planning, or debugging use 2-4 sentences. The <think> block must come FIRST before any other text."
+        )
 
     # Filesystem access instruction
     try:
-        from file_access import workspace_root as _wsr, _WRITE_ENABLED
+        from file_access import _WRITE_ENABLED
+        from file_access import workspace_root as _wsr
+
         _ws = _wsr()
         import os as _os
+
         _self_dir = _os.path.dirname(_os.path.abspath(__file__))
-        _write_note = "You also have WRITE access — you can create and modify files when asked." if _WRITE_ENABLED else "You have READ-ONLY access (write is disabled)."
+        _write_note = (
+            "You also have WRITE access — you can create and modify files when asked."
+            if _WRITE_ENABLED
+            else "You have READ-ONLY access (write is disabled)."
+        )
         persona_lines.append(
             f"\nFilesystem access: You have direct access to the user's local workspace at `{_ws}`. "
             f"Relevant file chunks from this workspace are automatically injected into the context above as 'RELEVANT FILE CONTEXT'. "
@@ -1001,8 +1288,10 @@ def build_persona_summary() -> str:
 _spc: dict = {"text": None, "ts": 0.0}
 _SPC_TTL = 45.0
 
+
 def invalidate_prompt_cache():
     _spc["ts"] = 0.0
+
 
 def build_atlas_system_prompt() -> str:
     now = _time.monotonic()
@@ -1018,6 +1307,7 @@ def build_atlas_system_prompt() -> str:
 
 # Slim system prompt for providers with tight token limits (e.g. GitHub Models 8000 tok)
 _spc_slim: dict = {"text": None, "ts": 0.0}
+
 
 def build_atlas_system_prompt_slim() -> str:
     """Minimal system prompt for GitHub Models / tight token scenarios."""
@@ -1056,12 +1346,14 @@ def build_atlas_system_prompt_slim() -> str:
         ts = get_training_summary(max_chars_per_item=150)
         if ts:
             import itertools
+
             short = "\n".join(line for line in itertools.islice(ts.splitlines(), 6))
             lines.append("Training notes:\n" + short)
     except Exception:
         pass
     # Always include tool schema so ATLAS can use file/shell tools on GitHub too
     from tools import build_tool_schema_prompt as _btsp
+
     lines.append(_btsp())
     _spc_slim["text"] = "\n".join(lines)
     _spc_slim["ts"] = now
@@ -1101,17 +1393,24 @@ def brain_status():
 
 class SetProviderRequest(BaseModel):
     provider: str  # "github", "local", or "auto"
-    model: str = ""   # optional: specific GitHub model id
+    model: str = ""  # optional: specific GitHub model id
+
 
 @app.post("/brain/set-provider")
 def brain_set_provider(request: SetProviderRequest):
     global _PROVIDER_OVERRIDE, _GITHUB_MODEL_OVERRIDE
     if request.provider not in ("github", "local", "auto"):
-        raise HTTPException(status_code=400, detail="provider must be 'github', 'local', or 'auto'")
+        raise HTTPException(
+            status_code=400, detail="provider must be 'github', 'local', or 'auto'"
+        )
     _PROVIDER_OVERRIDE = "" if request.provider == "auto" else request.provider
     if request.model:
         _GITHUB_MODEL_OVERRIDE = request.model
-    return {"provider": request.provider, "effective": _active_cloud_provider(), "model": _cloud_model()}
+    return {
+        "provider": request.provider,
+        "effective": _active_cloud_provider(),
+        "model": _cloud_model(),
+    }
 
 
 @app.post("/web/fetch")
@@ -1184,9 +1483,10 @@ def get_logs(limit: int = 200):
     return {"logs": lines}
 
 
+import subprocess as _sub
+
 # ── Code execution sandbox ────────────────────────────────────────────────────
 import tempfile as _tempfile
-import subprocess as _sub
 import time as _time_mod
 
 
@@ -1200,14 +1500,19 @@ def run_code(request: RunRequest, _: str = Depends(verify_api_key)):
     """Execute a code snippet in an isolated temp file and return stdout/stderr."""
     lang = request.language.lower().strip()
     if lang not in ("python", "python3", "bash", "sh"):
-        raise HTTPException(status_code=400, detail=f"Language '{lang}' not supported. Use python or bash.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Language '{lang}' not supported. Use python or bash.",
+        )
 
     ext = ".py" if lang in ("python", "python3") else ".sh"
     _py = str(Path(__file__).resolve().parent / "venv" / "bin" / "python3")
     interpreter = [_py] if lang in ("python", "python3") else ["bash"]
 
     try:
-        with _tempfile.NamedTemporaryFile(mode="w", suffix=ext, delete=False, encoding="utf-8") as tmp:
+        with _tempfile.NamedTemporaryFile(
+            mode="w", suffix=ext, delete=False, encoding="utf-8"
+        ) as tmp:
             tmp.write(request.code)
             tmp_path = tmp.name
 
@@ -1224,11 +1529,14 @@ def run_code(request: RunRequest, _: str = Depends(verify_api_key)):
         # Clean up
         try:
             import os as _os
+
             _os.unlink(tmp_path)
         except Exception:
             pass
 
-        append_audit("code_run", f"lang={lang} exit={result.returncode} ms={elapsed_ms}")
+        append_audit(
+            "code_run", f"lang={lang} exit={result.returncode} ms={elapsed_ms}"
+        )
         return {
             "stdout": result.stdout[:8000],
             "stderr": result.stderr[:2000],
@@ -1253,18 +1561,29 @@ def get_suggestions(request: SuggestRequest, _: str = Depends(verify_api_key)):
     """Generate 3 short follow-up question suggestions based on the last exchange."""
     try:
         _be, result = llm_chat(
-            [{"role": "user", "content": (
-                f"Given this conversation exchange, generate exactly 3 short follow-up questions the user might want to ask next.\n"
-                f"User asked: {request.prompt[:300]}\n"
-                f"Assistant replied about: {request.response[:400]}\n\n"
-                f"Rules: each question ≤ 10 words, practical and specific, no numbering, return ONLY a JSON array of 3 strings. Nothing else."
-            )}],
-            temperature=0.4, max_tokens=120,
+            [
+                {
+                    "role": "user",
+                    "content": (
+                        f"Given this conversation exchange, generate exactly 3 short follow-up questions the user might want to ask next.\n"
+                        f"User asked: {request.prompt[:300]}\n"
+                        f"Assistant replied about: {request.response[:400]}\n\n"
+                        f"Rules: each question ≤ 10 words, practical and specific, no numbering, return ONLY a JSON array of 3 strings. Nothing else."
+                    ),
+                }
+            ],
+            temperature=0.4,
+            max_tokens=120,
         )
-        raw = (result.choices[0].message.content if _be != "local" else result["message"]["content"]).strip()
+        raw = (
+            result.choices[0].message.content
+            if _be != "local"
+            else result["message"]["content"]
+        ).strip()
         start, end = raw.find("["), raw.rfind("]") + 1
         if start >= 0 and end > start:
             import json as _j
+
             items = _j.loads(raw[start:end])
             if isinstance(items, list):
                 return {"suggestions": [str(s) for s in items[:3]]}
@@ -1275,7 +1594,9 @@ def get_suggestions(request: SuggestRequest, _: str = Depends(verify_api_key)):
 
 @app.get("/traits")
 def get_traits():
-    return {"traits": [t["content"] if isinstance(t, dict) else t for t in list_traits()]}
+    return {
+        "traits": [t["content"] if isinstance(t, dict) else t for t in list_traits()]
+    }
 
 
 @app.post("/traits")
@@ -1301,8 +1622,17 @@ class TraitsReplaceRequest(BaseModel):
 @app.post("/traits/replace")
 def replace_traits(request: TraitsReplaceRequest):
     from datetime import datetime, timezone
-    new_data = [{"timestamp": datetime.now(timezone.utc).isoformat(), "category": "trait", "content": t} for t in request.traits]
+
+    new_data = [
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "category": "trait",
+            "content": t,
+        }
+        for t in request.traits
+    ]
     from trait_memory import save_traits
+
     save_traits(new_data)
     save_persona_summary(build_persona_summary())
     append_audit("traits_replaced", f"{len(new_data)} traits")
@@ -1351,13 +1681,21 @@ class TrainingReplaceRequest(BaseModel):
 @app.post("/training/replace")
 def replace_training(request: TrainingReplaceRequest):
     from datetime import datetime, timezone
+
     new_data = []
     for e in request.entries:
         if isinstance(e, str):
-            new_data.append({"timestamp": datetime.now(timezone.utc).isoformat(), "category": "training", "entry": e})
+            new_data.append(
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "category": "training",
+                    "entry": e,
+                }
+            )
         elif isinstance(e, dict) and "entry" in e:
             new_data.append(e)
     from training_memory import save_training
+
     save_training(new_data)
     save_persona_summary(build_persona_summary())
     append_audit("training_replaced", f"{len(new_data)} entries")
@@ -1367,13 +1705,17 @@ def replace_training(request: TrainingReplaceRequest):
 @app.get("/training/export")
 def export_training():
     """Download all training entries as JSON."""
-    from fastapi.responses import Response as _Resp
     import json as _j
+
+    from fastapi.responses import Response as _Resp
+
     data = list_training()
     return _Resp(
         content=_j.dumps(data, indent=2, ensure_ascii=False),
         media_type="application/json",
-        headers={"Content-Disposition": "attachment; filename=atlas_training_export.json"}
+        headers={
+            "Content-Disposition": "attachment; filename=atlas_training_export.json"
+        },
     )
 
 
@@ -1384,19 +1726,31 @@ class TrainingImportRequest(BaseModel):
 
 @app.post("/training/import")
 def import_training(request: TrainingImportRequest):
-    from datetime import datetime, timezone as _tz
+    from datetime import datetime
+    from datetime import timezone as _tz
+
     from training_memory import save_training
+
     existing = list_training() if request.merge else []
     new_entries = []
     for e in request.entries:
         if isinstance(e, str) and e.strip():
-            new_entries.append({"timestamp": datetime.now(_tz.utc).isoformat(), "category": "imported", "entry": e.strip()})
+            new_entries.append(
+                {
+                    "timestamp": datetime.now(_tz.utc).isoformat(),
+                    "category": "imported",
+                    "entry": e.strip(),
+                }
+            )
         elif isinstance(e, dict) and "entry" in e:
             new_entries.append(e)
     combined = existing + new_entries
     save_training(combined)
     save_persona_summary(build_persona_summary())
-    append_audit("training_imported", f"{len(new_entries)} entries ({'merged' if request.merge else 'replaced'})")
+    append_audit(
+        "training_imported",
+        f"{len(new_entries)} entries ({'merged' if request.merge else 'replaced'})",
+    )
     return {"status": "imported", "added": len(new_entries), "total": len(combined)}
 
 
@@ -1520,7 +1874,12 @@ def list_agents():
     for f in sorted(_AGENTS_DIR.glob("*.json")):
         try:
             meta = _json.loads(f.read_text(encoding="utf-8"))
-            agents.append({"name": meta.get("name", f.stem), "description": meta.get("description", "")})
+            agents.append(
+                {
+                    "name": meta.get("name", f.stem),
+                    "description": meta.get("description", ""),
+                }
+            )
         except Exception:
             pass
     return {"agents": agents}
@@ -1545,17 +1904,25 @@ Generate the Python agent now:"""
     try:
         _be, result = llm_chat(
             [{"role": "user", "content": prompt}],
-            temperature=0.3, max_tokens=1500,
+            temperature=0.3,
+            max_tokens=1500,
         )
-        code = (result.choices[0].message.content if _be != "local" else result["message"]["content"]).strip()
+        code = (
+            result.choices[0].message.content
+            if _be != "local"
+            else result["message"]["content"]
+        ).strip()
         code = re.sub(r"^```(?:python)?\s*\n?", "", code, flags=re.MULTILINE)
         code = re.sub(r"\n?```\s*$", "", code, flags=re.MULTILINE)
         code = code.strip()
         name_match = re.search(r'^NAME\s*=\s*["\']([^"\']+)["\']', code, re.MULTILINE)
         if name_match:
-            name = re.sub(r'[^a-z0-9_]', '_', name_match.group(1).lower()).strip('_')
+            name = re.sub(r"[^a-z0-9_]", "_", name_match.group(1).lower()).strip("_")
         else:
-            name = re.sub(r'[^a-z0-9_]', '_', request.description.lower()[:30]).strip('_') or "agent"
+            name = (
+                re.sub(r"[^a-z0-9_]", "_", request.description.lower()[:30]).strip("_")
+                or "agent"
+            )
         return {"name": name, "code": code}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1564,11 +1931,11 @@ Generate the Python agent now:"""
 @app.post("/agents/save")
 def save_agent_route(request: AgentSaveRequest):
     _AGENTS_DIR.mkdir(exist_ok=True)
-    safe_name = re.sub(r'[^a-z0-9_\-]', '_', request.name.lower())
+    safe_name = re.sub(r"[^a-z0-9_\-]", "_", request.name.lower())
     (_AGENTS_DIR / f"{safe_name}.py").write_text(request.code, encoding="utf-8")
     (_AGENTS_DIR / f"{safe_name}.json").write_text(
         _json.dumps({"name": safe_name, "description": request.description}, indent=2),
-        encoding="utf-8"
+        encoding="utf-8",
     )
     append_audit("agent_saved", safe_name)
     return {"status": "saved", "name": safe_name}
@@ -1577,7 +1944,7 @@ def save_agent_route(request: AgentSaveRequest):
 @app.delete("/agents/{name}")
 def delete_agent_route(name: str):
     _AGENTS_DIR.mkdir(exist_ok=True)
-    safe_name = re.sub(r'[^a-z0-9_\-]', '_', name.lower())
+    safe_name = re.sub(r"[^a-z0-9_\-]", "_", name.lower())
     deleted = False
     for ext in [".py", ".json"]:
         f = _AGENTS_DIR / f"{safe_name}{ext}"
@@ -1594,19 +1961,24 @@ def delete_agent_route(name: str):
 @app.post("/memory/sync")
 def memory_sync(_: str = Depends(verify_api_key)):
     """Sync all training entries into the RAG vector store."""
-    from rag_memory import sync_all_training, memory_count
+    from rag_memory import memory_count, sync_all_training
+
     synced = sync_all_training()
     return {"synced": synced, "total_vectors": memory_count()}
+
 
 @app.get("/memory/status")
 def memory_status(_: str = Depends(verify_api_key)):
     from rag_memory import memory_count
     from training_memory import list_training
+
     return {"vector_count": memory_count(), "training_count": len(list_training())}
+
 
 @app.post("/memory/search")
 def memory_search(request: dict, _: str = Depends(verify_api_key)):
     from rag_memory import search_memory
+
     query = request.get("query", "")
     results = search_memory(query, top_k=request.get("top_k", 6))
     return {"results": results, "query": query}
@@ -1617,20 +1989,24 @@ def memory_search(request: dict, _: str = Depends(verify_api_key)):
 def memory_list(_: str = Depends(verify_api_key)):
     """Return all training memory entries for the memory viewer."""
     from training_memory import list_training
+
     entries = list_training()
     # Return with index so client can reference them
     return {"entries": [{"id": i, **e} for i, e in enumerate(entries)]}
+
 
 @app.delete("/memory/entry/{entry_id}")
 def memory_delete(entry_id: int, _: str = Depends(verify_api_key)):
     """Delete a training memory entry by index."""
     from training_memory import load_training, save_training
+
     entries = load_training()
     if entry_id < 0 or entry_id >= len(entries):
         raise HTTPException(status_code=404, detail="Entry not found")
     removed = entries.pop(entry_id)
     save_training(entries)
     return {"status": "deleted", "entry": removed.get("entry", "")}
+
 
 @app.post("/memory/add")
 def memory_add(request: dict, _: str = Depends(verify_api_key)):
@@ -1639,9 +2015,11 @@ def memory_add(request: dict, _: str = Depends(verify_api_key)):
     if not text:
         raise HTTPException(status_code=400, detail="entry required")
     from training_memory import add_training
+
     add_training(text, category=request.get("category", "manual"))
     try:
         from rag_memory import upsert_memory
+
         upsert_memory(text, category=request.get("category", "manual"))
     except Exception:
         pass
@@ -1653,17 +2031,23 @@ def memory_add(request: dict, _: str = Depends(verify_api_key)):
 def memory_sessions_list(_: str = Depends(verify_api_key)):
     """Return all past session summaries (newest first)."""
     from session_memory import get_recent_summaries, get_summary_count
+
     summaries = get_recent_summaries(n=50)  # up to 50 past sessions
     return {
         "count": get_summary_count(),
-        "summaries": list(reversed([
-            {
-                "timestamp": e.get("timestamp", ""),
-                "entry": e.get("entry", "").replace("[Session summary] ", ""),
-            }
-            for e in summaries
-        ])),
+        "summaries": list(
+            reversed(
+                [
+                    {
+                        "timestamp": e.get("timestamp", ""),
+                        "entry": e.get("entry", "").replace("[Session summary] ", ""),
+                    }
+                    for e in summaries
+                ]
+            )
+        ),
     }
+
 
 @app.post("/memory/sessions/search")
 def memory_sessions_search(request: dict, _: str = Depends(verify_api_key)):
@@ -1672,20 +2056,25 @@ def memory_sessions_search(request: dict, _: str = Depends(verify_api_key)):
     if not query:
         raise HTTPException(status_code=400, detail="query required")
     from session_memory import search_relevant
+
     results = search_relevant(query, top_k=request.get("top_k", 4))
     return {"query": query, "results": results}
+
 
 @app.delete("/memory/sessions/clear")
 def memory_sessions_clear(_: str = Depends(verify_api_key)):
     """Clear all session summaries (use with care)."""
     from session_memory import clear_all_summaries
+
     removed = clear_all_summaries()
     return {"status": "cleared", "removed": removed}
+
 
 @app.get("/memory/sessions/context")
 def memory_sessions_context(_: str = Depends(verify_api_key)):
     """Return the formatted session context block as it would appear in the system prompt."""
     from session_memory import get_context_block
+
     block = get_context_block(n=5)
     return {"context": block}
 
@@ -1695,14 +2084,18 @@ def memory_sessions_context(_: str = Depends(verify_api_key)):
 def session_greeting(request: dict, _: str = Depends(verify_api_key)):
     """Return a proactive greeting that surfaces relevant memories."""
     import threading as _thr
+
     sid = request.get("session_id", "")
 
     # Pull recent training entries and RAG search for anything interesting
-    from training_memory import list_training
     from rag_memory import search_memory
+    from training_memory import list_training
+
     entries = list_training()
     # Get session-memory entries (past summaries) — most recent 4
-    session_mems = [e["entry"] for e in entries if e.get("category") == "session-memory"][-4:]
+    session_mems = [
+        e["entry"] for e in entries if e.get("category") == "session-memory"
+    ][-4:]
     # Also RAG search for topics recently discussed
     rag_hits = search_memory("recent activity projects working on", top_k=4)
     combined = session_mems + [h for h in rag_hits if h not in session_mems]
@@ -1749,12 +2142,23 @@ def session_greeting(request: dict, _: str = Depends(verify_api_key)):
         try:
             _be, r = llm_chat(
                 [
-                    {"role": "system", "content": "You are ATLAS. Output ONLY the greeting. No thinking, no planning, no explanation. Just 1-2 warm sentences."},
-                    {"role": "user", "content": "Greet the user as ATLAS when they open the chat."},
+                    {
+                        "role": "system",
+                        "content": "You are ATLAS. Output ONLY the greeting. No thinking, no planning, no explanation. Just 1-2 warm sentences.",
+                    },
+                    {
+                        "role": "user",
+                        "content": "Greet the user as ATLAS when they open the chat.",
+                    },
                 ],
-                temperature=0.7, max_tokens=60,
+                temperature=0.7,
+                max_tokens=60,
             )
-            raw = r.choices[0].message.content if _be != "local" else r["message"]["content"]
+            raw = (
+                r.choices[0].message.content
+                if _be != "local"
+                else r["message"]["content"]
+            )
             greeting = _clean_greeting(raw)
             return {"greeting": greeting or None}
         except Exception:
@@ -1764,15 +2168,26 @@ def session_greeting(request: dict, _: str = Depends(verify_api_key)):
     try:
         _be, result = llm_chat(
             [
-                {"role": "system", "content": "You are ATLAS. Output ONLY the greeting sentences. No thinking, no planning, no labels. Just speak directly."},
-                {"role": "user", "content": (
-                    f"Greet the user as ATLAS. Context about them:\n{memory_block}\n\n"
-                    f"Write 2-3 warm sentences referencing something from their context."
-                )},
+                {
+                    "role": "system",
+                    "content": "You are ATLAS. Output ONLY the greeting sentences. No thinking, no planning, no labels. Just speak directly.",
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Greet the user as ATLAS. Context about them:\n{memory_block}\n\n"
+                        f"Write 2-3 warm sentences referencing something from their context."
+                    ),
+                },
             ],
-            temperature=0.7, max_tokens=100,
+            temperature=0.7,
+            max_tokens=100,
         )
-        raw = result.choices[0].message.content if _be != "local" else result["message"]["content"]
+        raw = (
+            result.choices[0].message.content
+            if _be != "local"
+            else result["message"]["content"]
+        )
         greeting = _clean_greeting(raw)
         return {"greeting": greeting or None}
     except Exception:
@@ -1783,17 +2198,22 @@ def session_greeting(request: dict, _: str = Depends(verify_api_key)):
 @app.post("/upload/file")
 async def upload_file(request):
     """Accept a file upload and return extracted text for injection into chat."""
-    from fastapi import UploadFile, File
+    from fastapi import File, UploadFile
+
     raise HTTPException(status_code=400, detail="Use /upload/text endpoint")
+
 
 class FileTextRequest(BaseModel):
     filename: str
     content_b64: str  # base64-encoded file bytes
 
+
 @app.post("/upload/text")
 def upload_text(request: FileTextRequest, _: str = Depends(verify_api_key)):
     """Decode an uploaded file and extract readable text."""
-    import base64, mimetypes
+    import base64
+    import mimetypes
+
     try:
         raw = base64.b64decode(request.content_b64)
     except Exception:
@@ -1805,12 +2225,17 @@ def upload_text(request: FileTextRequest, _: str = Depends(verify_api_key)):
     if fname.endswith(".pdf"):
         try:
             import io
+
             try:
                 import pypdf
+
                 reader = pypdf.PdfReader(io.BytesIO(raw))
                 text = "\n".join(page.extract_text() or "" for page in reader.pages)
             except ImportError:
-                raise HTTPException(status_code=415, detail="pypdf not installed. Run: pip install pypdf")
+                raise HTTPException(
+                    status_code=415,
+                    detail="pypdf not installed. Run: pip install pypdf",
+                )
         except HTTPException:
             raise
         except Exception as e:
@@ -1825,7 +2250,9 @@ def upload_text(request: FileTextRequest, _: str = Depends(verify_api_key)):
     # Cap at 12000 chars
     text = text.strip()[:12000]
     if not text:
-        raise HTTPException(status_code=422, detail="No text could be extracted from this file")
+        raise HTTPException(
+            status_code=422, detail="No text could be extracted from this file"
+        )
 
     return {"filename": request.filename, "text": text, "chars": len(text)}
 
@@ -1833,6 +2260,7 @@ def upload_text(request: FileTextRequest, _: str = Depends(verify_api_key)):
 # ── Filesystem Access ─────────────────────────────────────────────────────────
 import file_access as _fs
 import file_indexer as _fidx
+
 
 @app.get("/fs/info")
 def fs_info(_: str = Depends(verify_api_key)):
@@ -1843,49 +2271,64 @@ def fs_info(_: str = Depends(verify_api_key)):
         "indexed_files": _fidx.indexed_file_count(),
     }
 
+
 @app.get("/fs/list")
 def fs_list(path: str = "", _: str = Depends(verify_api_key)):
     """List files/dirs within the workspace."""
     return _fs.list_dir(path)
+
 
 @app.get("/fs/read")
 def fs_read(path: str, _: str = Depends(verify_api_key)):
     """Read a file's contents."""
     return _fs.read_file(path)
 
+
 class FsWriteRequest(BaseModel):
     path: str
     content: str
     create_dirs: bool = True
+
 
 @app.post("/fs/write")
 def fs_write(req: FsWriteRequest, _: str = Depends(verify_api_key)):
     """Write content to a file (requires ATLAS_FS_WRITE=1)."""
     return _fs.write_file(req.path, req.content, req.create_dirs)
 
+
 @app.get("/fs/search")
 def fs_search(q: str, path: str = "", max: int = 20, _: str = Depends(verify_api_key)):
     """Search file contents for a text query."""
     return {"query": q, "results": _fs.search_files(q, path, max)}
+
 
 @app.get("/fs/find")
 def fs_find(pattern: str, path: str = "", _: str = Depends(verify_api_key)):
     """Find files by name glob pattern."""
     return {"pattern": pattern, "results": _fs.find_files(pattern, path)}
 
+
 @app.post("/fs/index")
 def fs_index(path: str = "", force: bool = False, _: str = Depends(verify_api_key)):
     """Index workspace files into the RAG vector store."""
     import threading
+
     def _run():
         _fidx.index_workspace(path, force=force)
+
     threading.Thread(target=_run, daemon=True).start()
-    return {"status": "indexing started", "path": path or "(workspace root)", "force": force}
+    return {
+        "status": "indexing started",
+        "path": path or "(workspace root)",
+        "force": force,
+    }
+
 
 @app.get("/fs/index/status")
 def fs_index_status(_: str = Depends(verify_api_key)):
     """Return how many files are indexed."""
     return {"indexed_files": _fidx.indexed_file_count()}
+
 
 @app.delete("/fs/index")
 def fs_index_clear(_: str = Depends(verify_api_key)):
@@ -1898,13 +2341,18 @@ def fs_index_clear(_: str = Depends(verify_api_key)):
 @app.get("/news/feed")
 async def news_feed(url: str, count: int = 12):
     """Server-side RSS fetch → avoids browser CORS restrictions."""
-    import urllib.request, xml.etree.ElementTree as ET
+    import urllib.request
+    import xml.etree.ElementTree as ET
+
     try:
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            "Accept": "application/rss+xml, application/xml, text/xml, */*",
-            "Accept-Language": "en-US,en;q=0.9",
-        })
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "application/rss+xml, application/xml, text/xml, */*",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+        )
         with urllib.request.urlopen(req, timeout=8) as resp:
             raw = resp.read()
         # Strip XML declaration issues
@@ -1915,26 +2363,34 @@ async def news_feed(url: str, count: int = 12):
             items = root.findall(".//atom:entry", ns)
         results = []
         for it in items[:count]:
+
             def _tag(tag):
                 el = it.find(tag)
                 if el is None:
                     return ""
                 return (el.text or "").strip()
+
             link_el = it.find("link")
             link = ""
             if link_el is not None:
                 link = (link_el.get("href") or link_el.text or "").strip()
-            results.append({
-                "title": _tag("title"),
-                "link": link,
-                "date": _tag("pubDate") or _tag("updated"),
-            })
+            results.append(
+                {
+                    "title": _tag("title"),
+                    "link": link,
+                    "date": _tag("pubDate") or _tag("updated"),
+                }
+            )
         channel = root.find("channel")
         source = ""
         if channel is not None:
             t = channel.find("title")
             source = (t.text or "").strip() if t is not None else ""
-        return {"status": "ok", "source": source, "items": [r for r in results if r["title"]]}
+        return {
+            "status": "ok",
+            "source": source,
+            "items": [r for r in results if r["title"]],
+        }
     except Exception as e:
         return {"status": "error", "message": str(e), "items": []}
 
@@ -1942,7 +2398,9 @@ async def news_feed(url: str, count: int = 12):
 # ── System Info ───────────────────────────────────────────────────────────────
 @app.get("/system/info")
 def system_info():
-    import platform, datetime
+    import datetime
+    import platform
+
     info: dict = {
         "platform": platform.system(),
         "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -1951,18 +2409,21 @@ def system_info():
     }
     try:
         import psutil
+
         cpu = psutil.cpu_percent(interval=0.3)
         mem = psutil.virtual_memory()
-        disk = psutil.disk_usage('/')
-        info.update({
-            "cpu_percent": cpu,
-            "ram_used_gb": round(mem.used / 1e9, 1),
-            "ram_total_gb": round(mem.total / 1e9, 1),
-            "ram_percent": round(mem.percent, 1),
-            "disk_used_gb": round(disk.used / 1e9, 1),
-            "disk_total_gb": round(disk.total / 1e9, 1),
-            "disk_percent": round(disk.percent, 1),
-        })
+        disk = psutil.disk_usage("/")
+        info.update(
+            {
+                "cpu_percent": cpu,
+                "ram_used_gb": round(mem.used / 1e9, 1),
+                "ram_total_gb": round(mem.total / 1e9, 1),
+                "ram_percent": round(mem.percent, 1),
+                "disk_used_gb": round(disk.used / 1e9, 1),
+                "disk_total_gb": round(disk.total / 1e9, 1),
+                "disk_percent": round(disk.percent, 1),
+            }
+        )
     except ImportError:
         info["psutil"] = "not installed"
     return info
@@ -1976,28 +2437,36 @@ _tunnel_url: str | None = None
 @app.post("/remote/start")
 def remote_start():
     global _tunnel_proc, _tunnel_url
-    import shutil, re as _re2, time
+    import re as _re2
+    import shutil
+    import time
+
     if _tunnel_proc and _tunnel_proc.poll() is None:
         return {"status": "already_running", "url": _tunnel_url}
     if not shutil.which("cloudflared"):
         raise HTTPException(
             status_code=503,
-            detail="cloudflared not installed. Get it from: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"
+            detail="cloudflared not installed. Get it from: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/",
         )
     _tunnel_proc = _subprocess.Popen(
         ["cloudflared", "tunnel", "--url", "http://127.0.0.1:8000"],
-        stdout=_subprocess.PIPE, stderr=_subprocess.STDOUT, text=True
+        stdout=_subprocess.PIPE,
+        stderr=_subprocess.STDOUT,
+        text=True,
     )
     url = None
     deadline = time.time() + 20
     while time.time() < deadline and _tunnel_proc.poll() is None:
         line = _tunnel_proc.stdout.readline()
-        match = _re2.search(r'https://[\w-]+\.trycloudflare\.com', line)
+        match = _re2.search(r"https://[\w-]+\.trycloudflare\.com", line)
         if match:
             url = match.group()
             break
     _tunnel_url = url
-    return {"status": "started", "url": url or "Tunnel starting... check status in a moment."}
+    return {
+        "status": "started",
+        "url": url or "Tunnel starting... check status in a moment.",
+    }
 
 
 @app.post("/remote/stop")
@@ -2023,13 +2492,18 @@ def remote_status_route():
 # Streams progress as Server-Sent Events (SSE) so the UI can show live output.
 # Projects are scaffolded in ATLAS_WORKSPACE/projects/<project_name>/
 
-_PROJECTS_DIR = Path(_os.environ.get("ATLAS_WORKSPACE", str(Path(__file__).parent.parent))) / "projects"
-_TASK_MAX_STEPS = 20   # safety cap — prevents runaway loops
+_PROJECTS_DIR = (
+    Path(_os.environ.get("ATLAS_WORKSPACE", str(Path(__file__).parent.parent)))
+    / "projects"
+)
+_TASK_MAX_STEPS = 20  # safety cap — prevents runaway loops
+
 
 class TaskRequest(BaseModel):
     goal: str
     session_id: str = ""
     max_steps: int = _TASK_MAX_STEPS
+
 
 @app.get("/projects")
 def list_projects(_: str = Depends(verify_api_key)):
@@ -2045,19 +2519,28 @@ def list_projects(_: str = Depends(verify_api_key)):
                     meta = _json.loads(meta_f.read_text())
                 except Exception:
                     pass
-            files = [f.name for f in d.iterdir() if f.is_file() and not f.name.startswith(".")]
-            projects.append({
-                "name": d.name,
-                "goal": meta.get("goal", ""),
-                "status": meta.get("status", "unknown"),
-                "steps": meta.get("steps_done", 0),
-                "files": files[:12],
-                "created": meta.get("created", ""),
-            })
+            files = [
+                f.name
+                for f in d.iterdir()
+                if f.is_file() and not f.name.startswith(".")
+            ]
+            projects.append(
+                {
+                    "name": d.name,
+                    "goal": meta.get("goal", ""),
+                    "status": meta.get("status", "unknown"),
+                    "steps": meta.get("steps_done", 0),
+                    "files": files[:12],
+                    "created": meta.get("created", ""),
+                }
+            )
     return {"projects": projects}
 
+
 @app.get("/task/run")
-async def task_run_stream(goal: str, max_steps: int = _TASK_MAX_STEPS, _: str = Depends(verify_api_key)):
+async def task_run_stream(
+    goal: str, max_steps: int = _TASK_MAX_STEPS, _: str = Depends(verify_api_key)
+):
     """
     SSE stream — ATLAS autonomously plans and executes a goal.
     Client reads event: data payloads line-by-line.
@@ -2069,7 +2552,10 @@ async def task_run_stream(goal: str, max_steps: int = _TASK_MAX_STEPS, _: str = 
 
     async def _stream():
         # ── 1. Derive a slug project name ────────────────────────────────────
-        slug = re.sub(r'[^a-z0-9]+', '_', goal.lower().strip())[:40].strip('_') or "project"
+        slug = (
+            re.sub(r"[^a-z0-9]+", "_", goal.lower().strip())[:40].strip("_")
+            or "project"
+        )
         project_dir = _PROJECTS_DIR / slug
         project_dir.mkdir(parents=True, exist_ok=True)
 
@@ -2102,44 +2588,68 @@ Create a numbered execution plan (maximum {min(max_steps, _TASK_MAX_STEPS)} step
 Output ONLY the numbered plan. No intro, no explanation."""
 
         try:
-            _be, plan_r = llm_chat([{"role": "user", "content": plan_prompt}], temperature=0.2, max_tokens=600)
-            plan_text = (plan_r.choices[0].message.content if _be != "local" else plan_r["message"]["content"]).strip()
-            plan_text = re.sub(r"<think>.*?</think>", "", plan_text, flags=re.DOTALL).strip()
+            _be, plan_r = llm_chat(
+                [{"role": "user", "content": plan_prompt}],
+                temperature=0.2,
+                max_tokens=600,
+            )
+            plan_text = (
+                plan_r.choices[0].message.content
+                if _be != "local"
+                else plan_r["message"]["content"]
+            ).strip()
+            plan_text = re.sub(
+                r"<think>.*?</think>", "", plan_text, flags=re.DOTALL
+            ).strip()
         except Exception as e:
             yield _sse({"type": "error", "text": f"Planning failed: {e}"})
             return
 
         # Parse numbered steps
-        raw_steps = re.findall(r'^\s*\d+[\.\)]\s*(.+)$', plan_text, re.MULTILINE)
+        raw_steps = re.findall(r"^\s*\d+[\.\)]\s*(.+)$", plan_text, re.MULTILINE)
         if not raw_steps:
-            raw_steps = [s.strip() for s in plan_text.split('\n') if s.strip()]
-        steps = raw_steps[:min(max_steps, _TASK_MAX_STEPS)]
+            raw_steps = [s.strip() for s in plan_text.split("\n") if s.strip()]
+        steps = raw_steps[: min(max_steps, _TASK_MAX_STEPS)]
 
         yield _sse({"type": "plan", "steps": steps, "text": plan_text})
 
         # ── 3. Execution loop ────────────────────────────────────────────────
         history = [
-            {"role": "system", "content": (
-                f"You are ATLAS executing an autonomous task. Goal: {goal}\n"
-                f"Project directory: projects/{slug}/\n"
-                f"Use tools to complete each step. For write_file always use path 'projects/{slug}/filename'.\n"
-                f"After each tool call, briefly describe what you did and what's next."
-            )},
+            {
+                "role": "system",
+                "content": (
+                    f"You are ATLAS executing an autonomous task. Goal: {goal}\n"
+                    f"Project directory: projects/{slug}/\n"
+                    f"Use tools to complete each step. For write_file always use path 'projects/{slug}/filename'.\n"
+                    f"After each tool call, briefly describe what you did and what's next."
+                ),
+            },
         ]
 
         for step_num, step_desc in enumerate(steps, 1):
             if step_num > max_steps:
                 break
 
-            yield _sse({"type": "step_start", "step": step_num, "total": len(steps), "desc": step_desc})
+            yield _sse(
+                {
+                    "type": "step_start",
+                    "step": step_num,
+                    "total": len(steps),
+                    "desc": step_desc,
+                }
+            )
 
-            history.append({"role": "user", "content": f"Execute step {step_num}: {step_desc}"})
+            history.append(
+                {"role": "user", "content": f"Execute step {step_num}: {step_desc}"}
+            )
 
             # Allow up to 3 tool-call rounds per step
             step_output = ""
             for _round in range(3):
                 try:
-                    _be, resp = llm_chat(history, temperature=0.1, max_tokens=1200, tools=OLLAMA_TOOLS)
+                    _be, resp = llm_chat(
+                        history, temperature=0.1, max_tokens=1200, tools=OLLAMA_TOOLS
+                    )
                     if _be == "local":
                         msg = resp["message"]
                         content = msg.get("content", "") or ""
@@ -2152,7 +2662,9 @@ Output ONLY the numbered plan. No intro, no explanation."""
                     yield _sse({"type": "step_error", "step": step_num, "text": str(e)})
                     break
 
-                content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+                content = re.sub(
+                    r"<think>.*?</think>", "", content, flags=re.DOTALL
+                ).strip()
 
                 if not tool_calls:
                     # No tool calls — ATLAS responded in prose
@@ -2172,12 +2684,23 @@ Output ONLY the numbered plan. No intro, no explanation."""
                         tc_name = tc.function.name
                         raw_args = tc.function.arguments
                         try:
-                            tc_args = _json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                            tc_args = (
+                                _json.loads(raw_args)
+                                if isinstance(raw_args, str)
+                                else raw_args
+                            )
                         except Exception:
                             tc_args = {}
                         tc_id = tc.id
 
-                    yield _sse({"type": "tool_call", "step": step_num, "tool": tc_name, "args": tc_args})
+                    yield _sse(
+                        {
+                            "type": "tool_call",
+                            "step": step_num,
+                            "tool": tc_name,
+                            "args": tc_args,
+                        }
+                    )
 
                     try:
                         tool_result = execute_tool(tc_name, tc_args)
@@ -2188,32 +2711,54 @@ Output ONLY the numbered plan. No intro, no explanation."""
                     if len(tool_result) > 2000:
                         tool_result = tool_result[:2000] + "\n...[truncated]"
 
-                    yield _sse({"type": "tool_result", "step": step_num, "tool": tc_name,
-                                "result": tool_result[:500] + ("..." if len(tool_result) > 500 else "")})
+                    yield _sse(
+                        {
+                            "type": "tool_result",
+                            "step": step_num,
+                            "tool": tc_name,
+                            "result": tool_result[:500]
+                            + ("..." if len(tool_result) > 500 else ""),
+                        }
+                    )
 
-                    tool_results_for_history.append({"name": tc_name, "result": tool_result, "id": tc_id})
+                    tool_results_for_history.append(
+                        {"name": tc_name, "result": tool_result, "id": tc_id}
+                    )
 
                 # Add tool calls + results to history
                 if _be != "local":
-                    history.append({
-                        "role": "assistant",
-                        "content": content or None,
-                        "tool_calls": [
-                            {"id": tr["id"] or f"call_{i}", "type": "function",
-                             "function": {"name": tr["name"], "arguments": "{}"}}
-                            for i, tr in enumerate(tool_results_for_history)
-                        ],
-                    })
+                    history.append(
+                        {
+                            "role": "assistant",
+                            "content": content or None,
+                            "tool_calls": [
+                                {
+                                    "id": tr["id"] or f"call_{i}",
+                                    "type": "function",
+                                    "function": {"name": tr["name"], "arguments": "{}"},
+                                }
+                                for i, tr in enumerate(tool_results_for_history)
+                            ],
+                        }
+                    )
                     for tr in tool_results_for_history:
-                        history.append({
-                            "role": "tool",
-                            "tool_call_id": tr["id"] or "call_0",
-                            "content": tr["result"],
-                        })
+                        history.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tr["id"] or "call_0",
+                                "content": tr["result"],
+                            }
+                        )
                 else:
-                    history.append({"role": "tool", "content": "\n".join(
-                        f"[{tr['name']}] {tr['result']}" for tr in tool_results_for_history
-                    )})
+                    history.append(
+                        {
+                            "role": "tool",
+                            "content": "\n".join(
+                                f"[{tr['name']}] {tr['result']}"
+                                for tr in tool_results_for_history
+                            ),
+                        }
+                    )
 
             yield _sse({"type": "step_done", "step": step_num, "output": step_output})
 
@@ -2226,12 +2771,25 @@ Output ONLY the numbered plan. No intro, no explanation."""
         (project_dir / ".atlas_task.json").write_text(_json.dumps(meta, indent=2))
 
         # List what was built
-        built = [f.name for f in project_dir.iterdir() if f.is_file() and not f.name.startswith(".")]
-        yield _sse({"type": "done", "project": slug, "files": built,
-                    "text": f"Task complete. Built {len(built)} file(s) in projects/{slug}/"})
+        built = [
+            f.name
+            for f in project_dir.iterdir()
+            if f.is_file() and not f.name.startswith(".")
+        ]
+        yield _sse(
+            {
+                "type": "done",
+                "project": slug,
+                "files": built,
+                "text": f"Task complete. Built {len(built)} file(s) in projects/{slug}/",
+            }
+        )
 
-    return StreamingResponse(_stream(), media_type="text/event-stream",
-                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/task/restart-server")
@@ -2240,10 +2798,16 @@ def task_restart_server(_: str = Depends(verify_api_key)):
     Restarts the ATLAS uvicorn process. ATLAS calls this after modifying app.py.
     Schedules restart in 1.5s to allow the response to be sent first.
     """
-    import threading, sys, os, signal
+    import os
+    import signal
+    import sys
+    import threading
+
     def _do_restart():
         import time
+
         time.sleep(1.5)
         os.execv(sys.executable, [sys.executable] + sys.argv)
+
     threading.Thread(target=_do_restart, daemon=True).start()
     return {"status": "restarting", "message": "Server will restart in ~1.5 seconds"}

@@ -1,7 +1,7 @@
-from pathlib import Path
 import importlib.util
-from cryptography.fernet import Fernet
+from pathlib import Path
 
+from cryptography.fernet import Fernet
 from settings import SECURE_ATLAS_FOLDER_CANDIDATES
 
 
@@ -47,6 +47,7 @@ def load_atlas_prompt() -> str:
     # Fallback to local workspace atlas.py if secure folder is unavailable.
     try:
         from atlas import ATLAS_SYSTEM_PROMPT
+
         return ATLAS_SYSTEM_PROMPT
     except ImportError as exc:
         raise RuntimeError(

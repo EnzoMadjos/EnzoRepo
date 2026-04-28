@@ -3,8 +3,8 @@ ATLAS Tool Executor
 Native Ollama tool calling — uses the model's built-in function calling capability.
 Tools are passed as Ollama-format dicts; results returned as plain strings.
 """
-from typing import Any
 
+from typing import Any
 
 # ── Ollama-native tool definitions ────────────────────────────────────────────
 # Format matches what ollama.chat(tools=[...]) expects.
@@ -32,7 +32,10 @@ OLLAMA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {"type": "string", "description": "Full URL (https://...) to fetch."}
+                    "url": {
+                        "type": "string",
+                        "description": "Full URL (https://...) to fetch.",
+                    }
                 },
                 "required": ["url"],
             },
@@ -47,7 +50,10 @@ OLLAMA_TOOLS = [
                 "type": "object",
                 "properties": {
                     "code": {"type": "string", "description": "The code to execute."},
-                    "language": {"type": "string", "description": "'python' (default) or 'bash'."},
+                    "language": {
+                        "type": "string",
+                        "description": "'python' (default) or 'bash'.",
+                    },
                 },
                 "required": ["code"],
             },
@@ -61,7 +67,10 @@ OLLAMA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "fact": {"type": "string", "description": "Clear statement of the fact to remember."}
+                    "fact": {
+                        "type": "string",
+                        "description": "Clear statement of the fact to remember.",
+                    }
                 },
                 "required": ["fact"],
             },
@@ -75,7 +84,10 @@ OLLAMA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Topic or keyword to search memory for."}
+                    "query": {
+                        "type": "string",
+                        "description": "Topic or keyword to search memory for.",
+                    }
                 },
                 "required": ["query"],
             },
@@ -89,7 +101,10 @@ OLLAMA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "description": "Relative path to the file within the workspace (e.g. 'local-chatbot/app.py')."}
+                    "path": {
+                        "type": "string",
+                        "description": "Relative path to the file within the workspace (e.g. 'local-chatbot/app.py').",
+                    }
                 },
                 "required": ["path"],
             },
@@ -103,7 +118,10 @@ OLLAMA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "description": "Relative directory path within the workspace. Use '' or '.' for the root."}
+                    "path": {
+                        "type": "string",
+                        "description": "Relative directory path within the workspace. Use '' or '.' for the root.",
+                    }
                 },
                 "required": ["path"],
             },
@@ -117,8 +135,14 @@ OLLAMA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Text or pattern to search for."},
-                    "path": {"type": "string", "description": "Optional subdirectory to restrict the search. Use '' for entire workspace."},
+                    "query": {
+                        "type": "string",
+                        "description": "Text or pattern to search for.",
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Optional subdirectory to restrict the search. Use '' for entire workspace.",
+                    },
                 },
                 "required": ["query"],
             },
@@ -132,9 +156,18 @@ OLLAMA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "description": "Relative path for the file within the workspace (e.g. 'local-chatbot/hello.py')."},
-                    "content": {"type": "string", "description": "Full content to write to the file."},
-                    "create_dirs": {"type": "boolean", "description": "If true, create parent directories if they don't exist. Default true."},
+                    "path": {
+                        "type": "string",
+                        "description": "Relative path for the file within the workspace (e.g. 'local-chatbot/hello.py').",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Full content to write to the file.",
+                    },
+                    "create_dirs": {
+                        "type": "boolean",
+                        "description": "If true, create parent directories if they don't exist. Default true.",
+                    },
                 },
                 "required": ["path", "content"],
             },
@@ -148,9 +181,18 @@ OLLAMA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "prompt": {"type": "string", "description": "Detailed description of the image to generate."},
-                    "width": {"type": "integer", "description": "Image width in pixels. Default 1024."},
-                    "height": {"type": "integer", "description": "Image height in pixels. Default 1024."},
+                    "prompt": {
+                        "type": "string",
+                        "description": "Detailed description of the image to generate.",
+                    },
+                    "width": {
+                        "type": "integer",
+                        "description": "Image width in pixels. Default 1024.",
+                    },
+                    "height": {
+                        "type": "integer",
+                        "description": "Image height in pixels. Default 1024.",
+                    },
                 },
                 "required": ["prompt"],
             },
@@ -164,14 +206,21 @@ OLLAMA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "command": {"type": "string", "description": "The bash command to run."},
-                    "workdir": {"type": "string", "description": "Optional working directory. Defaults to the workspace root."},
+                    "command": {
+                        "type": "string",
+                        "description": "The bash command to run.",
+                    },
+                    "workdir": {
+                        "type": "string",
+                        "description": "Optional working directory. Defaults to the workspace root.",
+                    },
                 },
                 "required": ["command"],
             },
         },
     },
 ]
+
 
 # Prompt note only — no JSON schema needed since we use native tool API
 def build_tool_schema_prompt() -> str:
@@ -195,6 +244,7 @@ def build_tool_schema_prompt() -> str:
 
 # ── Tool executor ─────────────────────────────────────────────────────────────
 
+
 def execute_tool(name: str, args: dict) -> str:
     """Execute a tool by name with args dict. Returns observation string."""
     try:
@@ -215,9 +265,17 @@ def execute_tool(name: str, args: dict) -> str:
         elif name == "search_files":
             return _tool_search_files(args.get("query", ""), args.get("path", ""))
         elif name == "write_file":
-            return _tool_write_file(args.get("path", ""), args.get("content", ""), args.get("create_dirs", True))
+            return _tool_write_file(
+                args.get("path", ""),
+                args.get("content", ""),
+                args.get("create_dirs", True),
+            )
         elif name == "generate_image":
-            return _tool_generate_image(args.get("prompt", ""), args.get("width", 1024), args.get("height", 1024))
+            return _tool_generate_image(
+                args.get("prompt", ""),
+                args.get("width", 1024),
+                args.get("height", 1024),
+            )
         elif name == "run_bash":
             return _tool_run_bash(args.get("command", ""), args.get("workdir", ""))
         else:
@@ -228,20 +286,26 @@ def execute_tool(name: str, args: dict) -> str:
 
 # ── Individual tool implementations ─────────────────────────────────────────
 
+
 def _tool_web_search(query: str) -> str:
     if not query.strip():
         return "[ERROR] Empty search query."
     try:
-        import urllib.parse, urllib.request, re as _re2
+        import re as _re2
+        import urllib.parse
+        import urllib.request
         from html.parser import HTMLParser
 
         # DuckDuckGo Lite — minimal stable HTML, text-only, no JS required
         encoded = urllib.parse.urlencode({"q": query, "kl": "us-en"})
         url = f"https://lite.duckduckgo.com/lite/?{encoded}"
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
-            "Accept": "text/html,application/xhtml+xml",
-        })
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+                "Accept": "text/html,application/xhtml+xml",
+            },
+        )
         with urllib.request.urlopen(req, timeout=10) as r:
             html = r.read().decode("utf-8", errors="replace")
 
@@ -262,9 +326,10 @@ def _tool_web_search(query: str) -> str:
                     self._in_link = True
                     href = a.get("href", "")
                     # Unwrap DDG redirect: extract uddg= param
-                    m = _re2.search(r'uddg=([^&]+)', href)
+                    m = _re2.search(r"uddg=([^&]+)", href)
                     if m:
                         import urllib.parse as _ul
+
                         href = _ul.unquote(m.group(1))
                     self._cur = {"title": "", "url": href, "snippet": ""}
                 elif tag == "span" and "link-text" in cls:
@@ -313,7 +378,8 @@ def _tool_web_search(query: str) -> str:
         )
         if _DETAIL_TRIGGERS.search(query):
             try:
-                from web_fetcher import fetch_url_content, extract_text_from_html
+                from web_fetcher import extract_text_from_html, fetch_url_content
+
                 # Try each result URL until we get clean readable text (skip JS-heavy pages)
                 for r in results[:3]:
                     top_url = r.get("url", "")
@@ -321,14 +387,37 @@ def _tool_web_search(query: str) -> str:
                         continue
                     try:
                         page = fetch_url_content(top_url, timeout=10)
-                        text = extract_text_from_html(page["html"], max_chars=50000).strip()
+                        text = extract_text_from_html(
+                            page["html"], max_chars=50000
+                        ).strip()
                         # Skip pages that are mostly JS/not readable prose
                         word_count = len(text.split())
                         if word_count < 80:
                             continue
                         # Check prose ratio: real text has lots of common short words
                         words = text.lower().split()
-                        common = sum(1 for w in words if w in {"the","a","is","in","of","to","and","for","with","it","that","this","its","are","was"})
+                        common = sum(
+                            1
+                            for w in words
+                            if w
+                            in {
+                                "the",
+                                "a",
+                                "is",
+                                "in",
+                                "of",
+                                "to",
+                                "and",
+                                "for",
+                                "with",
+                                "it",
+                                "that",
+                                "this",
+                                "its",
+                                "are",
+                                "was",
+                            }
+                        )
                         if len(words) > 0 and common / len(words) < 0.03:
                             continue  # too few common words = still looks like code/JS
                         lines.append(f"\n[TOP RESULT CONTENT from {top_url}]")
@@ -348,8 +437,9 @@ def _tool_web_fetch(url: str) -> str:
     if not url.strip():
         return "[ERROR] No URL provided."
     try:
-        from web_fetcher import fetch_url_content, extract_text_from_html
         from settings import MAX_WEB_TEXT_CHARS
+        from web_fetcher import extract_text_from_html, fetch_url_content
+
         result = fetch_url_content(url, timeout=12)
         text = extract_text_from_html(result["html"], max_chars=MAX_WEB_TEXT_CHARS)
         return f"[PAGE CONTENT from {url}]\n{text[:4000]}"
@@ -360,8 +450,11 @@ def _tool_web_fetch(url: str) -> str:
 def _tool_run_code(code: str, language: str = "python") -> str:
     if not code.strip():
         return "[ERROR] No code provided."
-    import tempfile, subprocess, time
+    import subprocess
+    import tempfile
+    import time
     from pathlib import Path
+
     lang = language.lower().strip()
     if lang not in ("python", "python3", "bash", "sh"):
         return f"[ERROR] Unsupported language: {lang!r}"
@@ -369,18 +462,26 @@ def _tool_run_code(code: str, language: str = "python") -> str:
     py = str(Path(__file__).resolve().parent / "venv" / "bin" / "python3")
     interpreter = [py] if lang in ("python", "python3") else ["bash"]
     try:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=ext, delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=ext, delete=False, encoding="utf-8"
+        ) as f:
             f.write(code)
             tmp = f.name
         t0 = time.monotonic()
-        r = subprocess.run(interpreter + [tmp], capture_output=True, text=True, timeout=15, cwd="/tmp")
+        r = subprocess.run(
+            interpreter + [tmp], capture_output=True, text=True, timeout=15, cwd="/tmp"
+        )
         ms = int((time.monotonic() - t0) * 1000)
-        import os; os.unlink(tmp)
+        import os
+
+        os.unlink(tmp)
         out = r.stdout[:3000]
         err = r.stderr[:1000]
         parts = [f"[CODE RESULT] exit={r.returncode} ({ms}ms)"]
-        if out: parts.append(f"stdout:\n{out}")
-        if err: parts.append(f"stderr:\n{err}")
+        if out:
+            parts.append(f"stdout:\n{out}")
+        if err:
+            parts.append(f"stderr:\n{err}")
         return "\n".join(parts)
     except subprocess.TimeoutExpired:
         return "[CODE ERROR] Timed out after 15s."
@@ -392,9 +493,10 @@ def _tool_remember(fact: str) -> str:
     if not fact.strip():
         return "[ERROR] No fact provided."
     try:
-        from training_memory import add_training
         from audit import append_audit
         from rag_memory import upsert_memory
+        from training_memory import add_training
+
         add_training(fact.strip(), category="auto-memory")
         upsert_memory(fact.strip(), category="auto-memory")
         append_audit("auto_remember", fact.strip()[:120])
@@ -408,6 +510,7 @@ def _tool_recall(query: str) -> str:
         return "[ERROR] No query provided."
     try:
         from rag_memory import search_memory
+
         matches = search_memory(query, top_k=6)
         if not matches:
             return f"[RECALL] No memories found matching '{query}'."
@@ -424,6 +527,7 @@ def _tool_read_file(path: str) -> str:
         return "[ERROR] No path provided."
     try:
         import file_access as _fa
+
         result = _fa.read_file(path.strip())
         if "error" in result:
             return f"[READ_FILE ERROR] {result['error']}"
@@ -436,6 +540,7 @@ def _tool_read_file(path: str) -> str:
 def _tool_list_dir(path: str) -> str:
     try:
         import file_access as _fa
+
         result = _fa.list_dir((path or "").strip())
         if "error" in result:
             return f"[LIST_DIR ERROR] {result['error']}"
@@ -457,7 +562,10 @@ def _tool_search_files(query: str, path: str = "") -> str:
         return "[ERROR] No search query provided."
     try:
         import file_access as _fa
-        result = _fa.search_files(query.strip(), path.strip() if path else "", max_results=20)
+
+        result = _fa.search_files(
+            query.strip(), path.strip() if path else "", max_results=20
+        )
         if "error" in result:
             return f"[SEARCH_FILES ERROR] {result['error']}"
         hits = result.get("results", [])
@@ -476,6 +584,7 @@ def _tool_write_file(path: str, content: str, create_dirs: bool = True) -> str:
         return "[ERROR] No path provided."
     try:
         import file_access as _fa
+
         result = _fa.write_file(path.strip(), content, create_dirs=create_dirs)
         if "error" in result:
             return f"[WRITE_FILE ERROR] {result['error']}"
@@ -489,6 +598,7 @@ def _tool_generate_image(prompt: str, width: int = 1024, height: int = 1024) -> 
         return "[ERROR] No image prompt provided."
     try:
         import urllib.parse
+
         encoded = urllib.parse.quote(prompt.strip())
         w = max(256, min(2048, int(width)))
         h = max(256, min(2048, int(height)))
@@ -503,11 +613,10 @@ def _rtk_wrap(command: str) -> str:
     """Rewrite known noisy commands to their rtk-compressed equivalents.
     Only rewrites when rtk is available and the command matches a known pattern.
     Falls back to original command silently if rtk is not installed."""
-    import shutil, re as _re
+    import re as _re
+    import shutil
 
-    rtk = shutil.which("rtk") or shutil.which(
-        "/home/enzo/.local/bin/rtk"
-    )
+    rtk = shutil.which("rtk") or shutil.which("/home/enzo/.local/bin/rtk")
     if not rtk:
         return command
 
@@ -556,6 +665,7 @@ def _tool_run_bash(command: str, workdir: str = "") -> str:
         return "[ERROR] No command provided."
     # Block dangerous patterns
     import re as _re
+
     _BLOCKED = _re.compile(
         r"\b(rm\s+-rf\s+/|mkfs|dd\s+if=|chmod\s+777\s+/|shutdown|reboot|:\(\)\{.*\})\b",
         _re.I,
@@ -565,9 +675,12 @@ def _tool_run_bash(command: str, workdir: str = "") -> str:
     # Wrap with RTK for token-efficient output where applicable
     command = _rtk_wrap(command)
     try:
-        import subprocess, os
+        import os
+        import subprocess
         from pathlib import Path
+
         import file_access as _fa
+
         cwd = str(_fa._WORKSPACE_ROOT)
         if workdir:
             candidate = (_fa._WORKSPACE_ROOT / workdir).resolve()

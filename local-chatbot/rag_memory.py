@@ -3,16 +3,17 @@ RAG Memory — vector store for Atlas training entries.
 Uses ChromaDB (fully local, no server needed) + Ollama embeddings.
 Falls back to BM25-style keyword search if embeddings are unavailable.
 """
-import json as _json
+
 import hashlib as _hash
+import json as _json
 import time as _time
 from pathlib import Path
 from typing import Optional
 
 _DB_DIR = Path(__file__).parent / "models" / "chroma_db"
 _COLLECTION = "atlas_memory"
-_EMBED_MODEL = "nomic-embed-text"   # fast local embedding model via Ollama
-_TOP_K = 6                          # memories to inject per query
+_EMBED_MODEL = "nomic-embed-text"  # fast local embedding model via Ollama
+_TOP_K = 6  # memories to inject per query
 
 _client = None
 _collection = None
@@ -24,6 +25,7 @@ def _get_collection():
         return _collection
     try:
         import chromadb
+
         _DB_DIR.mkdir(parents=True, exist_ok=True)
         _client = chromadb.PersistentClient(path=str(_DB_DIR))
         _collection = _client.get_or_create_collection(
@@ -39,6 +41,7 @@ def _embed(text: str) -> list[float] | None:
     """Get embedding from Ollama. Returns None if unavailable."""
     try:
         import ollama
+
         r = ollama.embeddings(model=_EMBED_MODEL, prompt=text)
         return r["embedding"]
     except Exception:
@@ -50,6 +53,7 @@ def _doc_id(text: str) -> str:
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
+
 
 def upsert_memory(text: str, category: str = "training") -> bool:
     """Add or update a memory entry in the vector store."""
@@ -98,11 +102,12 @@ def _keyword_fallback(query: str, top_k: int) -> list[str]:
     """Simple keyword search over training_memory as fallback."""
     try:
         from training_memory import list_training
+
         entries = list_training()
         kw = query.lower().split()
         scored = []
         for e in entries:
-            text = (e.get("entry") or e.get("content") or "")
+            text = e.get("entry") or e.get("content") or ""
             score = sum(1 for w in kw if w in text.lower())
             if score > 0:
                 scored.append((score, text))
@@ -116,6 +121,7 @@ def sync_all_training() -> int:
     """Sync all existing training_memory entries into the vector store. Returns count synced."""
     try:
         from training_memory import list_training
+
         entries = list_training()
         count = 0
         for e in entries:

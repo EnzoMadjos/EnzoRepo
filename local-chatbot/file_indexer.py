@@ -15,17 +15,20 @@ from pathlib import Path
 from typing import Generator
 
 from file_access import (
-    _WORKSPACE_ROOT, _SKIP_DIRS, _READABLE_EXTS,
+    _READABLE_EXTS,
+    _SKIP_DIRS,
+    _WORKSPACE_ROOT,
     MAX_READ_BYTES,
 )
 
 _STATE_FILE = Path(__file__).parent / "models" / "file_index_state.json"
-_CHUNK_SIZE = 60       # lines per chunk
-_CHUNK_OVERLAP = 8     # overlap lines between chunks
+_CHUNK_SIZE = 60  # lines per chunk
+_CHUNK_OVERLAP = 8  # overlap lines between chunks
 _MIN_CHUNK_CHARS = 80  # skip tiny chunks
 
 
 # ── State tracking ───────────────────────────────────────────────────────────
+
 
 def _load_state() -> dict:
     try:
@@ -46,26 +49,28 @@ def _file_sig(path: Path) -> str:
 
 # ── Chunking ─────────────────────────────────────────────────────────────────
 
+
 def _chunk_text(text: str, filepath: str) -> list[str]:
     """Split text into overlapping line-window chunks."""
     lines = text.splitlines()
     chunks = []
     step = _CHUNK_SIZE - _CHUNK_OVERLAP
     for i in range(0, max(1, len(lines) - _CHUNK_OVERLAP), step):
-        window = lines[i: i + _CHUNK_SIZE]
+        window = lines[i : i + _CHUNK_SIZE]
         chunk = "\n".join(window).strip()
         if len(chunk) >= _MIN_CHUNK_CHARS:
-            header = f"[FILE: {filepath} | lines {i+1}-{i+len(window)}]\n"
+            header = f"[FILE: {filepath} | lines {i + 1}-{i + len(window)}]\n"
             chunks.append(header + chunk)
     return chunks or [f"[FILE: {filepath}]\n{text.strip()}"]
 
 
 # ── Core indexing ─────────────────────────────────────────────────────────────
 
+
 def index_file(rel_path: str, force: bool = False) -> dict:
     """Index a single file into the RAG store. Returns status dict."""
-    from rag_memory import upsert_memory
     from file_access import read_file
+    from rag_memory import upsert_memory
 
     result = read_file(rel_path)
     if "error" in result:
@@ -139,7 +144,9 @@ def index_workspace(
                 results["errors"] += 1
         except Exception as e:
             results["errors"] += 1
-            results["files"].append({"path": str(fpath), "status": "error", "reason": str(e)})
+            results["files"].append(
+                {"path": str(fpath), "status": "error", "reason": str(e)}
+            )
 
     return results
 
@@ -148,6 +155,7 @@ def clear_file_index() -> int:
     """Remove all file-category entries from vector store and clear state."""
     try:
         from rag_memory import _get_collection
+
         col = _get_collection()
         if col:
             # Delete all docs with category=file

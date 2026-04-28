@@ -38,10 +38,9 @@ import json
 import re
 from typing import Any
 
-import httpx
-
 import app_logger
 import config
+import httpx
 
 _SYSTEM_PROMPT = """\
 You are a Salesforce test automation assistant. Your ONLY job is to convert a

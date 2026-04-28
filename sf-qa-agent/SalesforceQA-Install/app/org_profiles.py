@@ -15,9 +15,8 @@ import os
 from pathlib import Path
 from typing import Any
 
-from cryptography.fernet import Fernet
-
 import config
+from cryptography.fernet import Fernet
 
 _PROFILES_FILE = config.SECURE_DIR / "org_profiles.json"
 _KEY_FILE = config.SECURE_DIR / "profiles.key"
@@ -28,6 +27,7 @@ _SENSITIVE_FIELDS = {"password", "security_token", "consumer_secret"}
 # ---------------------------------------------------------------------------
 # Key management
 # ---------------------------------------------------------------------------
+
 
 def _get_key() -> bytes:
     """Load or create the Fernet key for this machine."""
@@ -61,6 +61,7 @@ def _decrypt(value: str) -> str:
 # Profile storage
 # ---------------------------------------------------------------------------
 
+
 def _load_all() -> dict[str, Any]:
     if not _PROFILES_FILE.exists():
         return {}
@@ -81,6 +82,7 @@ def _save_all(data: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def list_profiles() -> list[dict[str, str]]:
     """Return a list of saved profiles with non-sensitive fields only."""

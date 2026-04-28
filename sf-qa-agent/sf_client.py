@@ -4,11 +4,11 @@ import time
 from typing import Any
 
 import requests
-from requests.exceptions import ReadTimeout
-from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+from requests.exceptions import ReadTimeout
 from simple_salesforce import Salesforce, SFType
 from simple_salesforce.exceptions import SalesforceError
+from urllib3.util.retry import Retry
 
 
 class _TimeoutSession(requests.Session):
@@ -113,7 +113,9 @@ class SalesforceClient:
         record_id: str = result["id"]
         return {"id": record_id, "url": f"{self.instance_url}/{record_id}"}
 
-    def update_record(self, object_type: str, record_id: str, fields: dict[str, Any]) -> dict[str, str]:
+    def update_record(
+        self, object_type: str, record_id: str, fields: dict[str, Any]
+    ) -> dict[str, str]:
         """Update an existing record. Returns {"id": "...", "url": "..."}."""
         sf = self._connect()
         self._call_with_retry(getattr(sf, object_type).update, record_id, fields)
@@ -134,8 +136,7 @@ class SalesforceClient:
         meta = self._call_with_retry(sf_obj.describe)
         createable = {f["name"] for f in meta["fields"] if f["createable"]}
         fields: dict[str, Any] = {
-            k: v for k, v in source.items()
-            if k in createable and v is not None
+            k: v for k, v in source.items() if k in createable and v is not None
         }
         fields.update(overrides)
         result = self._call_with_retry(sf_obj.create, fields)

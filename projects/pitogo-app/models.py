@@ -3,24 +3,25 @@ SQLAlchemy models for PITOGO app (Sprint 1 core models).
 
 Includes: Resident, Household, User, CertificateType, CertificateIssue, Attachment.
 """
+
 from __future__ import annotations
 
-from datetime import datetime
 import uuid
+from datetime import datetime
+
 from sqlalchemy import (
+    JSON,
+    Boolean,
     Column,
-    String,
     Date,
     DateTime,
-    Boolean,
     ForeignKey,
-    Integer,
-    JSON,
-    Text,
     Index,
+    Integer,
+    String,
+    Text,
 )
-from sqlalchemy.orm import relationship, declarative_base
-
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
@@ -32,7 +33,9 @@ def gen_uuid():
 class Resident(Base):
     __tablename__ = "residents"
     id = Column(String(36), primary_key=True, default=gen_uuid)
-    household_id = Column(String(36), ForeignKey("households.id"), nullable=True, index=True)
+    household_id = Column(
+        String(36), ForeignKey("households.id"), nullable=True, index=True
+    )
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     middle_name = Column(String(100))
@@ -88,7 +91,9 @@ class CertificateIssue(Base):
     __tablename__ = "certificate_issues"
     id = Column(String(36), primary_key=True, default=gen_uuid)
     control_number = Column(String(64), unique=True, nullable=False, index=True)
-    certificate_type_id = Column(String(36), ForeignKey("certificate_types.id"), nullable=False)
+    certificate_type_id = Column(
+        String(36), ForeignKey("certificate_types.id"), nullable=False
+    )
     resident_id = Column(String(36), ForeignKey("residents.id"), nullable=True)
     household_id = Column(String(36), ForeignKey("households.id"), nullable=True)
     # store the issuing username (simpler for Sprint 1) rather than FK to users.id
@@ -113,4 +118,3 @@ class Attachment(Base):
     checksum = Column(String(128))
     uploaded_by = Column(String(36))
     uploaded_at = Column(DateTime, default=datetime.utcnow)
-

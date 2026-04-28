@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).parent
@@ -23,7 +24,7 @@ UPDATE_URL = os.getenv("UPDATE_URL", "")
 # Live relay server — Enzo starts relay/relay_server.py on demand and exposes it via ngrok.
 # Paste the public ngrok URL here so Vanessa's app can reach it.
 # When this is set it takes priority over UPDATE_URL and LOG_WEBHOOK_URL.
-RELAY_URL   = os.getenv("RELAY_URL",   "").rstrip("/")
+RELAY_URL = os.getenv("RELAY_URL", "").rstrip("/")
 RELAY_TOKEN = os.getenv("RELAY_TOKEN", "")  # shared secret — must match relay/.env
 
 # Fallback: static patch URL (Google Drive direct-download) used when RELAY_URL is blank

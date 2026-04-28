@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+import json
+import re
+from pathlib import Path
+from typing import Optional
+
+import app_logger
+import auth
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-import json
-from pathlib import Path
-import re
-
-import auth
-import app_logger
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -40,19 +40,35 @@ def _save_users(users: dict) -> None:
 
 
 @router.get("/")
-def list_users(q: Optional[str] = None, page: int = 1, per_page: int = 50, session: auth.SessionData = Depends(auth.require_auth)):
+def list_users(
+    q: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 50,
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     """List users with optional search and pagination. Admin only."""
     if session.role != "admin":
         raise HTTPException(status_code=403, detail="admin only")
     users = _load_users()
     items = []
     for uname, u in users.items():
-        items.append({"username": uname, "role": u.get("role"), "display_name": u.get("display_name")})
+        items.append(
+            {
+                "username": uname,
+                "role": u.get("role"),
+                "display_name": u.get("display_name"),
+            }
+        )
 
     # search
     if q:
         ql = q.lower()
-        items = [it for it in items if ql in it["username"].lower() or (it.get("display_name") and ql in str(it.get("display_name")).lower())]
+        items = [
+            it
+            for it in items
+            if ql in it["username"].lower()
+            or (it.get("display_name") and ql in str(it.get("display_name")).lower())
+        ]
 
     # pagination bounds
     try:
@@ -69,11 +85,17 @@ def list_users(q: Optional[str] = None, page: int = 1, per_page: int = 50, sessi
 
 @router.get("/me")
 def get_me(session: auth.SessionData = Depends(auth.require_auth)):
-    return {"username": session.username, "role": session.role, "display_name": session.display_name}
+    return {
+        "username": session.username,
+        "role": session.role,
+        "display_name": session.display_name,
+    }
 
 
 @router.post("/", status_code=201)
-def create_user(body: CreateUserIn, session: auth.SessionData = Depends(auth.require_auth)):
+def create_user(
+    body: CreateUserIn, session: auth.SessionData = Depends(auth.require_auth)
+):
     if session.role != "admin":
         raise HTTPException(status_code=403, detail="admin only")
     users = _load_users()
@@ -86,9 +108,13 @@ def create_user(body: CreateUserIn, session: auth.SessionData = Depends(auth.req
         raise HTTPException(status_code=400, detail="username already exists")
     # basic username validation
     if not re.match(r"^[A-Za-z0-9_.-]{2,64}$", uname):
-        raise HTTPException(status_code=422, detail="username must be 2-64 chars, alnum and _.- allowed")
+        raise HTTPException(
+            status_code=422, detail="username must be 2-64 chars, alnum and _.- allowed"
+        )
     if not body.password or len(body.password) < 6:
-        raise HTTPException(status_code=422, detail="password must be at least 6 characters")
+        raise HTTPException(
+            status_code=422, detail="password must be at least 6 characters"
+        )
     if body.role not in ("admin", "clerk"):
         raise HTTPException(status_code=422, detail="role must be 'admin' or 'clerk'")
     users[body.username] = {
@@ -98,11 +124,19 @@ def create_user(body: CreateUserIn, session: auth.SessionData = Depends(auth.req
     }
     _save_users(users)
     app_logger.info("User created", username=session.username, new_user=body.username)
-    return {"username": body.username, "role": body.role, "display_name": body.display_name}
+    return {
+        "username": body.username,
+        "role": body.role,
+        "display_name": body.display_name,
+    }
 
 
 @router.put("/{username}")
-def update_user(username: str, body: UpdateUserIn, session: auth.SessionData = Depends(auth.require_auth)):
+def update_user(
+    username: str,
+    body: UpdateUserIn,
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     if session.role != "admin":
         raise HTTPException(status_code=403, detail="admin only")
     users = _load_users()
@@ -116,17 +150,27 @@ def update_user(username: str, body: UpdateUserIn, session: auth.SessionData = D
             if len(admins) <= 1:
                 raise HTTPException(status_code=400, detail="cannot remove last admin")
         if body.role not in ("admin", "clerk"):
-            raise HTTPException(status_code=422, detail="role must be 'admin' or 'clerk'")
+            raise HTTPException(
+                status_code=422, detail="role must be 'admin' or 'clerk'"
+            )
         users[username]["role"] = body.role
     if body.display_name is not None:
         users[username]["display_name"] = body.display_name
     _save_users(users)
     app_logger.info("User updated", username=session.username, target=username)
-    return {"username": username, "role": users[username]["role"], "display_name": users[username].get("display_name")}
+    return {
+        "username": username,
+        "role": users[username]["role"],
+        "display_name": users[username].get("display_name"),
+    }
 
 
 @router.post("/{username}/password")
-def change_password(username: str, body: ChangePasswordIn, session: auth.SessionData = Depends(auth.require_auth)):
+def change_password(
+    username: str,
+    body: ChangePasswordIn,
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     users = _load_users()
     if username not in users:
         raise HTTPException(status_code=404, detail="user not found")
@@ -135,7 +179,9 @@ def change_password(username: str, body: ChangePasswordIn, session: auth.Session
     if session.role == "admin" and session.username != username:
         users[username]["password_hash"] = auth._hash(body.new_password)
         _save_users(users)
-        app_logger.info("Password reset by admin", username=session.username, target=username)
+        app_logger.info(
+            "Password reset by admin", username=session.username, target=username
+        )
         return {"status": "reset"}
 
     # Allow user to change own password with current_password

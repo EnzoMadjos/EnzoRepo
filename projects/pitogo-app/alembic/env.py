@@ -4,15 +4,14 @@ import os
 import sys
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # ensure project path is importable
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import config
 from models import Base
-
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -28,7 +27,7 @@ if config_obj.config_file_name:
 
 # set DB url programmatically (use config.SECURE_DIR pitogo.db)
 db_path = str(config.SECURE_DIR / "pitogo.db")
-config_obj.set_main_option('sqlalchemy.url', f"sqlite:///{db_path}")
+config_obj.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
 
 target_metadata = Base.metadata
 
@@ -43,11 +42,13 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     connectable = engine_from_config(
         config_obj.get_section(config_obj.config_ini_section),
-        prefix='sqlalchemy.',
+        prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
+        context.configure(
+            connection=connection, target_metadata=target_metadata, render_as_batch=True
+        )
         with context.begin_transaction():
             context.run_migrations()
 

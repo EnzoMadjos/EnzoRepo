@@ -53,7 +53,11 @@ def set_preferred_nickname(nickname: str) -> None:
     if nickname not in profile.get("options", ["Pre", "Lods"]):
         raise ValueError("Nickname must be one of the allowed options")
     profile["preferred"] = nickname
-    profile["last_updated"] = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+    profile["last_updated"] = (
+        __import__("datetime")
+        .datetime.now(__import__("datetime").timezone.utc)
+        .isoformat()
+    )
     save_nickname_profile(profile)
 
 

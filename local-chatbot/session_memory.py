@@ -20,16 +20,18 @@ import time
 from datetime import datetime, timezone
 from typing import List, Optional
 
-
 # ── Retrieval ────────────────────────────────────────────────────────────────
+
 
 def get_recent_summaries(n: int = 4) -> List[dict]:
     """Return the last n session summaries as dicts with 'entry' and 'timestamp'."""
     try:
         from training_memory import list_training
+
         entries = list_training()
         session_entries = [
-            e for e in entries
+            e
+            for e in entries
             if isinstance(e, dict) and e.get("category") == "session-memory"
         ]
         return session_entries[-n:]
@@ -70,6 +72,7 @@ def search_relevant(query: str, top_k: int = 3) -> List[str]:
     """
     try:
         from rag_memory import search_memory
+
         all_results = search_memory(query, top_k=top_k * 3)
         # Filter to only session-memory entries (they contain the prefix)
         session_hits = [r for r in all_results if "[Session summary]" in r][:top_k]
@@ -82,8 +85,13 @@ def get_summary_count() -> int:
     """Return the total number of stored session summaries."""
     try:
         from training_memory import list_training
+
         entries = list_training()
-        return sum(1 for e in entries if isinstance(e, dict) and e.get("category") == "session-memory")
+        return sum(
+            1
+            for e in entries
+            if isinstance(e, dict) and e.get("category") == "session-memory"
+        )
     except Exception:
         return 0
 
@@ -114,9 +122,11 @@ def record_work_observation(observation: str) -> bool:
     # Quick word-overlap dedup against recent entries
     try:
         from training_memory import list_training
+
         entries = list_training()
         recent_work = [
-            e.get("entry", "") for e in entries[-50:]
+            e.get("entry", "")
+            for e in entries[-50:]
             if isinstance(e, dict) and e.get("category") == "work-observation"
         ]
         obs_words = set(observation.lower().split())
@@ -131,10 +141,12 @@ def record_work_observation(observation: str) -> bool:
 
     try:
         from training_memory import add_training
+
         add_training(observation, category="work-observation")
         _seen_work_hashes.add(h)
         try:
             from rag_memory import upsert_memory
+
             upsert_memory(observation, category="work-observation")
         except Exception:
             pass
@@ -147,9 +159,11 @@ def get_recent_work_observations(n: int = 10) -> List[str]:
     """Return the last n work observations."""
     try:
         from training_memory import list_training
+
         entries = list_training()
         work_entries = [
-            e.get("entry", "") for e in entries
+            e.get("entry", "")
+            for e in entries
             if isinstance(e, dict) and e.get("category") == "work-observation"
         ]
         return work_entries[-n:]
@@ -159,13 +173,16 @@ def get_recent_work_observations(n: int = 10) -> List[str]:
 
 # ── Summary management ───────────────────────────────────────────────────────
 
+
 def delete_summary_by_index(index: int) -> bool:
     """Delete a session summary by its position in the list (0 = oldest)."""
     try:
         from training_memory import load_training, save_training
+
         entries = load_training()
         session_entries_idx = [
-            i for i, e in enumerate(entries)
+            i
+            for i, e in enumerate(entries)
             if isinstance(e, dict) and e.get("category") == "session-memory"
         ]
         if index < 0 or index >= len(session_entries_idx):
@@ -182,8 +199,13 @@ def clear_all_summaries() -> int:
     """Remove all session summaries. Returns count removed."""
     try:
         from training_memory import load_training, save_training
+
         entries = load_training()
-        kept = [e for e in entries if not (isinstance(e, dict) and e.get("category") == "session-memory")]
+        kept = [
+            e
+            for e in entries
+            if not (isinstance(e, dict) and e.get("category") == "session-memory")
+        ]
         removed = len(entries) - len(kept)
         save_training(kept)
         return removed

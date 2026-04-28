@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 import uuid
 from pathlib import Path
-import config
 
+import config
 
 NODE_FILE = config.SECURE_DIR / "node_id.json"
 

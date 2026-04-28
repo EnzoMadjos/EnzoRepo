@@ -3,7 +3,7 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
-from fastapi import HTTPException, Header
+from fastapi import Header, HTTPException
 from settings import API_KEY_NAME, SECURE_ATLAS_FOLDER_CANDIDATES
 
 

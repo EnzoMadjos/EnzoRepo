@@ -5,9 +5,10 @@ Place docx files in `templates/docs/source_documents/` and run this script
 to produce `templates/certs/<slug>.html` files that can be used as Jinja
 templates for certificates.
 """
-from pathlib import Path
+
 import re
 import sys
+from pathlib import Path
 
 try:
     import mammoth

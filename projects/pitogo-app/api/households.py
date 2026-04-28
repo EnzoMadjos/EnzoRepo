@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-
-from api.deps import get_db
 import auth
+from api.deps import get_db
+from fastapi import APIRouter, Depends, HTTPException
 from models import Household, Resident
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/households", tags=["households"])
 
@@ -34,19 +33,29 @@ def _to_dict(h: Household) -> dict:
 
 
 @router.get("/")
-def list_households(q: Optional[str] = None, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def list_households(
+    q: Optional[str] = None,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     query = db.query(Household)
     if q:
         qlike = f"%{q}%"
         query = query.filter(
-            (Household.address_line.ilike(qlike)) | (Household.barangay.ilike(qlike)) | (Household.city.ilike(qlike))
+            (Household.address_line.ilike(qlike))
+            | (Household.barangay.ilike(qlike))
+            | (Household.city.ilike(qlike))
         )
     rows = query.order_by(Household.created_at.desc()).limit(200).all()
     return [_to_dict(r) for r in rows]
 
 
 @router.post("/", status_code=201)
-def create_household(body: HouseholdIn, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def create_household(
+    body: HouseholdIn,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     if body.head_resident_id:
         head = db.query(Resident).get(body.head_resident_id)
         if not head:
@@ -65,7 +74,11 @@ def create_household(body: HouseholdIn, db=Depends(get_db), session: auth.Sessio
 
 
 @router.get("/{household_id}")
-def get_household(household_id: str, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def get_household(
+    household_id: str,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     h = db.query(Household).get(household_id)
     if not h:
         raise HTTPException(status_code=404, detail="household not found")
@@ -73,7 +86,12 @@ def get_household(household_id: str, db=Depends(get_db), session: auth.SessionDa
 
 
 @router.put("/{household_id}")
-def update_household(household_id: str, body: HouseholdIn, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def update_household(
+    household_id: str,
+    body: HouseholdIn,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     h = db.query(Household).get(household_id)
     if not h:
         raise HTTPException(status_code=404, detail="household not found")
@@ -89,14 +107,21 @@ def update_household(household_id: str, body: HouseholdIn, db=Depends(get_db), s
 
 
 @router.delete("/{household_id}")
-def delete_household(household_id: str, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def delete_household(
+    household_id: str,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     h = db.query(Household).get(household_id)
     if not h:
         raise HTTPException(status_code=404, detail="household not found")
     # prevent deleting households that still have members
     members = db.query(Resident).filter_by(household_id=household_id).count()
     if members:
-        raise HTTPException(status_code=400, detail="household has members; reassign or remove members first")
+        raise HTTPException(
+            status_code=400,
+            detail="household has members; reassign or remove members first",
+        )
     db.delete(h)
     db.commit()
     return {"status": "deleted"}

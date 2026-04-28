@@ -3,12 +3,11 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-
-from api.deps import get_db
 import auth
+from api.deps import get_db
+from fastapi import APIRouter, Depends, HTTPException
 from models import Resident
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/residents", tags=["residents"])
 
@@ -39,19 +38,29 @@ def _to_dict(r: Resident) -> dict:
 
 
 @router.get("/")
-def list_residents(q: Optional[str] = None, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def list_residents(
+    q: Optional[str] = None,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     query = db.query(Resident)
     if q:
         qlike = f"%{q}%"
         query = query.filter(
-            (Resident.first_name.ilike(qlike)) | (Resident.last_name.ilike(qlike)) | (Resident.national_id.ilike(qlike))
+            (Resident.first_name.ilike(qlike))
+            | (Resident.last_name.ilike(qlike))
+            | (Resident.national_id.ilike(qlike))
         )
     rows = query.order_by(Resident.last_name, Resident.first_name).limit(200).all()
-    return [ _to_dict(r) for r in rows ]
+    return [_to_dict(r) for r in rows]
 
 
 @router.post("/", status_code=201)
-def create_resident(body: ResidentIn, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def create_resident(
+    body: ResidentIn,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     # prevent duplicate national_id
     if body.national_id:
         exists = db.query(Resident).filter_by(national_id=body.national_id).first()
@@ -73,7 +82,11 @@ def create_resident(body: ResidentIn, db=Depends(get_db), session: auth.SessionD
 
 
 @router.get("/{resident_id}")
-def get_resident(resident_id: str, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def get_resident(
+    resident_id: str,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     r = db.query(Resident).get(resident_id)
     if not r:
         raise HTTPException(status_code=404, detail="resident not found")
@@ -81,7 +94,12 @@ def get_resident(resident_id: str, db=Depends(get_db), session: auth.SessionData
 
 
 @router.put("/{resident_id}")
-def update_resident(resident_id: str, body: ResidentIn, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def update_resident(
+    resident_id: str,
+    body: ResidentIn,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     r = db.query(Resident).get(resident_id)
     if not r:
         raise HTTPException(status_code=404, detail="resident not found")
@@ -94,7 +112,11 @@ def update_resident(resident_id: str, body: ResidentIn, db=Depends(get_db), sess
 
 
 @router.delete("/{resident_id}")
-def delete_resident(resident_id: str, db=Depends(get_db), session: auth.SessionData = Depends(auth.require_auth)):
+def delete_resident(
+    resident_id: str,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
     r = db.query(Resident).get(resident_id)
     if not r:
         raise HTTPException(status_code=404, detail="resident not found")

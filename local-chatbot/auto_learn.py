@@ -5,10 +5,10 @@ and extracts facts about the user — no manual training tab needed.
 ATLAS learns just from talking to you.
 """
 
-import json
-import threading
 import hashlib
+import json
 import re as _re
+import threading
 from pathlib import Path
 
 import ollama
@@ -16,25 +16,92 @@ from training_memory import add_training, list_training
 
 # Quick heuristic patterns — no LLM needed for obvious facts
 _QUICK_PATTERNS = [
-    (_re.compile(r"\bI(?:'m| am)\s+(?:a|an)\s+([a-zA-Z][a-zA-Z\s]{2,30}?)(?:\.|,|\s|$)", _re.I), lambda m: f"User is a {m.group(1).strip()}"),
-    (_re.compile(r"\bI work(?:ed)?\s+(?:at|for|in|as)\s+([a-zA-Z0-9][a-zA-Z0-9\s]{2,40}?)(?:\.|,|$)", _re.I), lambda m: f"User works at/as {m.group(1).strip()}"),
-    (_re.compile(r"\bI(?:'m| am)\s+from\s+([a-zA-Z][a-zA-Z\s]{2,30}?)(?:\.|,|$)", _re.I), lambda m: f"User is from {m.group(1).strip()}"),
-    (_re.compile(r"\bI prefer\s+(.{5,60}?)(?:\.|,|$)", _re.I), lambda m: f"User prefers {m.group(1).strip()}"),
-    (_re.compile(r"\bI(?:'m| am)\s+(\d+)\s*(?:years old|yo\b)", _re.I), lambda m: f"User is {m.group(1)} years old"),
-    (_re.compile(r"\bmy name is\s+([A-Z][a-z]+)"), lambda m: f"User's name is {m.group(1)}"),
-    (_re.compile(r"\bI(?:'m| am)\s+(?:called|known as)\s+([A-Z][a-z]+)"), lambda m: f"User is called {m.group(1)}"),
-    (_re.compile(r"\bI(?:'m| am)\s+(?:using|building|making|working on)\s+(.{5,60}?)(?:\.|,|$)", _re.I), lambda m: f"User is working on {m.group(1).strip()}"),
+    (
+        _re.compile(
+            r"\bI(?:'m| am)\s+(?:a|an)\s+([a-zA-Z][a-zA-Z\s]{2,30}?)(?:\.|,|\s|$)",
+            _re.I,
+        ),
+        lambda m: f"User is a {m.group(1).strip()}",
+    ),
+    (
+        _re.compile(
+            r"\bI work(?:ed)?\s+(?:at|for|in|as)\s+([a-zA-Z0-9][a-zA-Z0-9\s]{2,40}?)(?:\.|,|$)",
+            _re.I,
+        ),
+        lambda m: f"User works at/as {m.group(1).strip()}",
+    ),
+    (
+        _re.compile(
+            r"\bI(?:'m| am)\s+from\s+([a-zA-Z][a-zA-Z\s]{2,30}?)(?:\.|,|$)", _re.I
+        ),
+        lambda m: f"User is from {m.group(1).strip()}",
+    ),
+    (
+        _re.compile(r"\bI prefer\s+(.{5,60}?)(?:\.|,|$)", _re.I),
+        lambda m: f"User prefers {m.group(1).strip()}",
+    ),
+    (
+        _re.compile(r"\bI(?:'m| am)\s+(\d+)\s*(?:years old|yo\b)", _re.I),
+        lambda m: f"User is {m.group(1)} years old",
+    ),
+    (
+        _re.compile(r"\bmy name is\s+([A-Z][a-z]+)"),
+        lambda m: f"User's name is {m.group(1)}",
+    ),
+    (
+        _re.compile(r"\bI(?:'m| am)\s+(?:called|known as)\s+([A-Z][a-z]+)"),
+        lambda m: f"User is called {m.group(1)}",
+    ),
+    (
+        _re.compile(
+            r"\bI(?:'m| am)\s+(?:using|building|making|working on)\s+(.{5,60}?)(?:\.|,|$)",
+            _re.I,
+        ),
+        lambda m: f"User is working on {m.group(1).strip()}",
+    ),
 ]
 
 # Correction patterns — detect when user is correcting a wrong assumption
 _CORRECTION_PATTERNS = [
-    (_re.compile(r"(?:no[,.]?\s+)?actually[,.]?\s+(?:it(?:'s| is)|I(?:'m| am)|the answer is|that(?:'s| is))\s+(.{5,80}?)(?:\.|$)", _re.I), lambda m: f"Correction: actually {m.group(1).strip()}"),
-    (_re.compile(r"(?:no[,.]?\s+)?(?:wrong|incorrect)[,.]\s+(?:it(?:'s| is)|I(?:'m| am)|the)\s+(.{5,80}?)(?:\.|$)", _re.I), lambda m: f"Correction: {m.group(1).strip()}"),
-    (_re.compile(r"that(?:'s| is) (?:not|wrong|incorrect)[,.]\s+(?:it(?:'s| is)|I(?:'m| am))\s+(.{5,80}?)(?:\.|$)", _re.I), lambda m: f"Correction: {m.group(1).strip()}"),
-    (_re.compile(r"I (?:don't|do not) (?:like|want|prefer|use)\s+(.{5,60}?)(?:\.|,|$)", _re.I), lambda m: f"User does not like/want: {m.group(1).strip()}"),
-    (_re.compile(r"I (?:hate|dislike|avoid)\s+(.{5,60}?)(?:\.|,|$)", _re.I), lambda m: f"User dislikes/avoids: {m.group(1).strip()}"),
-    (_re.compile(r"never (?:do|use|say|call)\s+(.{5,60}?)(?:\.|,|$)", _re.I), lambda m: f"User rule - never: {m.group(1).strip()}"),
-    (_re.compile(r"always (?:do|use|say|call)\s+(.{5,60}?)(?:\.|,|$)", _re.I), lambda m: f"User rule - always: {m.group(1).strip()}"),
+    (
+        _re.compile(
+            r"(?:no[,.]?\s+)?actually[,.]?\s+(?:it(?:'s| is)|I(?:'m| am)|the answer is|that(?:'s| is))\s+(.{5,80}?)(?:\.|$)",
+            _re.I,
+        ),
+        lambda m: f"Correction: actually {m.group(1).strip()}",
+    ),
+    (
+        _re.compile(
+            r"(?:no[,.]?\s+)?(?:wrong|incorrect)[,.]\s+(?:it(?:'s| is)|I(?:'m| am)|the)\s+(.{5,80}?)(?:\.|$)",
+            _re.I,
+        ),
+        lambda m: f"Correction: {m.group(1).strip()}",
+    ),
+    (
+        _re.compile(
+            r"that(?:'s| is) (?:not|wrong|incorrect)[,.]\s+(?:it(?:'s| is)|I(?:'m| am))\s+(.{5,80}?)(?:\.|$)",
+            _re.I,
+        ),
+        lambda m: f"Correction: {m.group(1).strip()}",
+    ),
+    (
+        _re.compile(
+            r"I (?:don't|do not) (?:like|want|prefer|use)\s+(.{5,60}?)(?:\.|,|$)", _re.I
+        ),
+        lambda m: f"User does not like/want: {m.group(1).strip()}",
+    ),
+    (
+        _re.compile(r"I (?:hate|dislike|avoid)\s+(.{5,60}?)(?:\.|,|$)", _re.I),
+        lambda m: f"User dislikes/avoids: {m.group(1).strip()}",
+    ),
+    (
+        _re.compile(r"never (?:do|use|say|call)\s+(.{5,60}?)(?:\.|,|$)", _re.I),
+        lambda m: f"User rule - never: {m.group(1).strip()}",
+    ),
+    (
+        _re.compile(r"always (?:do|use|say|call)\s+(.{5,60}?)(?:\.|,|$)", _re.I),
+        lambda m: f"User rule - always: {m.group(1).strip()}",
+    ),
 ]
 
 
@@ -96,7 +163,9 @@ def _already_known(fact: str) -> bool:
     """Check if semantically similar fact already exists."""
     if _hash(fact) in _seen_hashes:
         return True
-    existing = [e.get("entry", "") if isinstance(e, dict) else str(e) for e in list_training()]
+    existing = [
+        e.get("entry", "") if isinstance(e, dict) else str(e) for e in list_training()
+    ]
     fact_words = set(fact.lower().split())
     for entry in existing:
         if not entry:
@@ -111,13 +180,23 @@ def _already_known(fact: str) -> bool:
 
 def _prune_if_needed():
     """Keep auto-learned entries under MAX_AUTO_ENTRIES."""
-    from training_memory import list_training, clear_training, add_training as _add
+    from training_memory import add_training as _add
+    from training_memory import clear_training, list_training
+
     entries = list_training()
-    auto = [e for e in entries if isinstance(e, dict) and e.get("category") == "auto-learned"]
+    auto = [
+        e
+        for e in entries
+        if isinstance(e, dict) and e.get("category") == "auto-learned"
+    ]
     if len(auto) > MAX_AUTO_ENTRIES:
         # Keep most recent half
-        keep = auto[-(MAX_AUTO_ENTRIES // 2):]
-        manual = [e for e in entries if not (isinstance(e, dict) and e.get("category") == "auto-learned")]
+        keep = auto[-(MAX_AUTO_ENTRIES // 2) :]
+        manual = [
+            e
+            for e in entries
+            if not (isinstance(e, dict) and e.get("category") == "auto-learned")
+        ]
         clear_training()
         for e in manual + keep:
             _add(e.get("entry", str(e)), category=e.get("category", "training"))
@@ -137,7 +216,20 @@ def extract_and_learn(user_message: str, assistant_response: str) -> None:
     # Also skip if message is purely a question with no self-disclosure signal
     stripped = user_message.strip()
     is_pure_question = stripped.endswith("?") and not any(
-        kw in stripped.lower() for kw in ("i ", "i'm", "i am", "my ", "me ", "i've", "i work", "i prefer", "i use", "i like", "i hate")
+        kw in stripped.lower()
+        for kw in (
+            "i ",
+            "i'm",
+            "i am",
+            "my ",
+            "me ",
+            "i've",
+            "i work",
+            "i prefer",
+            "i use",
+            "i like",
+            "i hate",
+        )
     )
     if is_pure_question and len(stripped) < 120:
         return
@@ -153,6 +245,7 @@ def extract_and_learn(user_message: str, assistant_response: str) -> None:
                 _seen_hashes.add(_hash(fact))
                 try:
                     from rag_memory import upsert_memory
+
                     upsert_memory(fact, category="auto-learned")
                 except Exception:
                     pass
@@ -161,14 +254,46 @@ def extract_and_learn(user_message: str, assistant_response: str) -> None:
     # Run LLM extraction when message has any meaningful content (not just self-disclosure)
     # and cooldown has expired to prevent Ollama queue contention
     import time as _time
+
     global _last_llm_extract
-    content_signals = any(kw in user_message.lower() for kw in (
-        "i ", "i'm", "i am", "my ", "me ", "i've", "i work", "i prefer",
-        "i use", "i like", "i hate", "i need", "i want", "i always", "i never",
-        "actually", "correction", "wrong", "prefer", "usually", "normally",
-        "working on", "building", "trying to", "help me", "can you", "how do",
-        "salesforce", "apex", "lwc", "soql", "flow", "trigger",  # platform signals
-    ))
+    content_signals = any(
+        kw in user_message.lower()
+        for kw in (
+            "i ",
+            "i'm",
+            "i am",
+            "my ",
+            "me ",
+            "i've",
+            "i work",
+            "i prefer",
+            "i use",
+            "i like",
+            "i hate",
+            "i need",
+            "i want",
+            "i always",
+            "i never",
+            "actually",
+            "correction",
+            "wrong",
+            "prefer",
+            "usually",
+            "normally",
+            "working on",
+            "building",
+            "trying to",
+            "help me",
+            "can you",
+            "how do",
+            "salesforce",
+            "apex",
+            "lwc",
+            "soql",
+            "flow",
+            "trigger",  # platform signals
+        )
+    )
     if len(user_message) < 60 or not content_signals:
         return
     if (_time.time() - _last_llm_extract) < _LLM_EXTRACT_COOLDOWN:
@@ -227,6 +352,7 @@ Return ONLY valid JSON. Nothing else."""
                 # Sync to RAG vector store immediately
                 try:
                     from rag_memory import upsert_memory
+
                     upsert_memory(fact, category="auto-learned")
                 except Exception:
                     pass
@@ -237,6 +363,6 @@ Return ONLY valid JSON. Nothing else."""
         except Exception:
             pass  # Silent — learning is best-effort, never breaks main flow
 
-    _last_llm_extract = __import__('time').time()
+    _last_llm_extract = __import__("time").time()
     t = threading.Thread(target=_run, daemon=True)
     t.start()

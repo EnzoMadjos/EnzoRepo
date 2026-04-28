@@ -4,16 +4,17 @@ Starts the FastAPI server in the background and opens the chat UI in a native wi
 """
 
 import os
+import signal
 import sys
 import threading
 import time
-import signal
 from pathlib import Path
 
 # ── Resolve project root (works whether run from local-chatbot/ or C:\ATLAS V1\) ──
 ROOT = Path(__file__).parent.resolve()
 os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
+
 
 # ── Load API key from secure folder ──
 def _load_api_key() -> str:
@@ -27,35 +28,41 @@ def _load_api_key() -> str:
             return p.read_text().strip()
     raise FileNotFoundError("atlas_api.key not found. Run install.sh first.")
 
+
 API_KEY = _load_api_key()
 HOST = "127.0.0.1"
 PORT = 8000
-URL  = f"http://{HOST}:{PORT}/ui/"
+URL = f"http://{HOST}:{PORT}/ui/"
 
 # ── Server thread ──
 _server = None
 
+
 def _start_server():
     import uvicorn
+
     os.environ["ATLAS_API_KEY"] = API_KEY
     config = uvicorn.Config(
         "app:app",
         host=HOST,
         port=PORT,
-        log_level="warning",   # quiet in desktop mode
+        log_level="warning",  # quiet in desktop mode
         reload=False,
     )
     global _server
     _server = uvicorn.Server(config)
     _server.run()
 
+
 def _stop_server():
     global _server
     if _server:
         _server.should_exit = True
 
+
 def _wait_for_server(timeout: int = 15) -> bool:
     import urllib.request
+
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
@@ -64,6 +71,7 @@ def _wait_for_server(timeout: int = 15) -> bool:
         except Exception:
             time.sleep(0.3)
     return False
+
 
 # ── Main ──
 def main():
@@ -102,6 +110,7 @@ def main():
     window.events.closed += on_closed
 
     webview.start(debug=False)
+
 
 if __name__ == "__main__":
     # Handle Ctrl+C cleanly

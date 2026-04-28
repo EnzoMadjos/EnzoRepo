@@ -2,8 +2,8 @@ import ipaddress
 import re
 import socket
 import ssl
-import urllib.request
 import urllib.parse
+import urllib.request
 from html.parser import HTMLParser
 from typing import Dict, Optional
 
@@ -105,7 +105,9 @@ def validate_url(parsed: urllib.parse.ParseResult) -> None:
             return
         for address in addresses:
             if is_private_address(address):
-                raise ValueError("Resolved host points to a private or local network address")
+                raise ValueError(
+                    "Resolved host points to a private or local network address"
+                )
 
 
 def fetch_url_content(url: str, timeout: int = 15) -> Dict[str, str]:

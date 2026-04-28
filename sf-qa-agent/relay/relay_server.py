@@ -34,17 +34,19 @@ from pydantic import BaseModel
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
 
-RELAY_TOKEN  = os.getenv("RELAY_TOKEN", "")
-PATCH_FILE   = BASE_DIR / os.getenv("PATCH_FILE", "patch.zip")
-LOGS_DIR     = BASE_DIR / "received_logs"
-RELAY_PORT   = int(os.getenv("RELAY_PORT", "9100"))
-VERSION      = os.getenv("APP_VERSION", "")  # optional — e.g. "1.2.0"
+RELAY_TOKEN = os.getenv("RELAY_TOKEN", "")
+PATCH_FILE = BASE_DIR / os.getenv("PATCH_FILE", "patch.zip")
+LOGS_DIR = BASE_DIR / "received_logs"
+RELAY_PORT = int(os.getenv("RELAY_PORT", "9100"))
+VERSION = os.getenv("APP_VERSION", "")  # optional — e.g. "1.2.0"
 
 LOGS_DIR.mkdir(exist_ok=True)
 
 if not RELAY_TOKEN:
     print("\n⚠  WARNING: RELAY_TOKEN is not set in relay/.env")
-    print("   Set a strong random token and copy it to Vanessa's .env (RELAY_TOKEN=...)\n")
+    print(
+        "   Set a strong random token and copy it to Vanessa's .env (RELAY_TOKEN=...)\n"
+    )
 
 # ── App ────────────────────────────────────────────────────────────────────────
 
@@ -67,37 +69,46 @@ def require_token(
 
 # ── /ping — public health check ────────────────────────────────────────────────
 
+
 @app.get("/ping")
 async def ping() -> JSONResponse:
     """
     Public endpoint — no token required.
     Vanessa's app calls this to check if your server is reachable.
     """
-    return JSONResponse({
-        "online": True,
-        "update_available": PATCH_FILE.exists(),
-        "version": VERSION or None,
-        "message": "Relay online — support server is ready.",
-    })
+    return JSONResponse(
+        {
+            "online": True,
+            "update_available": PATCH_FILE.exists(),
+            "version": VERSION or None,
+            "message": "Relay online — support server is ready.",
+        }
+    )
 
 
 # ── /update/check — alias ─────────────────────────────────────────────────────
 
+
 @app.get("/update/check", dependencies=[Depends(require_token)])
 async def update_check() -> JSONResponse:
-    return JSONResponse({
-        "online": True,
-        "update_available": PATCH_FILE.exists(),
-        "version": VERSION or None,
-    })
+    return JSONResponse(
+        {
+            "online": True,
+            "update_available": PATCH_FILE.exists(),
+            "version": VERSION or None,
+        }
+    )
 
 
 # ── /update/patch — serve patch.zip ──────────────────────────────────────────
 
+
 @app.get("/update/patch", dependencies=[Depends(require_token)])
 async def update_patch() -> FileResponse:
     if not PATCH_FILE.exists():
-        raise HTTPException(status_code=404, detail="No patch file is currently available.")
+        raise HTTPException(
+            status_code=404, detail="No patch file is currently available."
+        )
     return FileResponse(
         path=str(PATCH_FILE),
         media_type="application/zip",
@@ -106,6 +117,7 @@ async def update_patch() -> FileResponse:
 
 
 # ── /update/consumed — mark patch as applied ──────────────────────────────────
+
 
 @app.post("/update/consumed", dependencies=[Depends(require_token)])
 async def update_consumed() -> JSONResponse:
@@ -118,18 +130,19 @@ async def update_consumed() -> JSONResponse:
 
 # ── /logs — receive error reports ────────────────────────────────────────────
 
+
 class LogReport(BaseModel):
     username: str = "unknown"
-    machine:  str = "unknown"
-    message:  str = ""
-    logs:     list[dict] = []
-    ts:       str = ""
+    machine: str = "unknown"
+    message: str = ""
+    logs: list[dict] = []
+    ts: str = ""
 
 
 @app.post("/logs", dependencies=[Depends(require_token)])
 async def receive_logs(report: LogReport) -> JSONResponse:
     """Receive a log report from Vanessa's app, save it, and print to console."""
-    ts_str  = datetime.now().strftime("%Y%m%d_%H%M%S")
+    ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     ts_pretty = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # ── Print to console so Enzo sees it immediately ─────────────────────────
@@ -145,8 +158,8 @@ async def receive_logs(report: LogReport) -> JSONResponse:
     for entry in report.logs:
         lvl = entry.get("level", "").upper()
         msg = entry.get("msg", "")
-        ts  = entry.get("ts", "")
-        tb  = entry.get("traceback", "")
+        ts = entry.get("ts", "")
+        tb = entry.get("traceback", "")
         print(f"  [{ts}] {lvl}: {msg}")
         if tb:
             for line in tb.strip().splitlines():
@@ -155,15 +168,18 @@ async def receive_logs(report: LogReport) -> JSONResponse:
 
     # ── Save to file ──────────────────────────────────────────────────────────
     safe_user = "".join(c if c.isalnum() else "_" for c in report.username)
-    out_file  = LOGS_DIR / f"{ts_str}_{safe_user}.json"
+    out_file = LOGS_DIR / f"{ts_str}_{safe_user}.json"
     out_file.write_text(
-        json.dumps({
-            "received_at": ts_pretty,
-            "username":    report.username,
-            "machine":     report.machine,
-            "message":     report.message,
-            "logs":        report.logs,
-        }, indent=2),
+        json.dumps(
+            {
+                "received_at": ts_pretty,
+                "username": report.username,
+                "machine": report.machine,
+                "message": report.message,
+                "logs": report.logs,
+            },
+            indent=2,
+        ),
         encoding="utf-8",
     )
     print(f"  Saved → {out_file.name}\n")
@@ -178,8 +194,12 @@ if __name__ == "__main__":
     print("  SF QA Relay Server")
     print("=" * 60)
     print(f"  Listening on port : {RELAY_PORT}")
-    print(f"  Token configured  : {'YES ✓' if RELAY_TOKEN else 'NO ✗  (set RELAY_TOKEN in .env)'}")
-    print(f"  Patch file ready  : {'YES ✓  ' + PATCH_FILE.name if PATCH_FILE.exists() else 'NO  (place patch.zip here to enable)'}")
+    print(
+        f"  Token configured  : {'YES ✓' if RELAY_TOKEN else 'NO ✗  (set RELAY_TOKEN in .env)'}"
+    )
+    print(
+        f"  Patch file ready  : {'YES ✓  ' + PATCH_FILE.name if PATCH_FILE.exists() else 'NO  (place patch.zip here to enable)'}"
+    )
     print(f"  Log output folder : {LOGS_DIR}")
     print()
     print("  Next: run ngrok to expose this server publicly:")

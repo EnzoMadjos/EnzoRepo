@@ -70,10 +70,18 @@ def get_windows_acl(folder: Path) -> Optional[str]:
         return None
 
 
-def report_changes(folder: Path, baseline: Dict[str, str], current: Dict[str, str], log_path: Path) -> None:
+def report_changes(
+    folder: Path, baseline: Dict[str, str], current: Dict[str, str], log_path: Path
+) -> None:
     added = sorted([name for name in current if name not in baseline])
     removed = sorted([name for name in baseline if name not in current])
-    modified = sorted([name for name in current if name in baseline and baseline[name] != current[name]])
+    modified = sorted(
+        [
+            name
+            for name in current
+            if name in baseline and baseline[name] != current[name]
+        ]
+    )
 
     if not added and not removed and not modified:
         append_log(log_path, "Integrity check passed; no changes detected.")

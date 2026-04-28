@@ -2,6 +2,7 @@
 app_logger.py — structured rotating JSON logger for PITOGO Barangay App.
 Reused directly from sf-qa-agent pattern.
 """
+
 from __future__ import annotations
 
 import json
@@ -13,17 +14,17 @@ from pathlib import Path
 
 import config
 
-_LOG_FILE     = config.SECURE_DIR / "app.log"
-_MAX_BYTES    = 512_000   # 500 KB per file
+_LOG_FILE = config.SECURE_DIR / "app.log"
+_MAX_BYTES = 512_000  # 500 KB per file
 _BACKUP_COUNT = 3
 
 
 class _JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         entry: dict = {
-            "ts":    time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(record.created)),
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(record.created)),
             "level": record.levelname,
-            "msg":   record.getMessage(),
+            "msg": record.getMessage(),
         }
         extra = getattr(record, "extra", None)
         if extra:

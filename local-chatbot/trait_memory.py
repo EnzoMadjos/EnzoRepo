@@ -37,11 +37,13 @@ def save_traits(traits: List[Dict[str, Any]]) -> None:
 
 def add_trait(content: str, category: str = "trait") -> None:
     traits = load_traits()
-    traits.append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "category": category,
-        "content": content.strip(),
-    })
+    traits.append(
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "category": category,
+            "content": content.strip(),
+        }
+    )
     save_traits(traits)
 
 
@@ -57,5 +59,7 @@ def get_trait_summary(max_items: int = 12) -> str:
     traits = load_traits()
     if not traits:
         return ""
-    lines = [f"- [{item['category']}] {item['content']}" for item in traits[-max_items:]]
+    lines = [
+        f"- [{item['category']}] {item['content']}" for item in traits[-max_items:]
+    ]
     return "\n".join(lines)

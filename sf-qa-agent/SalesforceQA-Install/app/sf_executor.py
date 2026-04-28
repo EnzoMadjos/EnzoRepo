@@ -21,11 +21,15 @@ def _resolve_refs(value: Any, results: dict[int, dict[str, str]]) -> Any:
     """Replace $stepN.id tokens in string values with the actual record ID."""
     if not isinstance(value, str):
         return value
+
     def replacer(m: re.Match) -> str:
         step_num = int(m.group(1))
         if step_num not in results:
-            raise ValueError(f"$step{step_num}.id referenced before step {step_num} ran")
+            raise ValueError(
+                f"$step{step_num}.id referenced before step {step_num} ran"
+            )
         return results[step_num]["id"]
+
     return _REF_PATTERN.sub(replacer, value)
 
 
@@ -60,14 +64,16 @@ def execute(
             if action == "create":
                 result = client.create_record(obj, resolved_fields)
                 results[step_num] = result
-                summary.append({
-                    "step": step_num,
-                    "label": label,
-                    "object": obj,
-                    "id": result["id"],
-                    "url": result["url"],
-                    "status": "created",
-                })
+                summary.append(
+                    {
+                        "step": step_num,
+                        "label": label,
+                        "object": obj,
+                        "id": result["id"],
+                        "url": result["url"],
+                        "status": "created",
+                    }
+                )
                 yield {
                     "type": "step_done",
                     "step": step_num,
@@ -81,15 +87,20 @@ def execute(
                 if soql:
                     soql = _resolve_refs(soql, results)
                 records = client.query(soql) if soql else []
-                results[step_num] = {"id": records[0]["Id"] if records else "", "url": ""}
-                summary.append({
-                    "step": step_num,
-                    "label": label,
-                    "object": obj,
-                    "id": f"{len(records)} record(s) found",
+                results[step_num] = {
+                    "id": records[0]["Id"] if records else "",
                     "url": "",
-                    "status": "queried",
-                })
+                }
+                summary.append(
+                    {
+                        "step": step_num,
+                        "label": label,
+                        "object": obj,
+                        "id": f"{len(records)} record(s) found",
+                        "url": "",
+                        "status": "queried",
+                    }
+                )
                 yield {
                     "type": "step_done",
                     "step": step_num,
@@ -109,14 +120,16 @@ def execute(
                 object=obj,
                 action=action,
             )
-            summary.append({
-                "step": step_num,
-                "label": label,
-                "object": obj,
-                "id": "",
-                "url": "",
-                "status": f"error: {exc}",
-            })
+            summary.append(
+                {
+                    "step": step_num,
+                    "label": label,
+                    "object": obj,
+                    "id": "",
+                    "url": "",
+                    "status": f"error: {exc}",
+                }
+            )
             yield {"type": "step_error", "step": step_num, "error": str(exc)}
 
     yield {"type": "summary", "results": summary}

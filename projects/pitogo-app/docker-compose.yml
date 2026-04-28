@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  enzo-app:
+    image: ghcr.io/enzomadjos/enzo-repo:latest
+    container_name: enzo-app
+    restart: unless-stopped
+    ports:
+      - "80:8300"
+    env_file:
+      - .env
+    volumes:
+      - app_data:/app/secure/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8300/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  app_data:

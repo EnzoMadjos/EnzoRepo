@@ -1,0 +1,120 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./projects/pitogo-app
+          file: ./projects/pitogo-app/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/enzo-repo:latest
+
+  deploy:
+    name: Deploy via SSH
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.yml to remote host
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "projects/pitogo-app/docker-compose.yml"
+          target: "~/enzo-app/"
+          strip_components: 2
+
+      - name: Deploy via SSH (docker compose pull and up)
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            cd ~/enzo-app
+
+            # Login to GHCR on remote host
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+
+            # Pull latest image and restart with compose
+            docker compose pull
+            docker compose up -d --remove-orphans
+
+            echo "Waiting for health check..."
+            sleep 15
+
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' enzo-app 2>/dev/null || echo "no-healthcheck")
+            echo "Container health: $STATUS"
+
+            if [ "$STATUS" = "unhealthy" ]; then
+              echo "DEPLOY FAILED: container is unhealthy"
+              docker logs enzo-app --tail 50
+              exit 1
+            fi
+
+            echo "DEPLOY SUCCESS: enzo-app is running"
+            docker ps --filter name=enzo-app --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+  prune-old-images:
+    name: Prune old GHCR images (keep latest 3)
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Delete old package versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: enzo-repo
+          package-type: container
+          min-versions-to-keep: 3
+          delete-only-untagged-versions: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: Notify team on result
+    needs: [deploy, prune-old-images]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Report deploy result
+        run: |
+          if [ "${{ needs.deploy.result }}" = "success" ]; then
+            echo "✅ Deploy succeeded. enzo-app is live. Old GHCR images pruned."
+          else
+            echo "❌ Deploy failed. Steve Rogers: check deploy logs and escalate if needed."
+            exit 1
+          fi
+

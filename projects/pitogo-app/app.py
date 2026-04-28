@@ -9,42 +9,47 @@ Includes:
   - Support relay (reused from sf-qa-agent)
   - Update delivery (signed patch.zip)
 """
+
 from __future__ import annotations
 
+import json
+import mimetypes
+import os
 import platform
+import shutil
 import sys
 import time
 import zipfile
-import os
-import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
-import json
-from datetime import datetime
 
-import httpx
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status, Body
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
-import mimetypes
-import utils
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
-
-import auth
 import app_logger
+import auth
 import config
 import discovery
+import httpx
 import patch_signing
-from api.residents import router as residents_router
+import utils
+from api.attachments import router as attachments_router
 from api.certificate_types import router as certificate_types_router
 from api.certificates import router as certificates_router
 from api.households import router as households_router
-from api.attachments import router as attachments_router
+from api.residents import router as residents_router
 from api.users import router as users_router
-from fastapi.responses import HTMLResponse
-from fastapi import Request
-from fastapi.responses import HTMLResponse
+from fastapi import (
+    BackgroundTasks,
+    Body,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Request,
+    status,
+)
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 # ── App init ──────────────────────────────────────────────────────────────────
 
@@ -58,7 +63,7 @@ if _static_dir.exists():
 
 # ── Discovery state (set at startup) ─────────────────────────────────────────
 
-_server_role: str       = "unknown"   # "leader" | "client"
+_server_role: str = "unknown"  # "leader" | "client"
 _leader_addr: Optional[tuple] = None
 
 
@@ -75,7 +80,9 @@ async def _startup() -> None:
         global _server_role, _leader_addr
         _server_role = "client"
         _leader_addr = addr
-        app_logger.info("This instance is a CLIENT", leader_host=addr[0], leader_port=addr[1])
+        app_logger.info(
+            "This instance is a CLIENT", leader_host=addr[0], leader_port=addr[1]
+        )
 
     def on_leader_lost():
         global _server_role, _leader_addr
@@ -103,34 +110,52 @@ app.include_router(users_router)
 
 @app.get("/ui/residents", response_class=HTMLResponse)
 async def ui_residents(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("ui/residents.html", {"request": request, "app_name": config.APP_NAME})
+    return templates.TemplateResponse(
+        "ui/residents.html", {"request": request, "app_name": config.APP_NAME}
+    )
 
 
 @app.get("/ui/households", response_class=HTMLResponse)
 async def ui_households(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("ui/households.html", {"request": request, "app_name": config.APP_NAME})
+    return templates.TemplateResponse(
+        "ui/households.html", {"request": request, "app_name": config.APP_NAME}
+    )
 
 
 @app.get("/ui/certificate_preview", response_class=HTMLResponse)
 async def ui_certificate_preview(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("ui/certificate_preview.html", {"request": request, "app_name": config.APP_NAME})
+    return templates.TemplateResponse(
+        "ui/certificate_preview.html", {"request": request, "app_name": config.APP_NAME}
+    )
 
 
 @app.get("/ui/issue", response_class=HTMLResponse)
 async def ui_issue(request: Request) -> HTMLResponse:
     """Simple issuance form: select resident and certificate type, preview and generate."""
-    return templates.TemplateResponse("ui/issue_certificate.html", {"request": request, "app_name": config.APP_NAME})
+    return templates.TemplateResponse(
+        "ui/issue_certificate.html", {"request": request, "app_name": config.APP_NAME}
+    )
 
 
 @app.get("/ui/users", response_class=HTMLResponse)
 async def ui_users(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("ui/users.html", {"request": request, "app_name": config.APP_NAME})
+    return templates.TemplateResponse(
+        "ui/users.html", {"request": request, "app_name": config.APP_NAME}
+    )
+
+
 @app.get("/ui/account", response_class=HTMLResponse)
 async def ui_account(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("ui/account.html", {"request": request, "app_name": config.APP_NAME})
+    return templates.TemplateResponse(
+        "ui/account.html", {"request": request, "app_name": config.APP_NAME}
+    )
+
+
 @app.get("/ui/audit", response_class=HTMLResponse)
 async def ui_audit(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("ui/audit.html", {"request": request, "app_name": config.APP_NAME})
+    return templates.TemplateResponse(
+        "ui/audit.html", {"request": request, "app_name": config.APP_NAME}
+    )
 
 
 class ArchiveRequest(BaseModel):
@@ -138,7 +163,7 @@ class ArchiveRequest(BaseModel):
     level: Optional[str] = None
     start: Optional[str] = None
     end: Optional[str] = None
-    format: str = 'zip'
+    format: str = "zip"
     clear_after: bool = False
 
 
@@ -159,13 +184,13 @@ class UndoTemplatesRequest(BaseModel):
     undo_all: bool = False
 
 
-@app.post('/admin/logs/archive')
+@app.post("/admin/logs/archive")
 async def archive_logs(
     q: Optional[str] = None,
     level: Optional[str] = None,
     start: Optional[str] = None,
     end: Optional[str] = None,
-    format: str = 'zip',
+    format: str = "zip",
     clear_after: bool = False,
     body: Optional[ArchiveRequest] = Body(None),
     session: auth.SessionData = Depends(auth.require_auth),
@@ -199,7 +224,9 @@ async def archive_logs(
     req_start = body.start if body and body.start is not None else start
     req_end = body.end if body and body.end is not None else end
     req_format = body.format if body and body.format is not None else format
-    req_clear_after = body.clear_after if body and body.clear_after is not None else clear_after
+    req_clear_after = (
+        body.clear_after if body and body.clear_after is not None else clear_after
+    )
 
     start_dt = parse_ts(req_start)
     end_dt = parse_ts(req_end)
@@ -209,58 +236,94 @@ async def archive_logs(
     for e in entries:
         ets = None
         try:
-            ets = datetime.fromisoformat(e.get('ts')) if e.get('ts') else None
+            ets = datetime.fromisoformat(e.get("ts")) if e.get("ts") else None
         except Exception:
             ets = None
         if start_dt and ets and ets < start_dt:
             continue
         if end_dt and ets and ets > end_dt:
             continue
-        if req_level and e.get('level', '').upper() != req_level.upper():
+        if req_level and e.get("level", "").upper() != req_level.upper():
             continue
         if q_lower:
-            if not ((e.get('msg') and q_lower in str(e.get('msg')).lower()) or q_lower in json.dumps(e).lower()):
+            if not (
+                (e.get("msg") and q_lower in str(e.get("msg")).lower())
+                or q_lower in json.dumps(e).lower()
+            ):
                 continue
         filtered.append(e)
 
-    timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
-    base_name = f'pitogo_logs_{timestamp}'
+    timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    base_name = f"pitogo_logs_{timestamp}"
     LOG_ARCHIVE_DIR = config.LOG_ARCHIVE_DIR
-    if req_format == 'json':
+    if req_format == "json":
         filename = f"{base_name}.json"
         out_path = LOG_ARCHIVE_DIR / filename
-        out_path.write_text(json.dumps(filtered, ensure_ascii=False), encoding='utf-8')
-    elif req_format == 'csv':
-        import csv, io
+        out_path.write_text(json.dumps(filtered, ensure_ascii=False), encoding="utf-8")
+    elif req_format == "csv":
+        import csv
+        import io
+
         filename = f"{base_name}.csv"
         out_path = LOG_ARCHIVE_DIR / filename
         sio = io.StringIO()
         writer = csv.writer(sio)
-        writer.writerow(['ts', 'level', 'msg', 'extra'])
+        writer.writerow(["ts", "level", "msg", "extra"])
         for it in filtered:
-            extra = it.get('extra') if isinstance(it.get('extra'), (dict, list)) else {k: v for k, v in it.items() if k not in ('ts', 'level', 'msg')}
-            writer.writerow([it.get('ts', ''), it.get('level', ''), it.get('msg', ''), json.dumps(extra, ensure_ascii=False)])
-        out_path.write_text(sio.getvalue(), encoding='utf-8')
+            extra = (
+                it.get("extra")
+                if isinstance(it.get("extra"), (dict, list))
+                else {k: v for k, v in it.items() if k not in ("ts", "level", "msg")}
+            )
+            writer.writerow(
+                [
+                    it.get("ts", ""),
+                    it.get("level", ""),
+                    it.get("msg", ""),
+                    json.dumps(extra, ensure_ascii=False),
+                ]
+            )
+        out_path.write_text(sio.getvalue(), encoding="utf-8")
     else:
         # zip default
-        import io, csv, zipfile
+        import csv
+        import io
+        import zipfile
+
         filename = f"{base_name}.zip"
         out_path = LOG_ARCHIVE_DIR / filename
         # create a zip containing a CSV of logs
-        with zipfile.ZipFile(out_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             sio = io.StringIO()
             writer = csv.writer(sio)
-            writer.writerow(['ts', 'level', 'msg', 'extra'])
+            writer.writerow(["ts", "level", "msg", "extra"])
             for it in filtered:
-                extra = it.get('extra') if isinstance(it.get('extra'), (dict, list)) else {k: v for k, v in it.items() if k not in ('ts', 'level', 'msg')}
-                writer.writerow([it.get('ts', ''), it.get('level', ''), it.get('msg', ''), json.dumps(extra, ensure_ascii=False)])
+                extra = (
+                    it.get("extra")
+                    if isinstance(it.get("extra"), (dict, list))
+                    else {
+                        k: v for k, v in it.items() if k not in ("ts", "level", "msg")
+                    }
+                )
+                writer.writerow(
+                    [
+                        it.get("ts", ""),
+                        it.get("level", ""),
+                        it.get("msg", ""),
+                        json.dumps(extra, ensure_ascii=False),
+                    ]
+                )
             zf.writestr(f"{base_name}.csv", sio.getvalue())
 
     # optionally clear live logs
     if req_clear_after:
         try:
             app_logger.clear_logs()
-            app_logger.info('Logs archived and cleared', username=session.username, archive=str(out_path))
+            app_logger.info(
+                "Logs archived and cleared",
+                username=session.username,
+                archive=str(out_path),
+            )
         except Exception:
             pass
 
@@ -268,26 +331,33 @@ async def archive_logs(
     return JSONResponse({"archive": str(out_path), "download_url": download_url})
 
 
-@app.get('/admin/archives/{filename}')
-async def serve_archive(filename: str, session: auth.SessionData = Depends(auth.require_auth)):
+@app.get("/admin/archives/{filename}")
+async def serve_archive(
+    filename: str, session: auth.SessionData = Depends(auth.require_auth)
+):
     target = config.LOG_ARCHIVE_DIR / filename
     try:
         target_resolved = target.resolve()
         root = config.LOG_ARCHIVE_DIR.resolve()
     except Exception:
-        raise HTTPException(status_code=404, detail='not found')
+        raise HTTPException(status_code=404, detail="not found")
     if not str(target_resolved).startswith(str(root)):
-        raise HTTPException(status_code=403, detail='access denied')
+        raise HTTPException(status_code=403, detail="access denied")
     if not target_resolved.exists():
-        raise HTTPException(status_code=404, detail='not found')
-    mime = mimetypes.guess_type(str(target_resolved))[0] or 'application/octet-stream'
-    return FileResponse(path=str(target_resolved), media_type=mime, filename=target_resolved.name)
+        raise HTTPException(status_code=404, detail="not found")
+    mime = mimetypes.guess_type(str(target_resolved))[0] or "application/octet-stream"
+    return FileResponse(
+        path=str(target_resolved), media_type=mime, filename=target_resolved.name
+    )
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _relay_headers() -> dict:
-    return {"Authorization": f"Bearer {config.RELAY_TOKEN}"} if config.RELAY_TOKEN else {}
+    return (
+        {"Authorization": f"Bearer {config.RELAY_TOKEN}"} if config.RELAY_TOKEN else {}
+    )
 
 
 def _restart_server() -> None:
@@ -297,12 +367,16 @@ def _restart_server() -> None:
 
 # ── UI ────────────────────────────────────────────────────────────────────────
 
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("index.html", {"request": request, "app_name": config.APP_NAME})
+    return templates.TemplateResponse(
+        "index.html", {"request": request, "app_name": config.APP_NAME}
+    )
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
+
 
 class LoginRequest(BaseModel):
     username: str
@@ -314,7 +388,7 @@ class ArchiveRequest(BaseModel):
     level: Optional[str] = None
     start: Optional[str] = None
     end: Optional[str] = None
-    format: str = 'zip'
+    format: str = "zip"
     clear_after: bool = False
 
 
@@ -323,23 +397,39 @@ async def login(body: LoginRequest) -> JSONResponse:
     user = auth.verify_user(body.username, body.password)
     if not user:
         app_logger.warn("Failed login attempt", username=body.username)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password.")
-    token = auth.create_session(body.username, user["role"], user.get("display_name", body.username))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password.",
+        )
+    token = auth.create_session(
+        body.username, user["role"], user.get("display_name", body.username)
+    )
     app_logger.info("Login", username=body.username, role=user["role"])
-    return JSONResponse({"token": token, "username": body.username, "role": user["role"], "display_name": user.get("display_name", body.username)})
+    return JSONResponse(
+        {
+            "token": token,
+            "username": body.username,
+            "role": user["role"],
+            "display_name": user.get("display_name", body.username),
+        }
+    )
 
 
 @app.post("/auth/logout")
-async def logout(session: auth.SessionData = Depends(auth.require_auth)) -> JSONResponse:
+async def logout(
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
     app_logger.info("Logout", username=session.username)
     return JSONResponse({"status": "logged out"})
 
 
 # ── Server status ─────────────────────────────────────────────────────────────
 
+
 @app.get("/status")
 async def server_status() -> JSONResponse:
     import socket as _sock
+
     hostname = _sock.gethostname()
     try:
         s = _sock.socket(_sock.AF_INET, _sock.SOCK_DGRAM)
@@ -348,16 +438,18 @@ async def server_status() -> JSONResponse:
         s.close()
     except Exception:
         local_ip = "127.0.0.1"
-    return JSONResponse({
-        "role":        _server_role,
-        "leader_addr": list(_leader_addr) if _leader_addr else None,
-        "hostname":    hostname,
-        "local_ip":    local_ip,
-        "port":        config.APP_PORT,
-    })
+    return JSONResponse(
+        {
+            "role": _server_role,
+            "leader_addr": list(_leader_addr) if _leader_addr else None,
+            "hostname": hostname,
+            "local_ip": local_ip,
+            "port": config.APP_PORT,
+        }
+    )
 
 
-@app.get('/download/{token}')
+@app.get("/download/{token}")
 async def download_signed(token: str):
     """Serve a signed short-lived download token without requiring auth.
 
@@ -368,7 +460,7 @@ async def download_signed(token: str):
     except Exception:
         raise HTTPException(status_code=404, detail="invalid or expired token")
 
-    rel_path = payload.get('path')
+    rel_path = payload.get("path")
     if not rel_path:
         raise HTTPException(status_code=404, detail="invalid token payload")
 
@@ -385,10 +477,12 @@ async def download_signed(token: str):
         raise HTTPException(status_code=404, detail="file not found")
 
     mime = mimetypes.guess_type(str(target_resolved))[0] or "application/octet-stream"
-    return FileResponse(path=str(target_resolved), media_type=mime, filename=target_resolved.name)
+    return FileResponse(
+        path=str(target_resolved), media_type=mime, filename=target_resolved.name
+    )
 
 
-@app.post('/admin/templates/import')
+@app.post("/admin/templates/import")
 async def import_templates_endpoint(
     body: ImportTemplatesRequest,
     session: auth.SessionData = Depends(auth.require_auth),
@@ -400,56 +494,82 @@ async def import_templates_endpoint(
     - `dry_run`: when true, only report what would be done
     """
     root = config.BASE_DIR
-    src = root / 'templates' / 'docs' / 'source_documents'
-    dst = root / 'templates' / 'certs'
-    docx_files = sorted([p.name for p in src.glob('*.docx')]) if src.exists() else []
-    cert_files = sorted([p.name for p in dst.glob('*.html')]) if dst.exists() else []
+    src = root / "templates" / "docs" / "source_documents"
+    dst = root / "templates" / "certs"
+    docx_files = sorted([p.name for p in src.glob("*.docx")]) if src.exists() else []
+    cert_files = sorted([p.name for p in dst.glob("*.html")]) if dst.exists() else []
 
-    result = {'docx_count': len(docx_files), 'docx_files': docx_files, 'cert_count': len(cert_files), 'certs': cert_files, 'actions': []}
+    result = {
+        "docx_count": len(docx_files),
+        "docx_files": docx_files,
+        "cert_count": len(cert_files),
+        "certs": cert_files,
+        "actions": [],
+    }
 
     if body.dry_run:
         # simulate placeholder injection if requested
         if body.inject:
             try:
                 import tools.auto_inject_placeholders as injector
+
                 simulated = []
-                for p in sorted(dst.glob('*.html')):
+                for p in sorted(dst.glob("*.html")):
                     res = injector.simulate_inject_into_file(p)
-                    if res.get('patched'):
+                    if res.get("patched"):
                         # include up to first 3 replacements as preview
-                        simulated.append({'file': p.name, 'replacements': res.get('replacements')[:3]})
-                result['simulated_changes'] = simulated
+                        simulated.append(
+                            {
+                                "file": p.name,
+                                "replacements": res.get("replacements")[:3],
+                            }
+                        )
+                result["simulated_changes"] = simulated
             except Exception as exc:
-                app_logger.error('Placeholder simulation failed', exc=exc, username=session.username)
-                raise HTTPException(status_code=500, detail=f'Simulation failed: {exc}')
-        result['actions'].append('dry_run')
+                app_logger.error(
+                    "Placeholder simulation failed", exc=exc, username=session.username
+                )
+                raise HTTPException(status_code=500, detail=f"Simulation failed: {exc}")
+        result["actions"].append("dry_run")
         return JSONResponse(result)
 
     # perform actions
     if body.convert:
         try:
             import tools.import_templates as importer
+
             importer.main()
-            result['actions'].append('converted_docx')
-            app_logger.info('Templates converted', username=session.username, count=len(docx_files))
+            result["actions"].append("converted_docx")
+            app_logger.info(
+                "Templates converted", username=session.username, count=len(docx_files)
+            )
         except Exception as exc:
-            app_logger.error('Template conversion failed', exc=exc, username=session.username)
-            raise HTTPException(status_code=500, detail=f'Conversion failed: {exc}')
+            app_logger.error(
+                "Template conversion failed", exc=exc, username=session.username
+            )
+            raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
 
     if body.inject:
         try:
             import tools.auto_inject_placeholders as injector
+
             injector.main()
-            result['actions'].append('injected_placeholders')
-            app_logger.info('Placeholder injection completed', username=session.username, count=len(cert_files))
+            result["actions"].append("injected_placeholders")
+            app_logger.info(
+                "Placeholder injection completed",
+                username=session.username,
+                count=len(cert_files),
+            )
         except Exception as exc:
-            app_logger.error('Placeholder injection failed', exc=exc, username=session.username)
-            raise HTTPException(status_code=500, detail=f'Injection failed: {exc}')
+            app_logger.error(
+                "Placeholder injection failed", exc=exc, username=session.username
+            )
+            raise HTTPException(status_code=500, detail=f"Injection failed: {exc}")
 
     return JSONResponse(result)
 
 
-@app.post('/admin/templates/apply')
+@app.post("/admin/templates/apply")
 async def apply_templates_endpoint(
     body: ApplyTemplatesRequest,
     session: auth.SessionData = Depends(auth.require_auth),
@@ -461,54 +581,63 @@ async def apply_templates_endpoint(
     - `convert`: when true, run the DOCX->HTML converter first.
     """
     root = config.BASE_DIR
-    src = root / 'templates' / 'docs' / 'source_documents'
-    dst = root / 'templates' / 'certs'
+    src = root / "templates" / "docs" / "source_documents"
+    dst = root / "templates" / "certs"
 
-    result = {'requested': body.dict(), 'patched': [], 'skipped': [], 'errors': {}}
+    result = {"requested": body.dict(), "patched": [], "skipped": [], "errors": {}}
 
     if body.convert:
         try:
             import tools.import_templates as importer
+
             importer.main()
-            app_logger.info('Templates converted (apply)', username=session.username)
+            app_logger.info("Templates converted (apply)", username=session.username)
         except Exception as exc:
-            app_logger.error('Conversion (apply) failed', exc=exc, username=session.username)
-            raise HTTPException(status_code=500, detail=f'Conversion failed: {exc}')
+            app_logger.error(
+                "Conversion (apply) failed", exc=exc, username=session.username
+            )
+            raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
 
     try:
         import tools.auto_inject_placeholders as injector
     except Exception as exc:
-        app_logger.error('Injector import failed', exc=exc, username=session.username)
-        raise HTTPException(status_code=500, detail=f'Injector unavailable: {exc}')
+        app_logger.error("Injector import failed", exc=exc, username=session.username)
+        raise HTTPException(status_code=500, detail=f"Injector unavailable: {exc}")
 
     targets = []
     if body.apply_all:
-        targets = sorted(dst.glob('*.html'))
+        targets = sorted(dst.glob("*.html"))
     elif body.files:
         for fn in body.files:
             p = dst / fn
             targets.append(p)
     else:
-        raise HTTPException(status_code=400, detail='No files specified and apply_all is false')
+        raise HTTPException(
+            status_code=400, detail="No files specified and apply_all is false"
+        )
 
     for p in targets:
         try:
             if not p.exists():
-                result['skipped'].append(str(p.name))
+                result["skipped"].append(str(p.name))
                 continue
             ok = injector.inject_into_file(p)
             if ok:
-                result['patched'].append(str(p.name))
+                result["patched"].append(str(p.name))
             else:
-                result['skipped'].append(str(p.name))
+                result["skipped"].append(str(p.name))
         except Exception as exc:
-            result['errors'][str(p.name)] = str(exc)
+            result["errors"][str(p.name)] = str(exc)
 
-    app_logger.info('Apply templates completed', username=session.username, patched=result['patched'])
+    app_logger.info(
+        "Apply templates completed",
+        username=session.username,
+        patched=result["patched"],
+    )
     return JSONResponse(result)
 
 
-@app.post('/admin/templates/undo')
+@app.post("/admin/templates/undo")
 async def undo_templates_endpoint(
     body: UndoTemplatesRequest,
     session: auth.SessionData = Depends(auth.require_auth),
@@ -520,48 +649,59 @@ async def undo_templates_endpoint(
     Restores content from `file.html.bak` -> `file.html` and removes the `.bak` file.
     """
     root = config.BASE_DIR
-    dst = root / 'templates' / 'certs'
+    dst = root / "templates" / "certs"
 
-    result = {'requested': body.dict(), 'restored': [], 'skipped': [], 'errors': {}}
+    result = {"requested": body.dict(), "restored": [], "skipped": [], "errors": {}}
 
     targets = []
     if body.undo_all:
-        targets = sorted(dst.glob('*.html.bak'))
+        targets = sorted(dst.glob("*.html.bak"))
     elif body.files:
         for fn in body.files:
             p = dst / fn
-            targets.append(p.with_suffix(p.suffix + '.bak'))
+            targets.append(p.with_suffix(p.suffix + ".bak"))
     else:
-        raise HTTPException(status_code=400, detail='No files specified and undo_all is false')
+        raise HTTPException(
+            status_code=400, detail="No files specified and undo_all is false"
+        )
 
     for bak in targets:
         try:
             if not bak.exists():
-                result['skipped'].append(str(bak.name))
+                result["skipped"].append(str(bak.name))
                 continue
-            orig_path = Path(str(bak)[:-4]) if str(bak).endswith('.bak') else bak.with_suffix('')
-            data = bak.read_text(encoding='utf-8')
-            orig_path.write_text(data, encoding='utf-8')
+            orig_path = (
+                Path(str(bak)[:-4])
+                if str(bak).endswith(".bak")
+                else bak.with_suffix("")
+            )
+            data = bak.read_text(encoding="utf-8")
+            orig_path.write_text(data, encoding="utf-8")
             try:
                 bak.unlink()
             except Exception:
                 pass
-            result['restored'].append(str(orig_path.name))
+            result["restored"].append(str(orig_path.name))
         except Exception as exc:
-            result['errors'][str(bak.name)] = str(exc)
+            result["errors"][str(bak.name)] = str(exc)
 
-    app_logger.info('Undo templates completed', username=session.username, restored=result['restored'])
+    app_logger.info(
+        "Undo templates completed",
+        username=session.username,
+        restored=result["restored"],
+    )
     return JSONResponse(result)
 
 
 # ── Document printing ─────────────────────────────────────────────────────────
 
+
 class DocumentRequest(BaseModel):
-    doc_type:    str        # "clearance" | "residency" | "indigency"
-    full_name:   str
-    address:     str
-    purpose:     str
-    extra:       dict = {}  # any additional fields per doc type
+    doc_type: str  # "clearance" | "residency" | "indigency"
+    full_name: str
+    address: str
+    purpose: str
+    extra: dict = {}  # any additional fields per doc type
 
 
 @app.post("/documents/print")
@@ -575,7 +715,9 @@ async def print_document(
     """
     allowed = {"clearance", "residency", "indigency"}
     if body.doc_type not in allowed:
-        raise HTTPException(status_code=400, detail=f"doc_type must be one of: {allowed}")
+        raise HTTPException(
+            status_code=400, detail=f"doc_type must be one of: {allowed}"
+        )
 
     template_name = f"docs/{body.doc_type}.html"
     try:
@@ -601,6 +743,7 @@ async def print_document(
 
 
 # ── Admin — logs ──────────────────────────────────────────────────────────────
+
 
 @app.get("/admin/logs")
 async def get_logs(
@@ -660,7 +803,10 @@ async def get_logs(
             continue
         if q_lower:
             # search in message and JSON representation
-            if not ((e.get("msg") and q_lower in str(e.get("msg")).lower()) or q_lower in json.dumps(e).lower()):
+            if not (
+                (e.get("msg") and q_lower in str(e.get("msg")).lower())
+                or q_lower in json.dumps(e).lower()
+            ):
                 continue
         filtered.append(e)
 
@@ -671,25 +817,45 @@ async def get_logs(
     items = filtered[start_i : start_i + per_page]
 
     if format and format.lower() == "csv":
-        import csv, io
+        import csv
+        import io
 
         sio = io.StringIO()
         writer = csv.writer(sio)
         writer.writerow(["ts", "level", "msg", "extra"])
         for it in items:
-            extra = it.get("extra") if isinstance(it.get("extra"), (dict, list)) else {k: v for k, v in it.items() if k not in ("ts", "level", "msg")}
-            writer.writerow([it.get("ts", ""), it.get("level", ""), it.get("msg", ""), json.dumps(extra, ensure_ascii=False)])
+            extra = (
+                it.get("extra")
+                if isinstance(it.get("extra"), (dict, list))
+                else {k: v for k, v in it.items() if k not in ("ts", "level", "msg")}
+            )
+            writer.writerow(
+                [
+                    it.get("ts", ""),
+                    it.get("level", ""),
+                    it.get("msg", ""),
+                    json.dumps(extra, ensure_ascii=False),
+                ]
+            )
         text = sio.getvalue()
         from fastapi.responses import Response
 
         fn = f"pitogo_logs_{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}.csv"
-        return Response(content=text, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=\"{fn}\""})
+        return Response(
+            content=text,
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{fn}"'},
+        )
 
-    return JSONResponse({"items": items, "page": page, "per_page": per_page, "total": total})
+    return JSONResponse(
+        {"items": items, "page": page, "per_page": per_page, "total": total}
+    )
 
 
 @app.delete("/admin/logs")
-async def clear_logs(session: auth.SessionData = Depends(auth.require_auth)) -> JSONResponse:
+async def clear_logs(
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
     app_logger.clear_logs()
     app_logger.info("Logs cleared", username=session.username)
     return JSONResponse({"status": "cleared"})
@@ -711,49 +877,79 @@ async def report_logs(
 
     payload = {
         "username": session.username,
-        "machine":  platform.node(),
-        "message":  body.message,
-        "logs":     recent,
-        "ts":       time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "machine": platform.node(),
+        "message": body.message,
+        "logs": recent,
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }
 
     if config.RELAY_URL:
         try:
             async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(f"{config.RELAY_URL}/logs", json=payload, headers=_relay_headers())
+                r = await client.post(
+                    f"{config.RELAY_URL}/logs", json=payload, headers=_relay_headers()
+                )
                 r.raise_for_status()
         except Exception as exc:
             app_logger.error("Failed to send logs to relay", exc=exc)
-            raise HTTPException(status_code=502, detail=f"Support server unreachable: {exc}")
+            raise HTTPException(
+                status_code=502, detail=f"Support server unreachable: {exc}"
+            )
         app_logger.info("Log report sent via relay", username=session.username)
         return JSONResponse({"status": "sent", "via": "relay", "lines": len(recent)})
 
-    raise HTTPException(status_code=503, detail="No support server configured. Use the Support button to connect first.")
+    raise HTTPException(
+        status_code=503,
+        detail="No support server configured. Use the Support button to connect first.",
+    )
 
 
 # ── Admin — relay ─────────────────────────────────────────────────────────────
+
 
 class RelayConnectRequest(BaseModel):
     url: str
 
 
 @app.get("/admin/relay/status")
-async def relay_status(session: auth.SessionData = Depends(auth.require_auth)) -> JSONResponse:
+async def relay_status(
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
     if not config.RELAY_URL:
-        return JSONResponse({"relay_configured": False, "online": False, "update_available": False})
+        return JSONResponse(
+            {"relay_configured": False, "online": False, "update_available": False}
+        )
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             r = await client.get(f"{config.RELAY_URL}/ping")
             r.raise_for_status()
             data = r.json()
-        return JSONResponse({"relay_configured": True, "online": True, **data, "saved_url": config.RELAY_URL})
+        return JSONResponse(
+            {
+                "relay_configured": True,
+                "online": True,
+                **data,
+                "saved_url": config.RELAY_URL,
+            }
+        )
     except Exception as exc:
-        return JSONResponse({"relay_configured": True, "online": False, "update_available": False, "message": str(exc), "saved_url": config.RELAY_URL})
+        return JSONResponse(
+            {
+                "relay_configured": True,
+                "online": False,
+                "update_available": False,
+                "message": str(exc),
+                "saved_url": config.RELAY_URL,
+            }
+        )
 
 
 @app.post("/admin/relay/connect")
-async def relay_connect(body: RelayConnectRequest, session: auth.SessionData = Depends(auth.require_auth)) -> JSONResponse:
+async def relay_connect(
+    body: RelayConnectRequest, session: auth.SessionData = Depends(auth.require_auth)
+) -> JSONResponse:
     import re
+
     url = body.url.strip().rstrip("/")
     if not re.match(r"^https?://[^\s/$.?#].[^\s]*$", url):
         raise HTTPException(status_code=422, detail="Invalid URL format.")
@@ -775,7 +971,9 @@ async def relay_connect(body: RelayConnectRequest, session: auth.SessionData = D
 
 
 @app.post("/admin/relay/disconnect")
-async def relay_disconnect(session: auth.SessionData = Depends(auth.require_auth)) -> JSONResponse:
+async def relay_disconnect(
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
     config.RELAY_URL = ""
     _update_env(config.BASE_DIR / ".env", "RELAY_URL", "")
     app_logger.info("Relay disconnected", username=session.username)
@@ -784,18 +982,29 @@ async def relay_disconnect(session: auth.SessionData = Depends(auth.require_auth
 
 # ── Admin — updates ───────────────────────────────────────────────────────────
 
+
 @app.get("/admin/update/check")
-async def update_check(session: auth.SessionData = Depends(auth.require_auth)) -> JSONResponse:
+async def update_check(
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
     if config.RELAY_URL:
         try:
             async with httpx.AsyncClient(timeout=5) as client:
                 r = await client.get(f"{config.RELAY_URL}/ping")
                 r.raise_for_status()
                 data = r.json()
-            return JSONResponse({"available": data.get("update_available", False), "source": "relay", "version": data.get("version")})
+            return JSONResponse(
+                {
+                    "available": data.get("update_available", False),
+                    "source": "relay",
+                    "version": data.get("version"),
+                }
+            )
         except Exception as exc:
             raise HTTPException(status_code=503, detail=f"Relay offline: {exc}")
-    return JSONResponse({"available": bool(config.UPDATE_URL), "source": "static", "version": None})
+    return JSONResponse(
+        {"available": bool(config.UPDATE_URL), "source": "static", "version": None}
+    )
 
 
 @app.post("/admin/update/apply")
@@ -811,7 +1020,9 @@ async def update_apply(
     patch_path = config.BASE_DIR / "patch.zip"
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            r = await client.get(url, headers=_relay_headers() if config.RELAY_URL else {})
+            r = await client.get(
+                url, headers=_relay_headers() if config.RELAY_URL else {}
+            )
             r.raise_for_status()
         patch_path.write_bytes(r.content)
     except Exception as exc:
@@ -824,10 +1035,14 @@ async def update_apply(
     try:
         sig_url = url + ".sig"
         async with httpx.AsyncClient(timeout=10) as client:
-            r2 = await client.get(sig_url, headers=_relay_headers() if config.RELAY_URL else {})
+            r2 = await client.get(
+                sig_url, headers=_relay_headers() if config.RELAY_URL else {}
+            )
             if r2.status_code == 200 and r2.content:
                 sig_path.write_bytes(r2.content)
-                sig_ok = patch_signing.verify_signature(patch_path.read_bytes(), r2.content)
+                sig_ok = patch_signing.verify_signature(
+                    patch_path.read_bytes(), r2.content
+                )
     except Exception:
         sig_ok = False
 
@@ -835,8 +1050,12 @@ async def update_apply(
         patch_path.unlink(missing_ok=True)
         if sig_path.exists():
             sig_path.unlink(missing_ok=True)
-        app_logger.error("Patch signature verification failed or missing", username=session.username)
-        raise HTTPException(status_code=400, detail="Patch signature missing or verification failed.")
+        app_logger.error(
+            "Patch signature verification failed or missing", username=session.username
+        )
+        raise HTTPException(
+            status_code=400, detail="Patch signature missing or verification failed."
+        )
 
     updated, skipped = [], []
     try:
@@ -862,17 +1081,25 @@ async def update_apply(
     if config.RELAY_URL:
         try:
             async with httpx.AsyncClient(timeout=8) as client:
-                await client.post(f"{config.RELAY_URL}/update/consumed", headers=_relay_headers())
+                await client.post(
+                    f"{config.RELAY_URL}/update/consumed", headers=_relay_headers()
+                )
         except Exception:
             pass
 
-    return JSONResponse({
-        "status": "applied",
-        "updated": updated,
-        "skipped": skipped,
-        "restart_scheduled": bool(updated),
-        "message": f"{len(updated)} file(s) updated. Refresh in a moment." if updated else "No files were updated.",
-    })
+    return JSONResponse(
+        {
+            "status": "applied",
+            "updated": updated,
+            "skipped": skipped,
+            "restart_scheduled": bool(updated),
+            "message": (
+                f"{len(updated)} file(s) updated. Refresh in a moment."
+                if updated
+                else "No files were updated."
+            ),
+        }
+    )
 
 
 # ── Demo preview (dev-only) ─────────────────────────────────────────────────
@@ -903,10 +1130,14 @@ async def demo_preview(doc: str = "clearance") -> HTMLResponse:
 @app.get("/design", response_class=HTMLResponse)
 async def design_page(request: Request) -> HTMLResponse:
     """Render the main UI shell server-side for visual review (no auth required)."""
-    return templates.TemplateResponse("index.html", {"request": request, "app_name": config.APP_NAME, "demo_show_app": True})
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "app_name": config.APP_NAME, "demo_show_app": True},
+    )
 
 
 # ── Utility ───────────────────────────────────────────────────────────────────
+
 
 def _update_env(env_path: Path, key: str, value: str) -> None:
     if env_path.exists():
@@ -930,4 +1161,5 @@ def _update_env(env_path: Path, key: str, value: str) -> None:
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("app:app", host="0.0.0.0", port=config.APP_PORT, reload=False)

@@ -5,12 +5,12 @@ what was said earlier in the conversation — just like Copilot does.
 Sessions are persisted to disk so ATLAS remembers across restarts.
 """
 
-import uuid
-import time
 import json
+import time
+import uuid
 from collections import deque
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List
 
 # Max messages to keep per session (older ones roll off)
 MAX_HISTORY = 40
@@ -18,6 +18,7 @@ MAX_HISTORY = 40
 SESSION_TTL = 7200
 # How many messages to save to disk per session
 PERSIST_LIMIT = 20
+
 
 # Persist file — lives next to secure/ folder
 def _session_file() -> Path:
@@ -29,6 +30,7 @@ def _session_file() -> Path:
         if p.parent.exists():
             return p
     return candidates[0]
+
 
 # { session_id: {"messages": deque, "last_active": timestamp} }
 _sessions: Dict[str, dict] = {}

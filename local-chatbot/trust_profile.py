@@ -16,7 +16,9 @@ def get_secure_atlas_folder() -> Optional[Path]:
 def get_trust_file() -> Path:
     secure_folder = get_secure_atlas_folder()
     if secure_folder is None:
-        raise RuntimeError("Secure ATLAS folder not available for trust profile storage")
+        raise RuntimeError(
+            "Secure ATLAS folder not available for trust profile storage"
+        )
     return secure_folder / TRUST_PROFILE_NAME
 
 

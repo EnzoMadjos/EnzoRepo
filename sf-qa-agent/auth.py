@@ -21,10 +21,8 @@ import secrets
 import time
 from typing import Optional
 
-from fastapi import Header, HTTPException, status
-
-
 import config
+from fastapi import Header, HTTPException, status
 
 
 @dataclasses.dataclass
@@ -52,6 +50,7 @@ def _expire_seconds() -> float:
 # ---------------------------------------------------------------------------
 # Session management
 # ---------------------------------------------------------------------------
+
 
 def create_session(
     username: str,
@@ -97,6 +96,7 @@ def invalidate_session(token: str) -> None:
 # ---------------------------------------------------------------------------
 # FastAPI dependency — returns the SessionData for the request
 # ---------------------------------------------------------------------------
+
 
 def require_auth(authorization: Optional[str] = Header(default=None)) -> SessionData:
     if not authorization or not authorization.startswith("Bearer "):

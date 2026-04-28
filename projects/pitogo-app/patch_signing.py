@@ -3,16 +3,16 @@ patch_signing.py — simple RSA SHA256 signature verification helper.
 
 Expect a PEM-encoded public key at `config.PATCH_PUBLIC_KEY_PATH`.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
 
+import config
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
-
-import config
 
 
 def load_public_key() -> Optional[object]:
@@ -32,7 +32,9 @@ def verify_signature(data: bytes, signature: bytes) -> bool:
         key.verify(
             signature,
             data,
-            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH
+            ),
             hashes.SHA256(),
         )
         return True
