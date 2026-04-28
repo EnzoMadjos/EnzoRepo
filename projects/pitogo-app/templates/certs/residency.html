@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Certificate of Residency</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 36px; }
+    .header { text-align:center; margin-bottom:24px }
+    .control { text-align:right; font-size:0.9rem; color:#666 }
+    .content { margin-top:18px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Certificate of Residency</h1>
+    <div class="control">Control #: {{ control_number }}</div>
+  </div>
+  <div class="content">
+    <p>This certifies that <strong>{{ resident.first_name }} {{ resident.last_name }}</strong> is a resident of <strong>{{ household.address_line if household else '' }}</strong>.</p>
+    <p>Issued by: {{ issued_by }} on {{ issued_at }}</p>
+  </div>
+</body>
+</html>
