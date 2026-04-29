@@ -15,6 +15,25 @@
   .tb-username{font-size:.78rem;color:rgba(255,255,255,.82)}
   .tb-logout{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.74rem}
   .tb-logout:hover{background:rgba(255,255,255,.12)}
+  .tb-feedback-btn{background:#FCD116;border:none;color:#0038A8;padding:5px 11px;border-radius:20px;cursor:pointer;font-size:.74rem;font-weight:700;letter-spacing:.02em;transition:opacity .15s}
+  .tb-feedback-btn:hover{opacity:.88}
+  /* Demo banner */
+  .demo-banner{display:none;background:#FCD116;color:#0038A8;font-size:.78rem;font-weight:700;text-align:center;padding:5px 16px;border-bottom:2px solid #CE1126;position:sticky;top:54px;z-index:49}
+  /* Feedback modal */
+  .fb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center}
+  .fb-overlay.open{display:flex}
+  .fb-card{background:#fff;border-radius:14px;padding:28px 24px 20px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.22);position:relative}
+  .fb-card h3{margin:0 0 4px;font-size:1.1rem;color:#0038A8;font-weight:800}
+  .fb-card p{margin:0 0 16px;font-size:.82rem;color:#666}
+  .fb-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;line-height:1}
+  .fb-stars{display:flex;gap:6px;margin-bottom:14px}
+  .fb-star{font-size:1.6rem;cursor:pointer;color:#ccc;transition:color .1s}
+  .fb-star.lit{color:#FCD116}
+  .fb-field{width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:.85rem;margin-bottom:10px;font-family:inherit}
+  .fb-field:focus{outline:none;border-color:#0038A8}
+  .fb-submit{background:#0038A8;color:#fff;border:none;padding:9px 20px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:700;width:100%}
+  .fb-submit:hover{background:#0030a0}
+  .fb-msg{font-size:.8rem;margin-top:8px;text-align:center}
 </style>
 <div class="app-topbar">
   <a class="tb-brand" href="/ui/dashboard">
@@ -36,7 +55,29 @@
   </nav>
   <div class="tb-right">
     <span class="tb-username" id="tb-uname"></span>
-    <button class="tb-logout" onclick="(function(){localStorage.removeItem('pitogo_token');localStorage.removeItem('pitogo_username');window.location.href='/'})()">Log out</button>
+    <button class="tb-feedback-btn" onclick="openFeedback()">&#128172; Feedback</button>
+    <button class="tb-logout" onclick="(function(){localStorage.removeItem('pitogo_token');localStorage.removeItem('pitogo_username');window.location.href='/'})()">ログ out</button>
+  </div>
+</div>
+<!-- Demo banner -->
+<div class="demo-banner" id="demo-banner">&#128270; Demo Mode &mdash; You are exploring as a guest. <a href="/" style="color:#CE1126;font-weight:800;text-decoration:none">Log in</a> for full access.</div>
+<!-- Feedback modal -->
+<div class="fb-overlay" id="fb-overlay" onclick="if(event.target===this)closeFeedback()">
+  <div class="fb-card">
+    <button class="fb-close" onclick="closeFeedback()">&times;</button>
+    <h3>&#128172; Share Your Feedback</h3>
+    <p>Help us improve the Pitogo document system.</p>
+    <div class="fb-stars" id="fb-stars">
+      <span class="fb-star" data-v="1" onclick="setRating(1)">&#9733;</span>
+      <span class="fb-star" data-v="2" onclick="setRating(2)">&#9733;</span>
+      <span class="fb-star" data-v="3" onclick="setRating(3)">&#9733;</span>
+      <span class="fb-star" data-v="4" onclick="setRating(4)">&#9733;</span>
+      <span class="fb-star" data-v="5" onclick="setRating(5)">&#9733;</span>
+    </div>
+    <input class="fb-field" id="fb-name" type="text" placeholder="Your name (optional)" />
+    <textarea class="fb-field" id="fb-msg" rows="4" placeholder="What did you think? Any suggestions?"></textarea>
+    <button class="fb-submit" onclick="submitFeedback()">Submit Feedback</button>
+    <div class="fb-msg" id="fb-status"></div>
   </div>
 </div>
 <script>
@@ -48,5 +89,53 @@
   document.querySelectorAll('.tb-nav a').forEach(function(a){
     if (a.getAttribute('href') === p) a.classList.add('tb-active');
   });
+  // Demo banner
+  if (u === 'Demo Visitor') {
+    var b = document.getElementById('demo-banner');
+    if (b) b.style.display = 'block';
+    // Hide links irrelevant in demo (users, audit)
+    document.querySelectorAll('.tb-nav a[href="/ui/users"], .tb-nav a[href="/ui/audit"]').forEach(function(a){
+      a.style.display = 'none';
+    });
+  }
 })();
+var _fbRating = 0;
+function openFeedback(){
+  _fbRating = 0;
+  document.querySelectorAll('.fb-star').forEach(function(s){s.classList.remove('lit');});
+  document.getElementById('fb-name').value = '';
+  document.getElementById('fb-msg').value = '';
+  document.getElementById('fb-status').textContent = '';
+  document.getElementById('fb-overlay').classList.add('open');
+}
+function closeFeedback(){
+  document.getElementById('fb-overlay').classList.remove('open');
+}
+function setRating(v){
+  _fbRating = v;
+  document.querySelectorAll('.fb-star').forEach(function(s){
+    s.classList.toggle('lit', parseInt(s.dataset.v) <= v);
+  });
+}
+function submitFeedback(){
+  var name = document.getElementById('fb-name').value.trim();
+  var msg = document.getElementById('fb-msg').value.trim();
+  var status = document.getElementById('fb-status');
+  if (!_fbRating) { status.style.color='#CE1126'; status.textContent='Please select a star rating.'; return; }
+  if (!msg) { status.style.color='#CE1126'; status.textContent='Please write a short message.'; return; }
+  status.style.color='#0038A8'; status.textContent='Submitting...';
+  fetch('/api/feedback', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name:name||null, rating:_fbRating, message:msg})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    status.style.color='#228822'; status.textContent='Thank you! Your feedback was submitted. ♥';
+    setTimeout(closeFeedback, 2200);
+  })
+  .catch(function(){
+    status.style.color='#CE1126'; status.textContent='Submission failed. Please try again.';
+  });
+}
 </script>

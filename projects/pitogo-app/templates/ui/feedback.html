@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }} — Feedback</title>
+  <style>
+    body{font-family:system-ui,'Segoe UI',Arial;background:#f5f7fa;color:#111;margin:0}
+    .page{padding:24px 28px}
+    h2{margin:0 0 20px;font-size:1.15rem;color:#1a1a2e}
+    .summary{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+    .sum-card{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:18px 22px;min-width:140px;text-align:center}
+    .sum-value{font-size:2rem;font-weight:800;color:#0038A8;line-height:1}
+    .sum-label{font-size:.72rem;font-weight:700;color:#6c757d;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+    .sum-stars{font-size:1.4rem;color:#FCD116;line-height:1;margin-top:2px}
+    .card{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:20px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #eee;padding:10px 12px;text-align:left;font-size:.86rem}
+    th{background:#f8f9fa;font-weight:700;font-size:.76rem;color:#6c757d;text-transform:uppercase;letter-spacing:.04em}
+    .stars{color:#FCD116;font-size:1rem}
+    .date{color:#aaa;font-size:.76rem;white-space:nowrap}
+    .name-badge{display:inline-block;background:#dce7f9;color:#0038A8;border-radius:5px;padding:2px 7px;font-size:.76rem;font-weight:700}
+    #refresh-btn{background:#0038A8;color:#fff;border:none;border-radius:7px;padding:6px 14px;cursor:pointer;font-size:.82rem;font-weight:600;float:right}
+    .empty{color:#aaa;font-style:italic;text-align:center;padding:28px 0;font-size:.88rem}
+    .avg-note{font-size:.72rem;color:#aaa}
+  </style>
+</head>
+<body>
+  {% include 'partials/topbar.html' %}
+  <div class="page">
+    <h2>Demo Feedback <button id="refresh-btn" onclick="load()">↻ Refresh</button></h2>
+
+    <div class="summary" id="summary"></div>
+
+    <div class="card">
+      <table id="fb-table">
+        <thead><tr><th>#</th><th>Rating</th><th>Name</th><th>Message</th><th>Submitted</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+  const token = localStorage.getItem('pitogo_token') || '';
+  const hdrs = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'};
+
+  function stars(n) {
+    return '★'.repeat(n) + '☆'.repeat(5 - n);
+  }
+
+  async function load() {
+    const tbody = document.querySelector('#fb-table tbody');
+    tbody.innerHTML = '<tr><td colspan=5 style="color:#aaa;text-align:center;padding:20px">Loading…</td></tr>';
+    try {
+      const r = await fetch('/api/feedback', {headers: hdrs});
+      if (!r.ok) { tbody.innerHTML = '<tr><td colspan=5 style="color:#CE1126;text-align:center">Not authorized or error loading</td></tr>'; return; }
+      const data = await r.json();
+
+      // Summary
+      const total = data.length;
+      const avg = total ? (data.reduce((s,f) => s + f.rating, 0) / total).toFixed(1) : '—';
+      const dist = [5,4,3,2,1].map(s => ({s, n: data.filter(f => f.rating === s).length}));
+      document.getElementById('summary').innerHTML = `
+        <div class="sum-card"><div class="sum-value">${total}</div><div class="sum-label">Responses</div></div>
+        <div class="sum-card"><div class="sum-value" style="color:#FCD116">${avg}</div><div class="sum-stars">★★★★★</div><div class="sum-label avg-note">Avg Rating</div></div>
+        ${dist.map(d => `<div class="sum-card"><div class="sum-stars" style="font-size:1rem">${'★'.repeat(d.s)}</div><div class="sum-value" style="font-size:1.4rem">${d.n}</div><div class="sum-label">${d.s} Star${d.s!==1?'s':''}</div></div>`).join('')}
+      `;
+
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan=5 class="empty">No feedback submitted yet. Share the demo link!</td></tr>';
+        return;
+      }
+      tbody.innerHTML = [...data].reverse().map(f => `<tr>
+        <td style="color:#aaa;font-size:.76rem">#${f.id}</td>
+        <td><span class="stars">${stars(f.rating)}</span></td>
+        <td><span class="name-badge">${f.name}</span></td>
+        <td>${f.message}</td>
+        <td class="date">${f.submitted_at}</td>
+      </tr>`).join('');
+    } catch(e) {
+      tbody.innerHTML = '<tr><td colspan=5 style="color:#CE1126;text-align:center">Network error</td></tr>';
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', load);
+  </script>
+</body>
+</html>

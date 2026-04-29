@@ -33,6 +33,7 @@ import patch_signing
 import utils
 from api.attachments import router as attachments_router
 from api.certificate_types import router as certificate_types_router
+from api.feedback import router as feedback_router
 from api.certificates import router as certificates_router
 from api.dashboard import router as dashboard_router
 from api.households import router as households_router
@@ -119,6 +120,7 @@ app.include_router(dashboard_router)
 app.include_router(households_router)
 app.include_router(attachments_router)
 app.include_router(users_router)
+app.include_router(feedback_router)
 
 
 @app.get("/ui/dashboard", response_class=HTMLResponse)
@@ -189,6 +191,21 @@ async def ui_audit(request: Request) -> HTMLResponse:
 async def ui_certificate_types(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         "ui/certificate_types.html", {"request": request, "app_name": config.APP_NAME}
+    )
+
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo_landing(request: Request) -> HTMLResponse:
+    """Public demo landing page — no login required."""
+    return templates.TemplateResponse(
+        "demo.html", {"request": request, "app_name": config.APP_NAME}
+    )
+
+
+@app.get("/ui/feedback", response_class=HTMLResponse)
+async def ui_feedback(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "ui/feedback.html", {"request": request, "app_name": config.APP_NAME}
     )
 
 

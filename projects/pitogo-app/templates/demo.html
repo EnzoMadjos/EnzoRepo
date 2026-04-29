@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }} — Try the Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+      background: linear-gradient(135deg, #0038A8 0%, #002d8a 50%, #001f6b 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: #fff;
+    }
+
+    /* Red stripe at top like a flag */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 5px;
+      background: #CE1126;
+      z-index: 10;
+    }
+
+    .card {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 20px;
+      padding: 48px 40px 40px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 16px 48px rgba(0,0,0,.35);
+    }
+
+    .seal-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .seal-wrap img {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+      border-radius: 50%;
+      border: 3px solid rgba(252,209,22,.6);
+      box-shadow: 0 0 24px rgba(252,209,22,.25);
+    }
+
+    .app-name {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -.01em;
+      margin-bottom: 4px;
+    }
+    .slogan {
+      font-size: .82rem;
+      color: #FCD116;
+      font-weight: 700;
+      font-style: italic;
+      margin-bottom: 6px;
+    }
+    .tagline {
+      font-size: .88rem;
+      color: rgba(255,255,255,.72);
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    .features {
+      list-style: none;
+      text-align: left;
+      margin-bottom: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .features li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: .86rem;
+      color: rgba(255,255,255,.88);
+    }
+    .features li .icon {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      background: rgba(252,209,22,.15);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .btn-demo {
+      width: 100%;
+      padding: 14px 24px;
+      background: #FCD116;
+      color: #0038A8;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .1s, box-shadow .1s;
+      box-shadow: 0 4px 16px rgba(252,209,22,.3);
+      margin-bottom: 12px;
+    }
+    .btn-demo:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(252,209,22,.4); }
+    .btn-demo:active { transform: translateY(0); }
+    .btn-demo:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+    .demo-note {
+      font-size: .74rem;
+      color: rgba(255,255,255,.5);
+      line-height: 1.5;
+    }
+
+    .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(0,56,168,.3);
+      border-top-color: #0038A8;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .err-msg {
+      margin-top: 10px;
+      color: #ffb3b8;
+      font-size: .8rem;
+      min-height: 18px;
+    }
+
+    .footer {
+      margin-top: 28px;
+      font-size: .72rem;
+      color: rgba(255,255,255,.35);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="seal-wrap">
+      <img src="/static/img/seal.png" alt="Barangay Pitogo Seal" onerror="this.style.display='none'" />
+    </div>
+
+    <div class="app-name">{{ app_name }}</div>
+    <div class="slogan">#Asenso Pitogo</div>
+    <div class="tagline">Barangay Document Management System<br>Municipality of Consolacion</div>
+
+    <ul class="features">
+      <li><span class="icon">📋</span> Issue barangay certificates &amp; clearances</li>
+      <li><span class="icon">👥</span> Manage residents and households</li>
+      <li><span class="icon">📄</span> Generate &amp; download official PDFs</li>
+      <li><span class="icon">📊</span> Live dashboard with stats</li>
+      <li><span class="icon">📎</span> Attach documents to any record</li>
+    </ul>
+
+    <button class="btn-demo" id="startBtn" onclick="startDemo()">
+      <span class="spinner" id="spin"></span>
+      Explore the Demo
+    </button>
+
+    <div class="demo-note">
+      No login required &mdash; you'll get a live demo session as a Clerk.<br>
+      Your inputs are real but may be reset periodically.
+    </div>
+    <div class="err-msg" id="err-msg"></div>
+  </div>
+
+  <div class="footer">Barangay Pitogo &bull; Municipality of Consolacion &bull; Cebu, Philippines</div>
+
+  <script>
+  async function startDemo() {
+    const btn = document.getElementById('startBtn');
+    const spin = document.getElementById('spin');
+    const err = document.getElementById('err-msg');
+    btn.disabled = true;
+    spin.style.display = 'inline-block';
+    err.textContent = '';
+    try {
+      const r = await fetch('/api/demo/start', {method: 'POST'});
+      const d = await r.json();
+      if (!r.ok) { err.textContent = d.detail || 'Could not start demo. Try again.'; btn.disabled = false; spin.style.display = 'none'; return; }
+      localStorage.setItem('pitogo_token', d.token);
+      localStorage.setItem('pitogo_username', d.username);
+      window.location.href = '/ui/dashboard';
+    } catch(e) {
+      err.textContent = 'Network error. Please try again.';
+      btn.disabled = false;
+      spin.style.display = 'none';
+    }
+  }
+  </script>
+</body>
+</html>
