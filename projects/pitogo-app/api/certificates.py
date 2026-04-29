@@ -428,6 +428,7 @@ def preview_certificate_with_overrides(
             issued_at=ci.issued_at.strftime("%B %d, %Y"),
             resident=resident_ctx,
             household=household_ctx,
+            certificate_type={"id": ct.id, "code": ct.code, "name": ct.name},
             meta=meta_ctx,
             **meta_ctx,
         )
@@ -666,6 +667,7 @@ def generate_certificate_file(
             issued_at=ci.issued_at.strftime("%B %d, %Y"),
             resident=resident_ctx,
             household=household_ctx,
+            certificate_type={"id": ct.id, "code": ct.code, "name": ct.name},
             meta=meta_ctx,
             **meta_ctx,
         )

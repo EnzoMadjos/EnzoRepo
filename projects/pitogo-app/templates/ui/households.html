@@ -16,10 +16,34 @@
     th,td{border-bottom:1px solid #eee;padding:9px 10px;text-align:left;font-size:.86rem}
     th{background:#f8f9fa;font-weight:700;font-size:.78rem;color:#6c757d;text-transform:uppercase;letter-spacing:.04em}
     #status{min-height:18px;font-size:.82rem;color:#6c757d;margin-top:4px}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal{background:#fff;border-radius:10px;padding:24px;width:420px;max-width:95vw}
+    .modal h3{margin:0 0 14px;font-size:1rem}
+    .form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+    .form-row label{font-size:.78rem;font-weight:700;color:#555}
+    .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   </style>
 </head>
 <body>
   {% include 'partials/topbar.html' %}
+
+  <!-- Edit modal -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal">
+      <h3>Edit Household</h3>
+      <div class="form-row"><label>Address Line *</label><input id="e-address" /></div>
+      <div class="form-row"><label>Barangay *</label><input id="e-barangay" /></div>
+      <div class="form-row"><label>City *</label><input id="e-city" /></div>
+      <div class="form-row"><label>ZIP</label><input id="e-zip" /></div>
+      <div id="edit-status" style="font-size:.82rem;color:#dc3545;min-height:16px"></div>
+      <div class="modal-footer">
+        <button onclick="closeEditModal()" style="background:#eee;color:#333;padding:8px 14px;border-radius:6px;border:none;cursor:pointer">Cancel</button>
+        <button class="btn-primary" onclick="saveHousehold()">Save</button>
+      </div>
+    </div>
+  </div>
+
   <div style="padding:20px 24px">
   <h2 style="margin:0 0 18px;font-size:1.15rem;color:#1a1a2e">Households</h2>
   <div class="card">
@@ -50,7 +74,7 @@
       const data = await r.json();
       if(!r.ok){ t.innerHTML = '<tr><td colspan=5 style="color:red">Error loading</td></tr>'; return; }
       if(!data.length){ t.innerHTML = '<tr><td colspan=5 style="color:#aaa">No households yet</td></tr>'; return; }
-      t.innerHTML = data.map(h => `<tr><td>${h.address_line}</td><td>${h.barangay}</td><td>${h.city}</td><td>${h.zip_code||'—'}</td><td><button class="btn-danger btn-sm" onclick="deleteHousehold('${h.id}')">Delete</button></td></tr>`).join('');
+      t.innerHTML = data.map(h => `<tr><td>${h.address_line}</td><td>${h.barangay}</td><td>${h.city}</td><td>${h.zip_code||'—'}</td><td style="display:flex;gap:6px"><button class="btn-primary btn-sm" onclick="openEditModal('${h.id}','${h.address_line.replace(/'/g,"\\'")}','${h.barangay.replace(/'/g,"\\'")}','${h.city.replace(/'/g,"\\'")}','${h.zip_code||''}')">Edit</button><button class="btn-danger btn-sm" onclick="deleteHousehold('${h.id}')">Delete</button></td></tr>`).join('');
     }catch(e){ t.innerHTML = '<tr><td colspan=5 style="color:red">Network error</td></tr>'; }
   }
 
@@ -77,6 +101,37 @@
     const r = await fetch('/api/households/'+id, {method:'DELETE', headers: hdrs});
     if(r.status===400){ const d = await r.json().catch(()=>({detail:'Has members'})); alert(d.detail); }
     listHouseholds();
+  }
+
+  let editId = null;
+  function openEditModal(id, address, barangay, city, zip){
+    editId = id;
+    document.getElementById('e-address').value = address;
+    document.getElementById('e-barangay').value = barangay;
+    document.getElementById('e-city').value = city;
+    document.getElementById('e-zip').value = zip;
+    document.getElementById('edit-status').textContent = '';
+    document.getElementById('edit-modal').classList.add('open');
+  }
+  function closeEditModal(){
+    document.getElementById('edit-modal').classList.remove('open');
+    editId = null;
+  }
+  async function saveHousehold(){
+    const address = document.getElementById('e-address').value.trim();
+    const barangay = document.getElementById('e-barangay').value.trim();
+    const city = document.getElementById('e-city').value.trim();
+    const zip = document.getElementById('e-zip').value.trim();
+    const msg = document.getElementById('edit-status');
+    if(!address||!barangay||!city){ msg.textContent='Address, barangay and city are required'; return; }
+    msg.textContent='Saving…'; msg.style.color='#6c757d';
+    try{
+      const r = await fetch('/api/households/'+editId, {method:'PUT', headers: hdrs,
+        body: JSON.stringify({address_line:address,barangay,city,zip_code:zip||null})});
+      const d = await r.json();
+      if(!r.ok){ msg.textContent=d.detail||'Save failed'; msg.style.color='#dc3545'; return; }
+      closeEditModal(); listHouseholds();
+    }catch(e){ msg.textContent='Network error'; msg.style.color='#dc3545'; }
   }
 
   window.addEventListener('DOMContentLoaded', ()=>{ listHouseholds(); });

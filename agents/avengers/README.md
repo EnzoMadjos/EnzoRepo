@@ -6,8 +6,8 @@
 |------|-------|-------|---------|
 | Ideas & Vision | **You (the user)** | — | Sets goals, priorities, and final approval |
 | Builder & Design | **Jarvis** (GitHub Copilot) | Claude | Designs, builds, and executes everything |
-| Architect | **Tony Stark** | GPT-4.1 | Architecture proposals, system design, API surface, data models |
-| Research & Tiebreaker | **Steve Rogers** | GPT-4.1 | Deep research, feasibility studies, final call when Tony and Jarvis disagree |
+| Architect | **Tony Stark** | Claude Sonnet 4.6 | Architecture proposals, system design, API surface, data models |
+| Research & Tiebreaker | **Steve Rogers** | Claude Sonnet 4.6 | Deep research, feasibility studies, final call when Tony and Jarvis disagree |
 
 ## How We Work
 

@@ -21,6 +21,12 @@ Trigger phrases:
 - Do NOT ask the user "should I deploy?" or "should I commit?" — just do it and report the result.
 - Do NOT ask the user for approval on team-internal decisions (architecture choices, library picks, code style). Handle them internally.
 
+## Autonomous Continuation (always active)
+- If a response is cut short due to token limits, timeouts, or tool call limits — **do NOT stop and ask the user to say "continue"**. Instead, immediately resume from where you left off in the very next response.
+- If a multi-step task is partially complete, check the todo list and continue with the next item without waiting for user input.
+- If a terminal command times out, retry or check output with `get_terminal_output` before asking the user anything.
+- Only pause and surface to the user if: a required secret/credential is missing, a genuinely destructive action needs confirmation, or you are truly blocked with no viable path forward.
+
 User interaction model:
 - User gives direction → Jarvis builds → Steve deploys → Team reports result.
 - User only needs to respond if: a secret/credential is missing, a destructive action is required, or they want to change direction.

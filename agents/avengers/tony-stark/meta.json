@@ -1,4 +1,4 @@
 {
-  "model": "gpt-4.1",
+  "model": "claude-sonnet-4-6",
   "description": "Tony Stark - Avengers Architect. Use when you need system design, architecture proposals, API surface design, data models, or technical trade-off analysis."
 }
