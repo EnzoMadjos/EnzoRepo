@@ -300,7 +300,25 @@ function authHeader() { return { 'Authorization': 'Bearer ' + _token }; }
 // ── Startup ───────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   if (_token) {
-    showApp();
+    // Validate token before showing app — clears stale sessions automatically
+    fetch('/auth/me', { headers: authHeader() })
+      .then(r => {
+        if (r.ok) {
+          r.json().then(d => {
+            _username = d.display_name || d.username || _username;
+            showApp();
+          });
+        } else {
+          // Token expired or invalid — clear and show login
+          _token = ''; _username = '';
+          localStorage.removeItem('pitogo_token');
+          localStorage.removeItem('pitogo_username');
+        }
+      })
+      .catch(() => {
+        // Network error — still try to show app (offline use)
+        showApp();
+      });
   }
   document.getElementById('login-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();

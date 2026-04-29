@@ -542,6 +542,19 @@ async def logout(
     return JSONResponse({"status": "logged out"})
 
 
+@app.get("/auth/me")
+async def me(
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> JSONResponse:
+    return JSONResponse(
+        {
+            "username": session.username,
+            "role": session.role,
+            "display_name": session.display_name,
+        }
+    )
+
+
 # ── Server status ─────────────────────────────────────────────────────────────
 
 
