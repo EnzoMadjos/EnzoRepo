@@ -73,6 +73,15 @@ _leader_addr: Optional[tuple] = None
 async def _startup() -> None:
     global _server_role, _leader_addr
 
+    # Ensure all tables exist first (handles fresh DB where init migration is a no-op)
+    try:
+        from db import engine
+        from models import Base
+        Base.metadata.create_all(engine)
+        app_logger.info("Database tables ensured via create_all")
+    except Exception as exc:
+        app_logger.warn(f"create_all failed (non-fatal): {exc}")
+
     # Run database migrations automatically on startup
     try:
         from alembic import command
