@@ -100,10 +100,15 @@ class CertificateIssue(Base):
     issued_by = Column(String(128), nullable=False)
     issued_at = Column(DateTime, default=datetime.utcnow)
     pdf_path = Column(String(512))
-    status = Column(String(32), default="issued")
+    status = Column(String(32), default="issued")  # issued | voided | revoked
     node_id = Column(String(36), nullable=False, index=True)
     local_seq = Column(Integer, nullable=False, default=1)
     meta = Column(JSON)
+    # lifecycle tracking
+    finalized_at = Column(DateTime, nullable=True)
+    voided_at = Column(DateTime, nullable=True)
+    voided_by = Column(String(128), nullable=True)
+    void_reason = Column(Text, nullable=True)
 
 
 class Attachment(Base):

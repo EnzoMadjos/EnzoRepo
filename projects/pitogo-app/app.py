@@ -108,6 +108,13 @@ app.include_router(attachments_router)
 app.include_router(users_router)
 
 
+@app.get("/ui/certificates", response_class=HTMLResponse)
+async def ui_certificates(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "ui/certificates.html", {"request": request, "app_name": config.APP_NAME}
+    )
+
+
 @app.get("/ui/residents", response_class=HTMLResponse)
 async def ui_residents(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(

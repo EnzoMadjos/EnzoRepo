@@ -1,0 +1,232 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }} — Certificates</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:18px;color:#111}
+    .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    input,select{padding:8px;border:1px solid #ddd;border-radius:6px;font-size:.9rem}
+    button{padding:8px 14px;border-radius:6px;border:none;cursor:pointer;font-size:.85rem}
+    .btn-primary{background:#1976d2;color:#fff}
+    .btn-danger{background:#dc3545;color:#fff}
+    .btn-sm{padding:5px 10px;font-size:.78rem}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border-bottom:1px solid #eee;padding:8px 10px;text-align:left;font-size:.88rem}
+    th{background:#f5f7fa;font-weight:600;font-size:.8rem;color:#555}
+    .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+    .badge-issued{background:#e3f2fd;color:#1565c0}
+    .badge-voided{background:#fce4ec;color:#b71c1c}
+    .badge-finalized{background:#e8f5e9;color:#2e7d32}
+    .pagination{display:flex;gap:6px;margin-top:12px;align-items:center}
+    .pagination button{background:#f0f0f0;color:#333}
+    .pagination button:disabled{opacity:.4}
+    #status-msg{font-size:.85rem;color:#666;margin-top:6px;min-height:18px}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal{background:#fff;border-radius:10px;padding:24px;width:400px;max-width:95vw}
+    .modal h3{margin-bottom:12px}
+    .modal textarea{width:100%;height:80px;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:.9rem}
+    .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+  </style>
+</head>
+<body>
+  <h2>Issued Certificates</h2>
+
+  <!-- Void modal -->
+  <div class="modal-overlay" id="void-modal">
+    <div class="modal">
+      <h3>Void Certificate</h3>
+      <p style="font-size:.85rem;color:#666;margin-bottom:10px">Control #: <strong id="void-ctrl-num"></strong></p>
+      <label style="font-size:.82rem;font-weight:600">Reason <span style="color:red">*</span></label>
+      <textarea id="void-reason" placeholder="Enter reason for voiding…"></textarea>
+      <div class="modal-footer">
+        <button onclick="closeVoidModal()" style="background:#eee;color:#333;padding:8px 14px;border-radius:6px;border:none;cursor:pointer">Cancel</button>
+        <button class="btn-danger" onclick="confirmVoid()">Void Certificate</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <!-- Filters -->
+    <div class="row" style="margin-bottom:10px">
+      <input id="q-input" placeholder="Search name / control #" style="width:220px" oninput="debounceLoad()" />
+      <select id="status-filter" onchange="loadCerts()">
+        <option value="">All active</option>
+        <option value="issued">Issued</option>
+        <option value="voided">Voided</option>
+      </select>
+      <select id="type-filter" onchange="loadCerts()">
+        <option value="">All types</option>
+      </select>
+      <button class="btn-primary btn-sm" onclick="loadCerts()">Refresh</button>
+    </div>
+
+    <div id="status-msg"></div>
+    <table id="cert-table">
+      <thead>
+        <tr>
+          <th>Control #</th>
+          <th>Resident</th>
+          <th>Type</th>
+          <th>Issued By</th>
+          <th>Issued At</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <!-- Pagination -->
+    <div class="pagination">
+      <button id="btn-prev" onclick="prevPage()" disabled>← Prev</button>
+      <span id="page-info" style="font-size:.82rem;color:#555"></span>
+      <button id="btn-next" onclick="nextPage()" disabled>Next →</button>
+    </div>
+  </div>
+
+  <script>
+  const token = localStorage.getItem('pitogo_token') || '';
+  const hdrs = token ? {'Authorization':'Bearer '+token,'Content-Type':'application/json'} : {'Content-Type':'application/json'};
+  let currentPage = 1;
+  let totalPages = 1;
+  let voidTargetId = null;
+
+  // --- Cert types dropdown ---
+  async function loadTypes() {
+    try {
+      const r = await fetch('/api/certificate-types/', {headers: hdrs});
+      if (!r.ok) return;
+      const data = await r.json();
+      const sel = document.getElementById('type-filter');
+      data.forEach(t => {
+        const o = document.createElement('option');
+        o.value = t.id; o.textContent = t.name;
+        sel.appendChild(o);
+      });
+    } catch(e) {}
+  }
+
+  // --- Load certificates ---
+  async function loadCerts(page) {
+    currentPage = page || 1;
+    const q = document.getElementById('q-input').value.trim();
+    const status = document.getElementById('status-filter').value;
+    const typeId = document.getElementById('type-filter').value;
+    const params = new URLSearchParams({page: currentPage, per_page: 20});
+    if (q) params.set('q', q);
+    if (status) params.set('status', status);
+    if (typeId) params.set('certificate_type_id', typeId);
+
+    const tbody = document.querySelector('#cert-table tbody');
+    tbody.innerHTML = '<tr><td colspan=7 style="color:#aaa">Loading…</td></tr>';
+    document.getElementById('status-msg').textContent = '';
+
+    try {
+      const r = await fetch('/api/certificates/?' + params, {headers: hdrs});
+      const data = await r.json();
+      if (!r.ok) {
+        tbody.innerHTML = '<tr><td colspan=7 style="color:red">Error: ' + (data.detail || 'Failed') + '</td></tr>';
+        return;
+      }
+
+      totalPages = Math.ceil(data.total / 20) || 1;
+      document.getElementById('page-info').textContent =
+        `Page ${currentPage} of ${totalPages} (${data.total} total)`;
+      document.getElementById('btn-prev').disabled = currentPage <= 1;
+      document.getElementById('btn-next').disabled = currentPage >= totalPages;
+
+      if (!data.items.length) {
+        tbody.innerHTML = '<tr><td colspan=7 style="color:#aaa">No certificates found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.items.map(c => {
+        const badge = c.status === 'voided'
+          ? '<span class="badge badge-voided">Voided</span>'
+          : c.finalized_at
+            ? '<span class="badge badge-finalized">Finalized</span>'
+            : '<span class="badge badge-issued">Issued</span>';
+
+        const dt = new Date(c.issued_at).toLocaleString();
+        const actions = c.status === 'issued'
+          ? `<a href="/api/certificates/${c.id}/render" target="_blank" style="color:#1976d2;font-size:.8rem">Preview</a>
+             ${c.finalized_at
+               ? `&nbsp;<a href="/api/certificates/${c.id}/file" style="color:#2e7d32;font-size:.8rem">Download</a>`
+               : `&nbsp;<button class="btn-primary btn-sm" onclick="generateCert('${c.id}',this)">Generate</button>`}
+             &nbsp;<button class="btn-danger btn-sm" onclick="openVoidModal('${c.id}','${c.control_number}')">Void</button>`
+          : `<span style="color:#aaa;font-size:.8rem">—</span>`;
+
+        return `<tr>
+          <td style="font-family:monospace;font-size:.82rem">${c.control_number}</td>
+          <td>${c.resident_full_name || '<em style="color:#aaa">—</em>'}</td>
+          <td>${c.certificate_type_name || '—'}</td>
+          <td>${c.issued_by}</td>
+          <td>${dt}</td>
+          <td>${badge}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join('');
+    } catch(e) {
+      tbody.innerHTML = '<tr><td colspan=7 style="color:red">Network error</td></tr>';
+    }
+  }
+
+  // --- Generate / Finalize ---
+  async function generateCert(certId, btn) {
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const r = await fetch(`/api/certificates/${certId}/generate`, {method:'POST', headers: hdrs, body: '{}'});
+      const d = await r.json();
+      if (!r.ok) { alert(d.detail || 'Generate failed'); btn.disabled=false; btn.textContent='Generate'; return; }
+      document.getElementById('status-msg').textContent = '✓ Generated: ' + d.pdf_path;
+      loadCerts(currentPage);
+    } catch(e) { alert('Network error'); btn.disabled=false; btn.textContent='Generate'; }
+  }
+
+  // --- Void ---
+  function openVoidModal(certId, ctrlNum) {
+    voidTargetId = certId;
+    document.getElementById('void-ctrl-num').textContent = ctrlNum;
+    document.getElementById('void-reason').value = '';
+    document.getElementById('void-modal').classList.add('open');
+  }
+
+  function closeVoidModal() {
+    voidTargetId = null;
+    document.getElementById('void-modal').classList.remove('open');
+  }
+
+  async function confirmVoid() {
+    const reason = document.getElementById('void-reason').value.trim();
+    if (!reason) { alert('Reason is required'); return; }
+    try {
+      const r = await fetch(`/api/certificates/${voidTargetId}/void`, {
+        method:'POST', headers: hdrs,
+        body: JSON.stringify({reason})
+      });
+      const d = await r.json();
+      if (!r.ok) { alert(d.detail || 'Void failed'); return; }
+      closeVoidModal();
+      document.getElementById('status-msg').textContent = '✓ Certificate voided';
+      loadCerts(currentPage);
+    } catch(e) { alert('Network error'); }
+  }
+
+  // --- Pagination ---
+  function prevPage() { if (currentPage > 1) loadCerts(currentPage - 1); }
+  function nextPage() { if (currentPage < totalPages) loadCerts(currentPage + 1); }
+
+  // --- Search debounce ---
+  let debTimer;
+  function debounceLoad() { clearTimeout(debTimer); debTimer = setTimeout(() => loadCerts(1), 350); }
+
+  // Init
+  loadTypes();
+  loadCerts(1);
+  </script>
+</body>
+</html>
