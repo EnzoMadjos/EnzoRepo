@@ -96,26 +96,16 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     if: success()
-    permissions:
-      packages: write
     steps:
       - name: Delete all untagged package versions
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PAGE=1
-          DELETED=0
-          while true; do
-            IDS=$(gh api "/user/packages/container/enzo-repo/versions?per_page=100&page=$PAGE" \
-              --jq '[.[] | select(.metadata.container.tags | length == 0) | .id] | .[]' 2>/dev/null || true)
-            [ -z "$IDS" ] && break
-            for id in $IDS; do
-              gh api --method DELETE /user/packages/container/enzo-repo/versions/$id \
-                && { echo "Deleted $id"; DELETED=$((DELETED+1)); } || echo "Skipped $id"
-            done
-            PAGE=$((PAGE+1))
-          done
-          echo "Total untagged versions deleted: $DELETED"
+        uses: actions/delete-package-versions@v5
+        continue-on-error: true
+        with:
+          package-name: enzo-repo
+          package-type: container
+          min-versions-to-keep: 1
+          delete-only-untagged-versions: true
+          token: ${{ secrets.GHCR_TOKEN }}
 
   notify:
     name: Notify team on result
