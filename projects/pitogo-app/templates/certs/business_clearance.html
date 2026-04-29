@@ -1,9 +1,39 @@
-{% extends 'certs/base_cert.html' %}
-{% block body %}
-<p style="text-align:center; font-weight:600; text-decoration:underline;">BARANGAY BUSINESS CLEARANCE</p>
-<p>TO WHOM IT MAY CONCERN:</p>
-<p>This is to certify that <strong>{{ meta.business_name or business_name or '' }}</strong>, owned/managed by <strong>{{ meta.owner_name or owner_name or resident.full_name }}</strong>, conducting business activity within the jurisdiction of Barangay <strong>{{ household.barangay if household else '' }}</strong>, PITOGO, CONSOLACION, CEBU, is hereby granted clearance pursuant to Section 152 of the Local Government Code of 1991 in connection with the application for business permit.</p>
-<p>This clearance is issued upon the request of <strong>{{ meta.owner_name or owner_name or resident.full_name }}</strong> for <strong>{{ purpose or meta.purpose or 'whatever legal purpose it may serve' }}</strong>.</p>
-<p>Issued this <strong>{{ issued_at }}</strong> at the Office of the Punong Barangay, Barangay {{ household.barangay if household else '' }}, PITOGO, Municipality of CONSOLACION, Province of CEBU, Philippines.</p>
-<p>NOT VALID WITHOUT O.R. &amp; OFFICIAL SEAL</p>
+{% extends "certs/_layout.html" %}
+{% block cert_body %}
+<div class="cert-main-title">
+  <span><em>BARANGAY BUSINESS CLEARANCE</em></span>
+  <span class="cert-icon">&#x270D;</span>
+</div>
+
+<p class="to-whom">TO WHOM IT MAY CONCERN:</p>
+
+<p class="cert-paragraph">
+  This is to certify that
+  <strong>{{ meta.business_name or "___________________" }}</strong>,
+  owned and operated by
+  <strong>{{ meta.owner_name or (resident.full_name if resident else "___________________") }}</strong>,
+  located at
+  {{ household.address_line if household and household.address_line else meta.address or "___________________" }},
+  Barangay PITOGO, Municipality of CONSOLACION, Province of Cebu, Philippines,
+  has been found to be operating in accordance with the laws, rules, and
+  regulations of this Barangay and has no derogatory record on file.
+</p>
+
+<p class="cert-paragraph">
+  This clearance is issued upon the request of the above for
+  <strong>{{ purpose or meta.purpose or "whatever legal purpose it may serve" }}</strong>.
+</p>
+
+<p class="cert-paragraph">
+  Issued this <strong>{{ issued_at }}</strong> at the Office of the Punong
+  Barangay, Barangay PITOGO, Municipality of CONSOLACION,
+  Province of CEBU, Philippines.
+</p>
+{% endblock %}
+{% block extra_footer %}
+<div class="extra-footer" style="border-top:1px solid #000;padding-top:6px;margin-top:12px;font-size:9.5pt;">
+  <p><strong>NOT VALID WITHOUT O.R. &amp; OFFICIAL SEAL</strong></p>
+  <p>O.R. No.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: &nbsp;&nbsp;<strong>{{ control_number }}</strong></p>
+  <p>Issued on&nbsp;&nbsp;&nbsp;: &nbsp;&nbsp;<strong>{{ issued_at }}</strong></p>
+</div>
 {% endblock %}
