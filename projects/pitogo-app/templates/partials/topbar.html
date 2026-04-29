@@ -1,38 +1,38 @@
 <style>
   body{margin:0!important;padding:0!important}
-  .app-topbar{background:#0038A8;color:#fff;padding:0 20px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.18);gap:12px;border-bottom:3px solid #CE1126}
-  .tb-brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
-  .tb-seal{width:36px;height:36px;object-fit:contain;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);flex-shrink:0}
-  .tb-brand-text{display:flex;flex-direction:column;line-height:1.2}
-  .tb-brand-name{font-size:.88rem;font-weight:700;color:#fff;white-space:nowrap}
-  .tb-slogan{font-size:.62rem;color:#FCD116;white-space:nowrap;font-style:italic;font-weight:700}
+  .app-topbar{background:#CE1126;background-image:repeating-linear-gradient(-55deg,transparent,transparent 18px,rgba(0,0,0,.07) 18px,rgba(0,0,0,.07) 20px);color:#fff;padding:0 20px;height:68px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 3px 12px rgba(0,0,0,.3);gap:12px;border-top:4px solid #FCD116;border-bottom:4px solid #0038A8}
+  .tb-brand{display:flex;align-items:center;gap:12px;text-decoration:none;flex-shrink:0}
+  .tb-seal{width:44px;height:44px;object-fit:contain;border-radius:50%;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.1);flex-shrink:0;box-shadow:0 0 12px rgba(0,0,0,.25)}
+  .tb-brand-text{display:flex;flex-direction:column;line-height:1.25}
+  .tb-brand-name{font-size:1rem;font-weight:800;color:#fff;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .tb-slogan{font-size:.72rem;color:#FCD116;white-space:nowrap;font-style:italic;font-weight:700;letter-spacing:.03em}
   .tb-nav{display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none}
   .tb-nav::-webkit-scrollbar{display:none}
-  .tb-nav a{color:rgba(255,255,255,.88);text-decoration:none;padding:5px 9px;border-radius:6px;font-size:.79rem;font-weight:600;white-space:nowrap}
-  .tb-nav a:hover{background:rgba(252,209,22,.15);color:#FCD116}
-  .tb-nav a.tb-active{background:rgba(252,209,22,.12);color:#FCD116;border-bottom:2px solid #FCD116}
+  .tb-nav a{color:rgba(255,255,255,.92);text-decoration:none;padding:6px 11px;border-radius:6px;font-size:.84rem;font-weight:600;white-space:nowrap;transition:background .15s}
+  .tb-nav a:hover{background:rgba(0,0,0,.18);color:#FCD116}
+  .tb-nav a.tb-active{background:rgba(0,0,0,.22);color:#FCD116;border-bottom:3px solid #FCD116}
   .tb-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-  .tb-username{font-size:.78rem;color:rgba(255,255,255,.82)}
-  .tb-logout{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.74rem}
-  .tb-logout:hover{background:rgba(255,255,255,.12)}
-  .tb-feedback-btn{background:#FCD116;border:none;color:#0038A8;padding:5px 11px;border-radius:20px;cursor:pointer;font-size:.74rem;font-weight:700;letter-spacing:.02em;transition:opacity .15s}
+  .tb-username{font-size:.82rem;color:rgba(255,255,255,.9);font-weight:600}
+  .tb-logout{background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.35);color:#fff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600}
+  .tb-logout:hover{background:rgba(0,0,0,.35)}
+  .tb-feedback-btn{background:#0038A8;border:none;color:#fff;padding:6px 13px;border-radius:20px;cursor:pointer;font-size:.78rem;font-weight:700;letter-spacing:.02em;transition:opacity .15s;box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .tb-feedback-btn:hover{opacity:.88}
   /* Demo banner */
-  .demo-banner{display:none;background:#FCD116;color:#0038A8;font-size:.78rem;font-weight:700;text-align:center;padding:5px 16px;border-bottom:2px solid #CE1126;position:sticky;top:54px;z-index:49}
+  .demo-banner{display:none;background:#FCD116;color:#CE1126;font-size:.8rem;font-weight:700;text-align:center;padding:6px 16px;border-bottom:3px solid #0038A8;position:sticky;top:76px;z-index:49}
   /* Feedback modal */
   .fb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center}
   .fb-overlay.open{display:flex}
-  .fb-card{background:#fff;border-radius:14px;padding:28px 24px 20px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.22);position:relative}
-  .fb-card h3{margin:0 0 4px;font-size:1.1rem;color:#0038A8;font-weight:800}
+  .fb-card{background:#fff;border-radius:14px;padding:28px 24px 20px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.22);position:relative;border-top:4px solid #CE1126}
+  .fb-card h3{margin:0 0 4px;font-size:1.1rem;color:#CE1126;font-weight:800}
   .fb-card p{margin:0 0 16px;font-size:.82rem;color:#666}
   .fb-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;line-height:1}
   .fb-stars{display:flex;gap:6px;margin-bottom:14px}
   .fb-star{font-size:1.6rem;cursor:pointer;color:#ccc;transition:color .1s}
   .fb-star.lit{color:#FCD116}
   .fb-field{width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:.85rem;margin-bottom:10px;font-family:inherit}
-  .fb-field:focus{outline:none;border-color:#0038A8}
-  .fb-submit{background:#0038A8;color:#fff;border:none;padding:9px 20px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:700;width:100%}
-  .fb-submit:hover{background:#0030a0}
+  .fb-field:focus{outline:none;border-color:#CE1126}
+  .fb-submit{background:#CE1126;color:#fff;border:none;padding:9px 20px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:700;width:100%}
+  .fb-submit:hover{background:#b00e20}
   .fb-msg{font-size:.8rem;margin-top:8px;text-align:center}
 </style>
 <div class="app-topbar">
@@ -56,7 +56,7 @@
   <div class="tb-right">
     <span class="tb-username" id="tb-uname"></span>
     <button class="tb-feedback-btn" onclick="openFeedback()">&#128172; Feedback</button>
-    <button class="tb-logout" onclick="(function(){localStorage.removeItem('pitogo_token');localStorage.removeItem('pitogo_username');window.location.href='/'})()">ログ out</button>
+    <button class="tb-logout" onclick="(function(){localStorage.removeItem('pitogo_token');localStorage.removeItem('pitogo_username');window.location.href='/'})()">Log out</button>
   </div>
 </div>
 <!-- Demo banner -->

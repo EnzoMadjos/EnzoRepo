@@ -8,36 +8,46 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', system-ui, Arial, sans-serif;
-      background: linear-gradient(135deg, #0038A8 0%, #002d8a 50%, #001f6b 100%);
+      background: #CE1126;
+      background-image:
+        repeating-linear-gradient(-55deg, transparent, transparent 18px, rgba(0,0,0,.07) 18px, rgba(0,0,0,.07) 20px),
+        linear-gradient(160deg, #CE1126 0%, #a10d1f 55%, #78091a 100%);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 24px;
-      color: #fff;
     }
 
-    /* Red stripe at top like a flag */
+    /* Gold stripe at top */
     body::before {
       content: '';
       position: fixed;
       top: 0; left: 0; right: 0;
-      height: 5px;
-      background: #CE1126;
+      height: 6px;
+      background: #FCD116;
+      z-index: 10;
+    }
+    /* Blue stripe at bottom */
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 6px;
+      background: #0038A8;
       z-index: 10;
     }
 
     .card {
-      background: rgba(255,255,255,.07);
-      border: 1px solid rgba(255,255,255,.14);
+      background: #fff;
       border-radius: 20px;
       padding: 48px 40px 40px;
       max-width: 480px;
       width: 100%;
       text-align: center;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 16px 48px rgba(0,0,0,.35);
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+      border-top: 6px solid #CE1126;
     }
 
     .seal-wrap {
@@ -50,8 +60,8 @@
       height: 100px;
       object-fit: contain;
       border-radius: 50%;
-      border: 3px solid rgba(252,209,22,.6);
-      box-shadow: 0 0 24px rgba(252,209,22,.25);
+      border: 3px solid rgba(206,17,38,.4);
+      box-shadow: 0 0 24px rgba(206,17,38,.2);
     }
 
     .app-name {
@@ -59,17 +69,18 @@
       font-weight: 800;
       letter-spacing: -.01em;
       margin-bottom: 4px;
+      color: #CE1126;
     }
     .slogan {
       font-size: .82rem;
-      color: #FCD116;
+      color: #0038A8;
       font-weight: 700;
       font-style: italic;
       margin-bottom: 6px;
     }
     .tagline {
       font-size: .88rem;
-      color: rgba(255,255,255,.72);
+      color: #555;
       margin-bottom: 32px;
       line-height: 1.5;
     }
@@ -87,13 +98,13 @@
       align-items: center;
       gap: 10px;
       font-size: .86rem;
-      color: rgba(255,255,255,.88);
+      color: #333;
     }
     .features li .icon {
       width: 28px;
       height: 28px;
       flex-shrink: 0;
-      background: rgba(252,209,22,.15);
+      background: rgba(206,17,38,.1);
       border-radius: 7px;
       display: flex;
       align-items: center;
@@ -105,14 +116,14 @@
       width: 100%;
       padding: 14px 24px;
       background: #FCD116;
-      color: #0038A8;
+      color: #CE1126;
       border: none;
       border-radius: 10px;
       font-size: 1rem;
       font-weight: 800;
       cursor: pointer;
       transition: transform .1s, box-shadow .1s;
-      box-shadow: 0 4px 16px rgba(252,209,22,.3);
+      box-shadow: 0 4px 16px rgba(252,209,22,.4);
       margin-bottom: 12px;
     }
     .btn-demo:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(252,209,22,.4); }
@@ -121,7 +132,7 @@
 
     .demo-note {
       font-size: .74rem;
-      color: rgba(255,255,255,.5);
+      color: #888;
       line-height: 1.5;
     }
 
@@ -129,8 +140,8 @@
       display: none;
       width: 18px;
       height: 18px;
-      border: 2px solid rgba(0,56,168,.3);
-      border-top-color: #0038A8;
+      border: 2px solid rgba(206,17,38,.3);
+      border-top-color: #CE1126;
       border-radius: 50%;
       animation: spin .7s linear infinite;
       vertical-align: middle;
@@ -140,15 +151,25 @@
 
     .err-msg {
       margin-top: 10px;
-      color: #ffb3b8;
+      color: #CE1126;
       font-size: .8rem;
       min-height: 18px;
     }
 
+    .login-link {
+      display: block;
+      margin-top: 14px;
+      font-size: .78rem;
+      color: #0038A8;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .login-link:hover { text-decoration: underline; }
+
     .footer {
       margin-top: 28px;
       font-size: .72rem;
-      color: rgba(255,255,255,.35);
+      color: rgba(255,255,255,.45);
     }
   </style>
 </head>
@@ -176,9 +197,10 @@
     </button>
 
     <div class="demo-note">
-      No login required &mdash; you'll get a live demo session as a Clerk.<br>
-      Your inputs are real but may be reset periodically.
+      No login required &mdash; you'll get a live demo session as a Barangay Clerk.<br>
+      All features are fully functional. Try issuing a certificate!
     </div>
+    <a class="login-link" href="/">&#128274; Staff login &rarr;</a>
     <div class="err-msg" id="err-msg"></div>
   </div>
 
