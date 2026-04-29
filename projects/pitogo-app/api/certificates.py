@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import mimetypes
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -11,7 +13,7 @@ import config
 import utils
 from api.deps import get_db
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from models import CertificateIssue, CertificateType, Household, Resident
 from node import get_node_id, get_node_short
@@ -191,6 +193,77 @@ def list_certificates(
         })
 
     return JSONResponse({"items": out, "page": page, "per_page": per_page, "total": total})
+
+
+@router.get("/export")
+def export_certificates(
+    q: Optional[str] = None,
+    status: Optional[str] = None,
+    certificate_type_id: Optional[str] = None,
+    resident_id: Optional[str] = None,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
+    """Stream all matching certificates as CSV. Accepts same filters as GET /."""
+    query = (
+        db.query(CertificateIssue)
+        .outerjoin(Resident, CertificateIssue.resident_id == Resident.id)
+        .order_by(CertificateIssue.issued_at.desc())
+    )
+    if status:
+        query = query.filter(CertificateIssue.status == status)
+    else:
+        query = query.filter(CertificateIssue.status != "voided")
+    if certificate_type_id:
+        query = query.filter(CertificateIssue.certificate_type_id == certificate_type_id)
+    if resident_id:
+        query = query.filter(CertificateIssue.resident_id == resident_id)
+    if q:
+        tokens = [t.strip() for t in q.split() if t.strip()]
+        conds = []
+        for tok in tokens:
+            like = f"%{tok}%"
+            conds.append(CertificateIssue.control_number.ilike(like))
+            conds.append(Resident.first_name.ilike(like))
+            conds.append(Resident.last_name.ilike(like))
+        if conds:
+            query = query.filter(or_(*conds))
+
+    rows = query.all()
+
+    def generate():
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow([
+            "control_number", "status", "certificate_type", "resident_name",
+            "issued_by", "issued_at", "finalized_at", "voided_at", "void_reason",
+        ])
+        yield buf.getvalue()
+        for ci in rows:
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            ct = db.query(CertificateType).get(ci.certificate_type_id)
+            res = db.query(Resident).get(ci.resident_id) if ci.resident_id else None
+            res_name = f"{res.first_name} {res.last_name}" if res else ""
+            writer.writerow([
+                ci.control_number,
+                ci.status,
+                ct.name if ct else "",
+                res_name,
+                ci.issued_by,
+                ci.issued_at.isoformat() if ci.issued_at else "",
+                ci.finalized_at.isoformat() if ci.finalized_at else "",
+                ci.voided_at.isoformat() if ci.voided_at else "",
+                ci.void_reason or "",
+            ])
+            yield buf.getvalue()
+
+    filename = f"certificates_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    return StreamingResponse(
+        generate(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 def _resident_dict(resident: Resident | None, issued_at=None) -> dict | None:

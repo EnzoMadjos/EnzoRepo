@@ -9,9 +9,21 @@
     .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
     .row{display:flex;gap:8px}
     input,select{padding:8px;border:1px solid #ddd;border-radius:6px}
-    button{padding:8px 12px;border-radius:6px;border:none;background:#1976d2;color:#fff}
+    button{padding:8px 12px;border-radius:6px;border:none;background:#1976d2;color:#fff;cursor:pointer}
+    button.btn-sm{padding:4px 8px;font-size:.8rem}
+    button.btn-secondary{background:#607d8b}
     table{width:100%;border-collapse:collapse;margin-top:12px}
     th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
+    /* Modal */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:#fff;border-radius:10px;padding:24px;width:90%;max-width:760px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .modal-close{background:transparent;border:none;font-size:1.3rem;cursor:pointer;color:#555;padding:2px 6px}
+    .badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.75rem;font-weight:600}
+    .badge-issued{background:#e3f2fd;color:#1565c0}
+    .badge-finalized{background:#e8f5e9;color:#2e7d32}
+    .badge-voided{background:#fce4ec;color:#b71c1c}
   </style>
 </head>
 <body>
@@ -25,7 +37,24 @@
       <button onclick="createResident()">Create</button>
     </div>
     <div id="status" style="color:#666;font-size:0.9rem"></div>
-    <table id="res-table"><thead><tr><th>Name</th><th>National ID</th><th>Household</th><th></th></tr></thead><tbody></tbody></table>
+    <table id="res-table">
+      <thead><tr><th>Name</th><th>National ID</th><th>Household</th><th>Certs</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Cert History Modal -->
+  <div class="modal-overlay" id="cert-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <strong id="cert-modal-title">Certificates</strong>
+        <button class="modal-close" onclick="closeCertModal()">✕</button>
+      </div>
+      <table id="cert-hist-table">
+        <thead><tr><th>Control #</th><th>Type</th><th>Status</th><th>Issued At</th><th>Issued By</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <script>
@@ -33,13 +62,19 @@
   const hdrs = token ? {'Authorization': 'Bearer '+token, 'Content-Type':'application/json'} : {'Content-Type':'application/json'};
 
   async function listResidents(){
-    const t = document.querySelector('#res-table tbody'); t.innerHTML = '<tr><td colspan=4>Loading…</td></tr>';
+    const t = document.querySelector('#res-table tbody'); t.innerHTML = '<tr><td colspan=5>Loading…</td></tr>';
     try{
       const r = await fetch('/api/residents/', {headers: hdrs});
       const data = await r.json();
-      if(!r.ok){ t.innerHTML = '<tr><td colspan=4>Error loading</td></tr>'; return; }
-      t.innerHTML = data.map(r => `<tr><td>${r.last_name}, ${r.first_name}</td><td>${r.national_id||''}</td><td>${r.household_id||''}</td><td><button onclick="deleteResident('${r.id}')">Delete</button></td></tr>`).join('');
-    }catch(e){ t.innerHTML = '<tr><td colspan=4>Network error</td></tr>'; }
+      if(!r.ok){ t.innerHTML = '<tr><td colspan=5>Error loading</td></tr>'; return; }
+      t.innerHTML = data.map(r => `<tr>
+        <td>${r.last_name}, ${r.first_name}</td>
+        <td>${r.national_id||''}</td>
+        <td>${r.household_id||''}</td>
+        <td><button class="btn-sm btn-secondary" onclick="openCertHistory('${r.id}','${r.last_name}, ${r.first_name}')">View Certs</button></td>
+        <td><button class="btn-sm" style="background:#c62828" onclick="deleteResident('${r.id}')">Delete</button></td>
+      </tr>`).join('');
+    }catch(e){ t.innerHTML = '<tr><td colspan=5>Network error</td></tr>'; }
   }
 
   async function createResident(){
@@ -63,6 +98,43 @@
     await fetch('/api/residents/'+id, {method:'DELETE', headers: hdrs});
     listResidents();
   }
+
+  // --- Cert History Modal ---
+  async function openCertHistory(residentId, name) {
+    document.getElementById('cert-modal-title').textContent = 'Certificates — ' + name;
+    const tbody = document.querySelector('#cert-hist-table tbody');
+    tbody.innerHTML = '<tr><td colspan=5 style="color:#aaa">Loading…</td></tr>';
+    document.getElementById('cert-modal').classList.add('open');
+    try {
+      const r = await fetch('/api/certificates/?resident_id=' + residentId + '&limit=100', {headers: hdrs});
+      const d = await r.json();
+      if (!r.ok) { tbody.innerHTML = '<tr><td colspan=5 style="color:red">Error: '+(d.detail||'Failed')+'</td></tr>'; return; }
+      if (!d.items || !d.items.length) { tbody.innerHTML = '<tr><td colspan=5 style="color:#aaa">No certificates found</td></tr>'; return; }
+      tbody.innerHTML = d.items.map(c => {
+        const badge = c.status === 'voided'
+          ? '<span class="badge badge-voided">Voided</span>'
+          : c.finalized_at
+            ? '<span class="badge badge-finalized">Finalized</span>'
+            : '<span class="badge badge-issued">Issued</span>';
+        const dt = new Date(c.issued_at).toLocaleString();
+        return `<tr>
+          <td style="font-family:monospace;font-size:.82rem">${c.control_number}</td>
+          <td>${c.certificate_type_name||'—'}</td>
+          <td>${badge}</td>
+          <td>${dt}</td>
+          <td>${c.issued_by}</td>
+        </tr>`;
+      }).join('');
+    } catch(e) { tbody.innerHTML = '<tr><td colspan=5 style="color:red">Network error</td></tr>'; }
+  }
+
+  function closeCertModal() {
+    document.getElementById('cert-modal').classList.remove('open');
+  }
+
+  document.getElementById('cert-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('cert-modal')) closeCertModal();
+  });
 
   window.addEventListener('DOMContentLoaded', ()=>{ listResidents(); });
   </script>

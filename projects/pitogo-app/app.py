@@ -34,6 +34,7 @@ import utils
 from api.attachments import router as attachments_router
 from api.certificate_types import router as certificate_types_router
 from api.certificates import router as certificates_router
+from api.dashboard import router as dashboard_router
 from api.households import router as households_router
 from api.residents import router as residents_router
 from api.users import router as users_router
@@ -71,6 +72,17 @@ _leader_addr: Optional[tuple] = None
 async def _startup() -> None:
     global _server_role, _leader_addr
 
+    # Run database migrations automatically on startup
+    try:
+        from alembic import command
+        from alembic.config import Config as AlembicConfig
+        alembic_cfg = AlembicConfig(str(config.BASE_DIR / "alembic.ini"))
+        alembic_cfg.set_main_option("script_location", str(config.BASE_DIR / "alembic"))
+        command.upgrade(alembic_cfg, "head")
+        app_logger.info("Database migrations applied (alembic upgrade head)")
+    except Exception as exc:
+        app_logger.warn(f"Migration check failed (non-fatal): {exc}")
+
     def on_elected():
         global _server_role
         _server_role = "leader"
@@ -103,9 +115,17 @@ async def _shutdown() -> None:
 app.include_router(residents_router)
 app.include_router(certificate_types_router)
 app.include_router(certificates_router)
+app.include_router(dashboard_router)
 app.include_router(households_router)
 app.include_router(attachments_router)
 app.include_router(users_router)
+
+
+@app.get("/ui/dashboard", response_class=HTMLResponse)
+async def ui_dashboard(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "ui/dashboard.html", {"request": request, "app_name": config.APP_NAME}
+    )
 
 
 @app.get("/ui/certificates", response_class=HTMLResponse)

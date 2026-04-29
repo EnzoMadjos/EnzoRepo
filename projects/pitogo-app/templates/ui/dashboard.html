@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }} — Dashboard</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:0;background:#f5f7fa;color:#111}
+    .page{padding:28px 32px}
+    h2{margin:0 0 20px;font-size:1.2rem;color:#1a1a2e}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+    .stat-card{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:22px 20px;display:flex;flex-direction:column;gap:6px}
+    .stat-label{font-size:.75rem;font-weight:700;color:#6c757d;text-transform:uppercase;letter-spacing:.06em}
+    .stat-value{font-size:2rem;font-weight:700;color:#1a6fc4;line-height:1}
+    .stat-sub{font-size:.78rem;color:#aaa}
+    .card{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:20px}
+    .card h3{margin:0 0 14px;font-size:.92rem;color:#333}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #eee;padding:8px 10px;text-align:left;font-size:.85rem}
+    th{background:#f8f9fa;font-weight:600;font-size:.78rem;color:#6c757d}
+    .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:600}
+    .badge-issued{background:#e3f2fd;color:#1565c0}
+    .badge-finalized{background:#e8f5e9;color:#2e7d32}
+    a{color:#1976d2;text-decoration:none}a:hover{text-decoration:underline}
+    .refresh-btn{background:none;border:1px solid #ddd;border-radius:6px;padding:5px 12px;font-size:.8rem;cursor:pointer;color:#555;float:right;margin-top:-2px}
+    #load-time{font-size:.75rem;color:#aaa;margin-top:6px}
+  </style>
+</head>
+<body>
+<div class="page">
+  <h2>Dashboard <button class="refresh-btn" onclick="load()">↻ Refresh</button></h2>
+
+  <div class="stat-grid" id="stat-grid">
+    <div class="stat-card"><div class="stat-label">Certs Today</div><div class="stat-value" id="s-today">—</div></div>
+    <div class="stat-card"><div class="stat-label">Certs This Month</div><div class="stat-value" id="s-month">—</div></div>
+    <div class="stat-card"><div class="stat-label">Total Certs</div><div class="stat-value" id="s-total">—</div></div>
+    <div class="stat-card"><div class="stat-label">Residents</div><div class="stat-value" id="s-residents">—</div></div>
+    <div class="stat-card"><div class="stat-label">Households</div><div class="stat-value" id="s-households">—</div></div>
+  </div>
+
+  <div class="card">
+    <h3>Recent Certificates</h3>
+    <table id="recent-table">
+      <thead><tr><th>Control #</th><th>Resident</th><th>Type</th><th>Issued By</th><th>Time</th><th>Status</th></tr></thead>
+      <tbody><tr><td colspan=6 style="color:#aaa">Loading…</td></tr></tbody>
+    </table>
+    <div id="load-time"></div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem('pitogo_token') || '';
+const hdrs = token ? {'Authorization':'Bearer '+token} : {};
+
+async function load() {
+  const t0 = Date.now();
+  try {
+    const r = await fetch('/api/dashboard/stats', {headers: hdrs});
+    if (!r.ok) { document.querySelector('#recent-table tbody').innerHTML = '<tr><td colspan=6 style="color:red">Auth error — please log in</td></tr>'; return; }
+    const d = await r.json();
+
+    document.getElementById('s-today').textContent = d.certs_today;
+    document.getElementById('s-month').textContent = d.certs_month;
+    document.getElementById('s-total').textContent = d.certs_total;
+    document.getElementById('s-residents').textContent = d.residents_total;
+    document.getElementById('s-households').textContent = d.households_total;
+
+    const tbody = document.querySelector('#recent-table tbody');
+    if (!d.recent_certs.length) {
+      tbody.innerHTML = '<tr><td colspan=6 style="color:#aaa">No certificates yet.</td></tr>';
+    } else {
+      tbody.innerHTML = d.recent_certs.map(c => {
+        const badge = c.status === 'voided'
+          ? '<span class="badge" style="background:#fce4ec;color:#b71c1c">Voided</span>'
+          : c.finalized_at
+            ? '<span class="badge badge-finalized">Finalized</span>'
+            : '<span class="badge badge-issued">Issued</span>';
+        const dt = new Date(c.issued_at).toLocaleString();
+        return `<tr>
+          <td><a href="/api/certificates/${c.id}/render" target="_blank" style="font-family:monospace;font-size:.8rem">${c.control_number}</a></td>
+          <td>${c.resident_name}</td>
+          <td>${c.certificate_type_name}</td>
+          <td>${c.issued_by}</td>
+          <td>${dt}</td>
+          <td>${badge}</td>
+        </tr>`;
+      }).join('');
+    }
+    document.getElementById('load-time').textContent = `Loaded in ${Date.now()-t0}ms`;
+  } catch(e) {
+    document.querySelector('#recent-table tbody').innerHTML = '<tr><td colspan=6 style="color:red">Network error</td></tr>';
+  }
+}
+
+load();
+</script>
+</body>
+</html>

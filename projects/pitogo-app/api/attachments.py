@@ -68,6 +68,32 @@ async def upload_attachment(
     }
 
 
+@router.get("/")
+def list_attachments(
+    owner_type: str,
+    owner_id: str,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
+    items = (
+        db.query(Attachment)
+        .filter(Attachment.owner_type == owner_type, Attachment.owner_id == owner_id)
+        .order_by(Attachment.uploaded_at)
+        .all()
+    )
+    return [
+        {
+            "id": a.id,
+            "original_filename": a.original_filename,
+            "mime_type": a.mime_type,
+            "size": a.size,
+            "uploaded_by": a.uploaded_by,
+            "uploaded_at": a.uploaded_at.isoformat() if a.uploaded_at else None,
+        }
+        for a in items
+    ]
+
+
 @router.get("/{attachment_id}")
 def download_attachment(
     attachment_id: str,
