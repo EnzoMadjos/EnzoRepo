@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220">
+  <!-- Outer white circle -->
+  <circle cx="110" cy="110" r="108" fill="white" stroke="#1a1a6e" stroke-width="3"/>
+  <!-- Inner border ring -->
+  <circle cx="110" cy="110" r="100" fill="none" stroke="#1a1a6e" stroke-width="2"/>
+  <!-- Gold ring -->
+  <circle cx="110" cy="110" r="90" fill="none" stroke="#e8a800" stroke-width="8"/>
+  <!-- Blue central background -->
+  <circle cx="110" cy="110" r="84" fill="#4a90d9"/>
+
+  <!-- Green hill at left -->
+  <ellipse cx="62" cy="148" rx="45" ry="30" fill="#4a8c2a"/>
+  <!-- Houses / barrio at left -->
+  <rect x="30" y="128" width="20" height="16" fill="white" stroke="#888" stroke-width="0.5"/>
+  <polygon points="30,128 40,118 50,128" fill="#cc2222"/>
+  <rect x="52" y="132" width="16" height="12" fill="white" stroke="#888" stroke-width="0.5"/>
+  <polygon points="52,132 60,124 68,132" fill="#cc2222"/>
+
+  <!-- Road / highway (the central Y-shape) -->
+  <polygon points="85,165 125,165 118,95 102,95" fill="#e8c84a" opacity="0.85"/>
+  <polygon points="102,95 118,95 150,60 135,55" fill="#e8c84a" opacity="0.85"/>
+  <polygon points="102,95 118,95 75,60 62,65" fill="#e8c84a" opacity="0.85"/>
+
+  <!-- Central hub circle on road -->
+  <circle cx="110" cy="108" r="14" fill="#f5f5dc" stroke="#333" stroke-width="1.5"/>
+  <!-- Anvil/hammer symbol in hub -->
+  <rect x="106" y="110" width="8" height="5" fill="#555" rx="1"/>
+  <rect x="107" y="105" width="2.5" height="7" fill="#555"/>
+  <rect x="111" y="103" width="6" height="3" fill="#555" rx="0.5"/>
+
+  <!-- Dark mountains / landscape at right -->
+  <polygon points="145,165 185,100 200,165" fill="#2a3a5e" opacity="0.7"/>
+  <polygon points="165,165 195,120 215,150" fill="#1a2a4a" opacity="0.6"/>
+  <!-- Red/maroon figure bottom right -->
+  <ellipse cx="178" cy="158" rx="12" ry="18" fill="#8b0000" opacity="0.8"/>
+
+  <!-- Bird flying across the top - black swift/martin shape -->
+  <path d="M55,72 C70,62 85,68 110,65 C135,68 155,60 168,70 C155,72 140,68 110,72 C85,68 70,75 55,72 Z" fill="#111"/>
+  <path d="M80,66 C90,58 105,62 110,65 C115,62 125,57 135,64 C125,66 115,68 110,66 C105,67 90,68 80,66 Z" fill="#111"/>
+
+  <!-- Curved text top: BAYAN NG CONSOLACION -->
+  <path id="topArc" d="M 26,110 A 84,84 0 0,1 194,110" fill="none"/>
+  <text font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#1a1a6e" letter-spacing="1">
+    <textPath href="#topArc" startOffset="5%">BAYAN NG CONSOLACION</textPath>
+  </text>
+
+  <!-- Curved text bottom: CEBU 1920 PILIPINAS -->
+  <path id="botArc" d="M 26,110 A 84,84 0 0,0 194,110" fill="none"/>
+  <text font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#1a1a6e" letter-spacing="1">
+    <textPath href="#botArc" startOffset="8%">CEBU  1920  PILIPINAS</textPath>
+  </text>
+
+  <!-- Dot separators -->
+  <circle cx="34" cy="110" r="3" fill="#1a1a6e"/>
+  <circle cx="186" cy="110" r="3" fill="#1a1a6e"/>
+</svg>
