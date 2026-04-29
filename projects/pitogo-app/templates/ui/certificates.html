@@ -10,15 +10,17 @@
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     input,select{padding:8px;border:1px solid #ddd;border-radius:6px;font-size:.9rem}
     button{padding:8px 14px;border-radius:6px;border:none;cursor:pointer;font-size:.85rem}
-    .btn-primary{background:#1976d2;color:#fff}
-    .btn-danger{background:#dc3545;color:#fff}
+    .btn-primary{background:#0038A8;color:#fff}
+    .btn-primary:hover{background:#002d8a}
+    .btn-danger{background:#CE1126;color:#fff}
+    .btn-danger:hover{background:#a50e1f}
     .btn-sm{padding:5px 10px;font-size:.78rem}
     table{width:100%;border-collapse:collapse;margin-top:12px}
     th,td{border-bottom:1px solid #eee;padding:8px 10px;text-align:left;font-size:.88rem}
     th{background:#f5f7fa;font-weight:600;font-size:.8rem;color:#555}
     .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
-    .badge-issued{background:#e3f2fd;color:#1565c0}
-    .badge-voided{background:#fce4ec;color:#b71c1c}
+    .badge-issued{background:#dce7f9;color:#0038A8}
+    .badge-voided{background:#fde8eb;color:#CE1126}
     .badge-finalized{background:#e8f5e9;color:#2e7d32}
     .pagination{display:flex;gap:6px;margin-top:12px;align-items:center}
     .pagination button{background:#f0f0f0;color:#333}
@@ -88,7 +90,7 @@
         <option value="">All types</option>
       </select>
       <button class="btn-primary btn-sm" onclick="loadCerts()">Refresh</button>
-      <button style="background:#28a745;color:#fff;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:.78rem" onclick="exportCSV()">⬇ Export CSV</button>
+      <button style="background:#FCD116;color:#1a1a2e;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:.78rem;font-weight:600" onclick="exportCSV()">⬇ Export CSV</button>
     </div>
 
     <div id="status-msg"></div>
@@ -179,11 +181,11 @@
             : '<span class="badge badge-issued">Issued</span>';
 
         const dt = new Date(c.issued_at).toLocaleString();
-        const attachBtn = `&nbsp;<button class="btn-sm" style="background:#607d8b;color:#fff" onclick="openAttachModal('${c.id}','${c.control_number}')">📎</button>`;
+        const attachBtn = `&nbsp;<button class="btn-sm" style="background:#FCD116;color:#1a1a2e;font-weight:600" onclick="openAttachModal('${c.id}','${c.control_number}')">📎</button>`;
         const actions = c.status === 'issued'
-          ? `<a href="/api/certificates/${c.id}/render" target="_blank" style="color:#1976d2;font-size:.8rem">Preview</a>
+          <a href="/api/certificates/${c.id}/render" target="_blank" style="color:#0038A8;font-size:.8rem">Preview</a>
              ${c.finalized_at
-               ? `&nbsp;<a href="/api/certificates/${c.id}/file" style="color:#2e7d32;font-size:.8rem">Download</a>`
+               ? `&nbsp;<a href="/api/certificates/${c.id}/file" style="color:#0038A8;font-size:.8rem">Download</a>`
                : `&nbsp;<button class="btn-primary btn-sm" onclick="generateCert('${c.id}',this)">Generate</button>`}
              &nbsp;<button class="btn-danger btn-sm" onclick="openVoidModal('${c.id}','${c.control_number}')">Void</button>${attachBtn}`
           : `<span style="color:#aaa;font-size:.8rem">—</span>${attachBtn}`;
@@ -304,7 +306,7 @@
         return `<div class="attach-row">
           <span class="attach-name" title="${a.original_filename}">${a.original_filename}</span>
           <span class="attach-meta">${kb} KB · ${a.uploaded_by}</span>
-          <a href="/api/attachments/${a.id}" target="_blank" style="font-size:.78rem;color:#1976d2;margin-right:8px">Download</a>
+          <a href="/api/attachments/${a.id}" target="_blank" style="font-size:.78rem;color:#0038A8;margin-right:8px">Download</a>
           <button class="btn-danger btn-sm" onclick="deleteAttachment('${a.id}')">Delete</button>
         </div>`;
       }).join('');

@@ -11,7 +11,7 @@
     .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px}
     .stat-card{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:22px 20px;display:flex;flex-direction:column;gap:6px}
     .stat-label{font-size:.75rem;font-weight:700;color:#6c757d;text-transform:uppercase;letter-spacing:.06em}
-    .stat-value{font-size:2rem;font-weight:700;color:#1a6fc4;line-height:1}
+    .stat-value{font-size:2rem;font-weight:700;color:#0038A8;line-height:1}
     .stat-sub{font-size:.78rem;color:#aaa}
     .card{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:20px}
     .card h3{margin:0 0 14px;font-size:.92rem;color:#333}
@@ -19,9 +19,9 @@
     th,td{border-bottom:1px solid #eee;padding:8px 10px;text-align:left;font-size:.85rem}
     th{background:#f8f9fa;font-weight:600;font-size:.78rem;color:#6c757d}
     .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:600}
-    .badge-issued{background:#e3f2fd;color:#1565c0}
+    .badge-issued{background:#dce7f9;color:#0038A8}
     .badge-finalized{background:#e8f5e9;color:#2e7d32}
-    a{color:#1976d2;text-decoration:none}a:hover{text-decoration:underline}
+    a{color:#0038A8;text-decoration:none}a:hover{text-decoration:underline}
     .refresh-btn{background:none;border:1px solid #ddd;border-radius:6px;padding:5px 12px;font-size:.8rem;cursor:pointer;color:#555;float:right;margin-top:-2px}
     #load-time{font-size:.75rem;color:#aaa;margin-top:6px}
   </style>
@@ -72,7 +72,7 @@ async function load() {
     } else {
       tbody.innerHTML = d.recent_certs.map(c => {
         const badge = c.status === 'voided'
-          ? '<span class="badge" style="background:#fce4ec;color:#b71c1c">Voided</span>'
+          ? '<span class="badge" style="background:#fde8eb;color:#CE1126">Voided</span>'
           : c.finalized_at
             ? '<span class="badge badge-finalized">Finalized</span>'
             : '<span class="badge badge-issued">Issued</span>';

@@ -6,9 +6,10 @@
   <title>{{ app_name }}</title>
   <style>
     :root {
-      --bg: #f5f7fa; --card: #ffffff; --primary: #1a6fc4; --primary-dark: #145fa8;
+      --bg: #f5f7fa; --card: #ffffff; --primary: #0038A8; --primary-dark: #002d8a;
       --text: #1a1a2e; --muted: #6c757d; --border: #dee2e6;
-      --success: #28a745; --error: #dc3545; --warn: #ffc107;
+      --ph-red: #CE1126; --ph-gold: #FCD116;
+      --success: #28a745; --error: #CE1126; --warn: #ffc107;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -38,12 +39,12 @@
     #login-error  { color: var(--error); font-size: .8rem; min-height: 18px; margin-top: 8px; }
 
     /* ── Topbar ── */
-    .topbar { background: var(--primary); color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar { background: var(--primary); color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--ph-red); }
     .topbar h1 { font-size: 1.05rem; font-weight: 700; }
     .topbar-right { display: flex; align-items: center; gap: 12px; font-size: .82rem; }
     .topbar-nav { display:flex; align-items:center; gap:10px; margin-left:12px; }
     .topbar-nav a { color: rgba(255,255,255,.95); text-decoration:none; padding:6px 10px; border-radius:6px; font-weight:600; font-size:.9rem; }
-    .topbar-nav a:hover { background: rgba(255,255,255,.06); }
+    .topbar-nav a:hover { background: rgba(252,209,22,.15); color: #FCD116; }
     #relay-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; display: inline-block; transition: background .3s; }
     #relay-dot.online { background: #4cd137; }
     #update-banner { display: none; background: var(--warn); color: #333; padding: 8px 20px; font-size: .85rem; align-items: center; gap: 10px; }
@@ -52,7 +53,7 @@
     .main-wrap { display: flex; gap: 0; min-height: calc(100vh - 56px); }
     .sidebar { width: 220px; flex-shrink: 0; background: var(--card); border-right: 1px solid var(--border); padding: 20px 0; }
     .sidebar a { display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: .88rem; color: var(--text); text-decoration: none; cursor: pointer; transition: background .15s; }
-    .sidebar a:hover, .sidebar a.active { background: #e8f0fb; color: var(--primary); font-weight: 600; }
+    .sidebar a:hover, .sidebar a.active { background: #dce7f9; color: var(--primary); font-weight: 600; }
     .sidebar .section-label { font-size: .7rem; font-weight: 700; color: var(--muted); padding: 14px 20px 4px; text-transform: uppercase; letter-spacing: .08em; }
     .content { flex: 1; padding: 28px 32px; }
 
@@ -101,7 +102,7 @@
              style="width:80px;height:80px;object-fit:contain;margin-bottom:10px"
              onerror="this.style.display='none'" />
         <h1 style="margin:0 0 2px">{{ app_name }}</h1>
-        <p style="font-size:.78rem;color:#1a6fc4;font-weight:700;margin:0 0 4px">#Asenso Pitogo</p>
+        <p style="font-size:.78rem;color:#CE1126;font-weight:700;margin:0 0 4px">#Asenso Pitogo</p>
         <p style="font-size:.8rem;color:var(--muted);margin:0">Barangay Document Management System</p>
       </div>
       <div class="form-group">

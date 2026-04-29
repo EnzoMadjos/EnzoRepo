@@ -9,9 +9,9 @@
     .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
     .row{display:flex;gap:8px}
     input,select{padding:8px;border:1px solid #ddd;border-radius:6px}
-    button{padding:8px 12px;border-radius:6px;border:none;background:#1976d2;color:#fff;cursor:pointer}
+    button{padding:8px 12px;border-radius:6px;border:none;background:#0038A8;color:#fff;cursor:pointer}
     button.btn-sm{padding:4px 8px;font-size:.8rem}
-    button.btn-secondary{background:#607d8b}
+    button.btn-secondary{background:#FCD116;color:#1a1a2e}
     table{width:100%;border-collapse:collapse;margin-top:12px}
     th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
     /* Modal */
@@ -21,9 +21,9 @@
     .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
     .modal-close{background:transparent;border:none;font-size:1.3rem;cursor:pointer;color:#555;padding:2px 6px}
     .badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.75rem;font-weight:600}
-    .badge-issued{background:#e3f2fd;color:#1565c0}
+    .badge-issued{background:#dce7f9;color:#0038A8}
     .badge-finalized{background:#e8f5e9;color:#2e7d32}
-    .badge-voided{background:#fce4ec;color:#b71c1c}
+    .badge-voided{background:#fde8eb;color:#CE1126}
   </style>
 </head>
 <body>
@@ -74,7 +74,7 @@
         <td>${r.national_id||''}</td>
         <td>${r.household_id||''}</td>
         <td><button class="btn-sm btn-secondary" onclick="openCertHistory('${r.id}','${r.last_name}, ${r.first_name}')">View Certs</button></td>
-        <td><button class="btn-sm" style="background:#c62828" onclick="deleteResident('${r.id}')">Delete</button></td>
+        <td><button class="btn-sm" style="background:#CE1126;color:#fff" onclick="deleteResident('${r.id}')">Delete</button></td>
       </tr>`).join('');
     }catch(e){ t.innerHTML = '<tr><td colspan=5>Network error</td></tr>'; }
   }

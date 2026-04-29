@@ -5,8 +5,10 @@ h1,h2{ margin: 8px 0; }
 .form-row { display:flex; gap:8px; align-items:center; }
 .input, input[type=text], input[type=password], select { padding:6px 8px; border:1px solid #ddd; border-radius:6px; }
 .btn { padding:8px 10px; border-radius:6px; border: none; cursor: pointer; }
-.btn-primary { background:#0366d6; color:#fff; }
-.btn-danger { background:#dc3545; color:#fff; }
+.btn-primary { background:#0038A8; color:#fff; }
+.btn-primary:hover { background:#002d8a; }
+.btn-danger { background:#CE1126; color:#fff; }
+.btn-danger:hover { background:#a50e1f; }
 .btn-ghost { background:transparent; border:1px solid #ddd; }
 .small { font-size:0.9em; }
 .confirm-box .btn { min-width:72px; }
