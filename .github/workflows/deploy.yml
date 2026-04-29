@@ -99,20 +99,23 @@ jobs:
     permissions:
       packages: write
     steps:
-      - name: Delete old package versions
+      - name: Delete all untagged package versions
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          OLD_IDS=$(gh api /user/packages/container/enzo-repo/versions \
-            --jq 'sort_by(.created_at) | reverse | .[3:] | .[].id' 2>/dev/null || true)
-          if [ -z "$OLD_IDS" ]; then
-            echo "Nothing to prune — already at 3 or fewer versions."
-            exit 0
-          fi
-          for id in $OLD_IDS; do
-            gh api --method DELETE /user/packages/container/enzo-repo/versions/$id \
-              && echo "Deleted version $id" || echo "Skipped $id (already gone)"
+          PAGE=1
+          DELETED=0
+          while true; do
+            IDS=$(gh api "/user/packages/container/enzo-repo/versions?per_page=100&page=$PAGE" \
+              --jq '[.[] | select(.metadata.container.tags | length == 0) | .id] | .[]' 2>/dev/null || true)
+            [ -z "$IDS" ] && break
+            for id in $IDS; do
+              gh api --method DELETE /user/packages/container/enzo-repo/versions/$id \
+                && { echo "Deleted $id"; DELETED=$((DELETED+1)); } || echo "Skipped $id"
+            done
+            PAGE=$((PAGE+1))
           done
+          echo "Total untagged versions deleted: $DELETED"
 
   notify:
     name: Notify team on result
