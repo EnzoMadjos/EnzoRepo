@@ -1,1 +1,21 @@
-HOME ADDRESS
+{% extends 'certs/base_cert.html' %}
+{% block body %}
+<p style="text-align:center; font-weight:600; text-decoration:underline;">BARANGAY CLEARANCE</p>
+<p>
+  This is to certify that <strong>{{ resident.full_name }}</strong>{% if resident.age %}, {{ resident.age }} years of age{% endif %},
+  a bonafide resident of <strong>{{ household.address_line if household else '' }}</strong>,
+  Barangay <strong>{{ household.barangay if household else '' }}</strong>,
+  Municipality of <strong>CONSOLACION</strong>, Province of <strong>CEBU</strong>, Philippines,
+  is known to be of <strong>GOOD MORAL CHARACTER</strong> and has no derogatory record on file with this Barangay.
+</p>
+<p>
+  This clearance is issued upon the request of
+  <strong>{{ resident.full_name }}</strong>
+  for <strong>{{ purpose or meta.purpose or 'whatever legal purpose it may serve' }}</strong>.
+</p>
+<p>
+  Issued this <strong>{{ issued_at }}</strong> at the Office of the Punong Barangay,
+  Barangay {{ household.barangay if household else '' }}, PITOGO,
+  Municipality of CONSOLACION, Province of CEBU, Philippines.
+</p>
+{% endblock %}
