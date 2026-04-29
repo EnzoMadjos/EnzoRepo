@@ -207,25 +207,16 @@
   <div class="footer">Barangay Pitogo &bull; Municipality of Consolacion &bull; Cebu, Philippines</div>
 
   <script>
-  async function startDemo() {
-    const btn = document.getElementById('startBtn');
-    const spin = document.getElementById('spin');
-    const err = document.getElementById('err-msg');
-    btn.disabled = true;
-    spin.style.display = 'inline-block';
-    err.textContent = '';
-    try {
-      const r = await fetch('/api/demo/start', {method: 'POST'});
-      const d = await r.json();
-      if (!r.ok) { err.textContent = d.detail || 'Could not start demo. Try again.'; btn.disabled = false; spin.style.display = 'none'; return; }
-      localStorage.setItem('pitogo_token', d.token);
-      localStorage.setItem('pitogo_username', d.username);
-      window.location.href = '/ui/dashboard';
-    } catch(e) {
-      err.textContent = 'Network error. Please try again.';
-      btn.disabled = false;
-      spin.style.display = 'none';
-    }
+  function startDemo() {
+    // Pure frontend — no backend call needed.
+    // All demo data lives in sessionStorage (cleared on tab close).
+    localStorage.setItem('pitogo_token', 'demo-mode');
+    localStorage.setItem('pitogo_username', 'Demo Visitor');
+    // Clear any previous demo session data so each run starts fresh
+    Object.keys(sessionStorage).forEach(function(k) {
+      if (k.startsWith('demo_')) sessionStorage.removeItem(k);
+    });
+    window.location.href = '/ui/dashboard';
   }
   </script>
 </body>

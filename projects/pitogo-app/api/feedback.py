@@ -2,17 +2,12 @@ from __future__ import annotations
 
 import json
 import time
-import uuid
-from datetime import date
 from typing import Optional
 
 import auth
 import config
-from api.deps import get_db
 from fastapi import APIRouter, Depends, HTTPException
-from models import CertificateType, Resident
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["demo", "feedback"])
 
@@ -65,36 +60,7 @@ def list_feedbacks(session: auth.SessionData = Depends(auth.require_auth)):
     return _load()
 
 
-def _ensure_demo_seed(db: Session) -> None:
-    """Seed sample cert types and residents if the database is empty."""
-    try:
-        if db.query(CertificateType).count() == 0:
-            db.add_all([
-                CertificateType(id=str(uuid.uuid4()), code="BCL", name="Barangay Clearance", template="clearance"),
-                CertificateType(id=str(uuid.uuid4()), code="COR", name="Certificate of Residency", template="residency"),
-                CertificateType(id=str(uuid.uuid4()), code="COI", name="Certificate of Indigency", template="indigency"),
-            ])
-            db.commit()
-        if db.query(Resident).count() == 0:
-            db.add_all([
-                Resident(id=str(uuid.uuid4()), first_name="Juan", last_name="Dela Cruz", birthdate=date(1985, 3, 14), contact_number="09171234567"),
-                Resident(id=str(uuid.uuid4()), first_name="Maria", last_name="Santos", middle_name="Reyes", birthdate=date(1992, 7, 22), contact_number="09281234567"),
-                Resident(id=str(uuid.uuid4()), first_name="Jose", last_name="Rizal", middle_name="Protacio", birthdate=date(1978, 6, 19)),
-                Resident(id=str(uuid.uuid4()), first_name="Ana", last_name="Bautista", birthdate=date(2000, 1, 5), contact_number="09391234567"),
-                Resident(id=str(uuid.uuid4()), first_name="Pedro", last_name="Garcia", middle_name="Lim", birthdate=date(1965, 11, 30)),
-            ])
-            db.commit()
-    except Exception:
-        db.rollback()  # don't block demo session if seed fails
-
-
 @router.post("/api/demo/start")
-def demo_start(db: Session = Depends(get_db)):
-    """Auto-create a read/write clerk demo session — no credentials required."""
-    _ensure_demo_seed(db)
-    token = auth.create_session(
-        username="demo_visitor",
-        role="clerk",
-        display_name="Demo Visitor",
-    )
-    return {"token": token, "username": "Demo Visitor", "role": "clerk"}
+def demo_start():
+    """Return a demo marker token — actual data is handled client-side."""
+    return {"token": "demo-mode", "username": "Demo Visitor", "role": "clerk"}
