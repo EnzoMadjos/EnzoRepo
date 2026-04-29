@@ -95,7 +95,7 @@ async def _startup() -> None:
 
     # Seed default cert types if none exist
     try:
-        from api.deps import SessionLocal
+        from db import SessionLocal
         from models import CertificateType
         import uuid as _uuid
         _defaults = [
