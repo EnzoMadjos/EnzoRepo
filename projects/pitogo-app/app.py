@@ -93,7 +93,7 @@ async def _startup() -> None:
     except Exception as exc:
         app_logger.warn(f"Migration check failed (non-fatal): {exc}")
 
-    # Seed default cert types if none exist
+    # Seed / fix default cert types
     try:
         from db import SessionLocal
         from models import CertificateType
@@ -109,13 +109,44 @@ async def _startup() -> None:
             ("CON", "Construction Clearance",       "constructionclearance.html"),
             ("NFH", "No Flood History",             "no_flood_history.html"),
         ]
+        # Legacy paths seeded by old manage.py seed → fix to correct filename-only format
+        _legacy_fixes = {
+            "certs/clearance.html":         "barangay_clearance.html",
+            "certs/business_clearance.html": "business_clearance.html",
+            "certs/cohabitation.html":      "cohabitation.html",
+            "certs/sss_membership.html":    "sss_membership.html",
+            "docs/residency.html":          "certofresidency.html",
+            "docs/indigency.html":          "indigency.html",
+        }
+        # Also fix old code mismatches (manage.py used CLEAR/RESID/INDIG/COHAB vs our BCL/COR/COI/COH)
+        _code_fixes = {
+            "CLEAR": "BCL", "RESID": "COR", "INDIG": "COI",
+            "COHAB": "COH", "BUSINESS": "BUS",
+        }
         _db = SessionLocal()
         try:
-            if _db.query(CertificateType).count() == 0:
-                for _code, _name, _tpl in _defaults:
+            changed = False
+            existing = {ct.code: ct for ct in _db.query(CertificateType).all()}
+            # Fix legacy template paths and normalise codes
+            for row in list(existing.values()):
+                new_tpl = _legacy_fixes.get(row.template)
+                if new_tpl:
+                    row.template = new_tpl
+                    changed = True
+                new_code = _code_fixes.get(row.code)
+                if new_code and new_code not in existing:
+                    row.code = new_code
+                    existing[new_code] = row
+                    changed = True
+            # Add any newly defined cert types that don't exist yet
+            existing_refresh = {ct.code: ct for ct in _db.query(CertificateType).all()}
+            for _code, _name, _tpl in _defaults:
+                if _code not in existing_refresh:
                     _db.add(CertificateType(id=str(_uuid.uuid4()), code=_code, name=_name, template=_tpl))
+                    changed = True
+            if changed:
                 _db.commit()
-                app_logger.info("Seeded default certificate types")
+                app_logger.info("Cert types seeded / fixed")
         finally:
             _db.close()
     except Exception as exc:
