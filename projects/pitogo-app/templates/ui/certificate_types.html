@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }} — Certificate Types</title>
+  <style>
+    body{font-family:system-ui,'Segoe UI',Arial;background:#f5f7fa;color:#111}
+    .page{padding:24px 28px}
+    h2{margin:0 0 20px;font-size:1.15rem;color:#1a1a2e}
+    .card{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:20px;margin-bottom:20px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+    input,select,textarea{padding:8px 10px;border:1px solid #dee2e6;border-radius:7px;font-size:.88rem;font-family:inherit}
+    input:focus,textarea:focus{outline:none;border-color:#1a6fc4}
+    textarea{resize:vertical;min-height:60px;width:100%;box-sizing:border-box}
+    button{padding:8px 14px;border-radius:7px;border:none;cursor:pointer;font-size:.85rem;font-weight:600}
+    .btn-primary{background:#1a6fc4;color:#fff}
+    .btn-primary:hover{background:#145fa8}
+    .btn-danger{background:#dc3545;color:#fff}
+    .btn-danger:hover{background:#b02a37}
+    .btn-sm{padding:5px 10px;font-size:.78rem}
+    table{width:100%;border-collapse:collapse;margin-top:4px}
+    th,td{border-bottom:1px solid #eee;padding:9px 10px;text-align:left;font-size:.86rem}
+    th{background:#f8f9fa;font-weight:700;font-size:.78rem;color:#6c757d;text-transform:uppercase;letter-spacing:.04em}
+    .code-pill{display:inline-block;background:#e8f0fb;color:#1a6fc4;border-radius:5px;padding:2px 8px;font-size:.78rem;font-family:monospace;font-weight:700}
+    .tmpl-cell{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6c757d;font-size:.8rem;font-family:monospace}
+    #status-msg{min-height:18px;font-size:.82rem;color:#6c757d;margin-top:6px}
+    .label{font-size:.78rem;font-weight:700;color:#6c757d;display:block;margin-bottom:4px}
+    .field{display:flex;flex-direction:column;gap:2px}
+  </style>
+</head>
+<body>
+  {% include 'partials/topbar.html' %}
+  <div class="page">
+    <h2>Certificate Types</h2>
+
+    <div class="card">
+      <div style="font-size:.88rem;font-weight:700;margin-bottom:14px;color:#333">Add Certificate Type <span style="font-size:.75rem;font-weight:400;color:#6c757d">(admin only)</span></div>
+      <div class="row" style="margin-bottom:12px">
+        <div class="field">
+          <span class="label">Code</span>
+          <input id="ct-code" placeholder="e.g. CLEARANCE" style="width:160px" />
+        </div>
+        <div class="field">
+          <span class="label">Name</span>
+          <input id="ct-name" placeholder="e.g. Barangay Clearance" style="width:240px" />
+        </div>
+        <div class="field" style="flex:1;min-width:200px">
+          <span class="label">Template file</span>
+          <input id="ct-template" placeholder="e.g. certs/clearance.html" style="width:100%" />
+        </div>
+        <div class="field" style="justify-content:flex-end">
+          <button class="btn-primary" onclick="createType()">Add Type</button>
+        </div>
+      </div>
+      <div id="status-msg"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:.88rem;font-weight:700;color:#333">Registered Types</div>
+        <button class="btn-primary btn-sm" onclick="loadTypes()">↻ Refresh</button>
+      </div>
+      <table id="types-table">
+        <thead>
+          <tr><th>Code</th><th>Name</th><th>Template</th><th style="width:80px"></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+  const token = localStorage.getItem('pitogo_token') || '';
+  const hdrs = {
+    'Authorization': token ? 'Bearer ' + token : '',
+    'Content-Type': 'application/json'
+  };
+
+  async function loadTypes() {
+    const tbody = document.querySelector('#types-table tbody');
+    tbody.innerHTML = '<tr><td colspan=4 style="color:#aaa">Loading…</td></tr>';
+    try {
+      const r = await fetch('/api/certificate-types/', {headers: hdrs});
+      const data = await r.json();
+      if (!r.ok) { tbody.innerHTML = '<tr><td colspan=4 style="color:red">Error loading</td></tr>'; return; }
+      if (!data.length) { tbody.innerHTML = '<tr><td colspan=4 style="color:#aaa">No certificate types yet. Add one above.</td></tr>'; return; }
+      tbody.innerHTML = data.map(ct => `<tr>
+        <td><span class="code-pill">${ct.code}</span></td>
+        <td>${ct.name}</td>
+        <td class="tmpl-cell" title="${ct.template}">${ct.template}</td>
+        <td><button class="btn-danger btn-sm" onclick="deleteType('${ct.id}','${ct.name}')">Delete</button></td>
+      </tr>`).join('');
+    } catch(e) {
+      tbody.innerHTML = '<tr><td colspan=4 style="color:red">Network error</td></tr>';
+    }
+  }
+
+  async function createType() {
+    const code = document.getElementById('ct-code').value.trim().toUpperCase();
+    const name = document.getElementById('ct-name').value.trim();
+    const template = document.getElementById('ct-template').value.trim();
+    const msg = document.getElementById('status-msg');
+    if (!code || !name || !template) { msg.textContent = 'All fields required'; msg.style.color = '#dc3545'; return; }
+    msg.textContent = 'Creating…'; msg.style.color = '#6c757d';
+    try {
+      const r = await fetch('/api/certificate-types/', {
+        method: 'POST', headers: hdrs,
+        body: JSON.stringify({code, name, template})
+      });
+      const d = await r.json();
+      if (!r.ok) { msg.textContent = d.detail || 'Create failed'; msg.style.color = '#dc3545'; return; }
+      document.getElementById('ct-code').value = '';
+      document.getElementById('ct-name').value = '';
+      document.getElementById('ct-template').value = '';
+      msg.textContent = '✓ Created: ' + d.name; msg.style.color = '#28a745';
+      loadTypes();
+    } catch(e) { msg.textContent = 'Network error'; msg.style.color = '#dc3545'; }
+  }
+
+  async function deleteType(id, name) {
+    if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
+    try {
+      const r = await fetch('/api/certificate-types/' + id, {method: 'DELETE', headers: hdrs});
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        alert(d.detail || 'Delete failed');
+        return;
+      }
+      loadTypes();
+    } catch(e) { alert('Network error'); }
+  }
+
+  window.addEventListener('DOMContentLoaded', loadTypes);
+  </script>
+</body>
+</html>

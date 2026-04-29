@@ -5,26 +5,38 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{{ app_name }} — Households</title>
   <style>
-    body{font-family:system-ui,Segoe UI,Arial;margin:18px;color:#111}
-    .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
-    input,select{padding:8px;border:1px solid #ddd;border-radius:6px}
-    button{padding:8px 12px;border-radius:6px;border:none;background:#1976d2;color:#fff}
-    table{width:100%;border-collapse:collapse;margin-top:12px}
-    th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
+    body{font-family:system-ui,'Segoe UI',Arial;margin:0;background:#f5f7fa;color:#111}
+    .card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);margin-bottom:20px}
+    input,select{padding:8px 10px;border:1px solid #dee2e6;border-radius:7px;font-size:.88rem}
+    input:focus{outline:none;border-color:#1a6fc4}
+    button{padding:8px 14px;border-radius:7px;border:none;cursor:pointer;font-size:.85rem;font-weight:600}
+    .btn-primary{background:#1a6fc4;color:#fff}.btn-primary:hover{background:#145fa8}
+    .btn-danger{background:#dc3545;color:#fff}.btn-sm{padding:5px 10px;font-size:.78rem}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{border-bottom:1px solid #eee;padding:9px 10px;text-align:left;font-size:.86rem}
+    th{background:#f8f9fa;font-weight:700;font-size:.78rem;color:#6c757d;text-transform:uppercase;letter-spacing:.04em}
+    #status{min-height:18px;font-size:.82rem;color:#6c757d;margin-top:4px}
   </style>
 </head>
 <body>
-  <h2>Households</h2>
+  {% include 'partials/topbar.html' %}
+  <div style="padding:20px 24px">
+  <h2 style="margin:0 0 18px;font-size:1.15rem;color:#1a1a2e">Households</h2>
   <div class="card">
-    <div style="margin-bottom:10px">Create household</div>
-    <div style="display:flex;gap:8px;margin-bottom:8px">
-      <input id="address_line" placeholder="Address line" style="flex:2" />
+    <div style="font-size:.88rem;font-weight:700;margin-bottom:12px;color:#333">Add Household</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
+      <input id="address_line" placeholder="Address line" style="flex:2;min-width:200px" />
       <input id="barangay" placeholder="Barangay" style="width:160px" />
-      <input id="city" placeholder="City" style="width:160px" />
-      <button onclick="createHousehold()">Create</button>
+      <input id="city" placeholder="City" style="width:140px" />
+      <input id="zip_code" placeholder="ZIP" style="width:90px" />
+      <button class="btn-primary" onclick="createHousehold()">+ Add</button>
     </div>
-    <div id="status" style="color:#666;font-size:0.9rem"></div>
-    <table id="hh-table"><thead><tr><th>Address</th><th>Barangay</th><th>City</th><th></th></tr></thead><tbody></tbody></table>
+    <div id="status"></div>
+    <table id="hh-table">
+      <thead><tr><th>Address</th><th>Barangay</th><th>City</th><th>ZIP</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
   </div>
 
   <script>
@@ -32,35 +44,38 @@
   const hdrs = token ? {'Authorization': 'Bearer '+token, 'Content-Type':'application/json'} : {'Content-Type':'application/json'};
 
   async function listHouseholds(){
-    const t = document.querySelector('#hh-table tbody'); t.innerHTML = '<tr><td colspan=4>Loading…</td></tr>';
+    const t = document.querySelector('#hh-table tbody'); t.innerHTML = '<tr><td colspan=5>Loading…</td></tr>';
     try{
       const r = await fetch('/api/households/', {headers: hdrs});
       const data = await r.json();
-      if(!r.ok){ t.innerHTML = '<tr><td colspan=4>Error loading</td></tr>'; return; }
-      t.innerHTML = data.map(h => `<tr><td>${h.address_line}</td><td>${h.barangay}</td><td>${h.city}</td><td><button onclick="deleteHousehold('${h.id}')">Delete</button></td></tr>`).join('');
-    }catch(e){ t.innerHTML = '<tr><td colspan=4>Network error</td></tr>'; }
+      if(!r.ok){ t.innerHTML = '<tr><td colspan=5 style="color:red">Error loading</td></tr>'; return; }
+      if(!data.length){ t.innerHTML = '<tr><td colspan=5 style="color:#aaa">No households yet</td></tr>'; return; }
+      t.innerHTML = data.map(h => `<tr><td>${h.address_line}</td><td>${h.barangay}</td><td>${h.city}</td><td>${h.zip_code||'—'}</td><td><button class="btn-danger btn-sm" onclick="deleteHousehold('${h.id}')">Delete</button></td></tr>`).join('');
+    }catch(e){ t.innerHTML = '<tr><td colspan=5 style="color:red">Network error</td></tr>'; }
   }
 
   async function createHousehold(){
     const address = document.getElementById('address_line').value.trim();
     const barangay = document.getElementById('barangay').value.trim();
     const city = document.getElementById('city').value.trim();
-    if(!address||!barangay||!city){ document.getElementById('status').textContent='All fields required'; return; }
-    document.getElementById('status').textContent='Creating…';
+    const zip = document.getElementById('zip_code').value.trim();
+    const msg = document.getElementById('status');
+    if(!address||!barangay||!city){ msg.textContent='Address, barangay and city are required'; msg.style.color='#dc3545'; return; }
+    msg.textContent='Creating…'; msg.style.color='#6c757d';
     try{
-      const r = await fetch('/api/households/', {method:'POST', headers: hdrs, body: JSON.stringify({address_line:address,barangay:barangay,city:city})});
+      const r = await fetch('/api/households/', {method:'POST', headers: hdrs, body: JSON.stringify({address_line:address,barangay,city,zip_code:zip||null})});
       const d = await r.json();
-      if(!r.ok){ document.getElementById('status').textContent = d.detail || 'Create failed'; return; }
-      document.getElementById('address_line').value=''; document.getElementById('barangay').value=''; document.getElementById('city').value='';
-      document.getElementById('status').textContent='Created';
+      if(!r.ok){ msg.textContent = d.detail || 'Create failed'; msg.style.color='#dc3545'; return; }
+      document.getElementById('address_line').value=''; document.getElementById('barangay').value=''; document.getElementById('city').value=''; document.getElementById('zip_code').value='';
+      msg.textContent='✓ Household added'; msg.style.color='#28a745';
       listHouseholds();
-    }catch(e){ document.getElementById('status').textContent='Network error'; }
+    }catch(e){ msg.textContent='Network error'; msg.style.color='#dc3545'; }
   }
 
   async function deleteHousehold(id){
-    if(!confirm('Delete household?')) return;
+    if(!confirm('Delete this household? (Only possible if no residents are assigned)')) return;
     const r = await fetch('/api/households/'+id, {method:'DELETE', headers: hdrs});
-    if(r.status===400){ alert('Household has members; reassign or remove members first'); }
+    if(r.status===400){ const d = await r.json().catch(()=>({detail:'Has members'})); alert(d.detail); }
     listHouseholds();
   }
 

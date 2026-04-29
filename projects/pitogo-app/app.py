@@ -185,6 +185,13 @@ async def ui_audit(request: Request) -> HTMLResponse:
     )
 
 
+@app.get("/ui/certificate-types", response_class=HTMLResponse)
+async def ui_certificate_types(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "ui/certificate_types.html", {"request": request, "app_name": config.APP_NAME}
+    )
+
+
 class ArchiveRequest(BaseModel):
     q: Optional[str] = None
     level: Optional[str] = None

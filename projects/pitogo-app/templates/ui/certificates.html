@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{{ app_name }} — Certificates</title>
   <style>
-    body{font-family:system-ui,Segoe UI,Arial;margin:18px;color:#111}
+    body{font-family:system-ui,Segoe UI,Arial;margin:0;background:#f5f7fa;color:#111}
     .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     input,select{padding:8px;border:1px solid #ddd;border-radius:6px;font-size:.9rem}
@@ -38,6 +38,8 @@
   </style>
 </head>
 <body>
+  {% include 'partials/topbar.html' %}
+  <div style="padding:20px 24px">
   <h2>Issued Certificates</h2>
 
   <!-- Attachment modal -->
@@ -345,5 +347,6 @@
   loadTypes();
   loadCerts(1);
   </script>
+  </div>
 </body>
 </html>

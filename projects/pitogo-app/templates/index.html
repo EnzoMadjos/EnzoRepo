@@ -96,8 +96,14 @@
 <div id="login-screen" {% if demo_show_app %}style="display:none;"{% endif %}>
   <div class="login-wrap">
     <div class="login-card">
-      <h1>{{ app_name }}</h1>
-      <p>Barangay Document Management System</p>
+      <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px">
+        <img id="login-seal" src="/static/img/seal.png" alt="Barangay Seal"
+             style="width:80px;height:80px;object-fit:contain;margin-bottom:10px"
+             onerror="this.style.display='none'" />
+        <h1 style="margin:0 0 2px">{{ app_name }}</h1>
+        <p style="font-size:.78rem;color:#1a6fc4;font-weight:700;margin:0 0 4px">#Asenso Pitogo</p>
+        <p style="font-size:.8rem;color:var(--muted);margin:0">Barangay Document Management System</p>
+      </div>
       <div class="form-group">
         <label>Username</label>
         <input type="text" id="login-username" placeholder="Enter username" autocomplete="username" />
@@ -124,13 +130,20 @@
 
   <!-- Topbar -->
   <div class="topbar">
-    <h1>{{ app_name }}</h1>
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="/static/img/seal.png" alt="" style="width:34px;height:34px;object-fit:contain;border-radius:50%;border:2px solid rgba(255,255,255,.3);flex-shrink:0" onerror="this.style.display='none'" />
+      <div style="display:flex;flex-direction:column;line-height:1.2">
+        <span style="font-size:.88rem;font-weight:700">{{ app_name }}</span>
+        <span style="font-size:.62rem;color:rgba(255,255,255,.78);font-style:italic">#Asenso Pitogo</span>
+      </div>
+    </div>
     <div class="topbar-nav">
       <a href="/ui/dashboard">Dashboard</a>
       <a href="/ui/issue">Issue</a>
       <a href="/ui/certificates">Certificates</a>
       <a href="/ui/residents">Residents</a>
       <a href="/ui/households">Households</a>
+      <a href="/ui/certificate-types">Cert Types</a>
       <a href="/ui/users">Users</a>
       <a href="/ui/audit">Audit</a>
     </div>

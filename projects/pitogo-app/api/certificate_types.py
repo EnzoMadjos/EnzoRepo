@@ -43,3 +43,18 @@ def create_type(
     db.commit()
     db.refresh(ct)
     return _to_dict(ct)
+
+
+@router.delete("/{type_id}", status_code=204)
+def delete_type(
+    type_id: str,
+    db=Depends(get_db),
+    session: auth.SessionData = Depends(auth.require_auth),
+):
+    if session.role != "admin":
+        raise HTTPException(status_code=403, detail="admin only")
+    ct = db.query(CertificateType).get(type_id)
+    if not ct:
+        raise HTTPException(status_code=404, detail="certificate type not found")
+    db.delete(ct)
+    db.commit()
