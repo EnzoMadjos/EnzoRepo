@@ -93,6 +93,34 @@ async def _startup() -> None:
     except Exception as exc:
         app_logger.warn(f"Migration check failed (non-fatal): {exc}")
 
+    # Seed default cert types if none exist
+    try:
+        from api.deps import SessionLocal
+        from models import CertificateType
+        import uuid as _uuid
+        _defaults = [
+            ("BCL", "Barangay Clearance",           "barangay_clearance.html"),
+            ("COR", "Certificate of Residency",     "certofresidency.html"),
+            ("COI", "Certificate of Indigency",     "indigency.html"),
+            ("BUS", "Business Clearance",           "business_clearance.html"),
+            ("COH", "Cohabitation Certificate",     "cohabitation.html"),
+            ("SSS", "SSS Membership Certificate",   "sss_membership.html"),
+            ("SAM", "Same Person Certificate",      "same_person.html"),
+            ("CON", "Construction Clearance",       "constructionclearance.html"),
+            ("NFH", "No Flood History",             "no_flood_history.html"),
+        ]
+        _db = SessionLocal()
+        try:
+            if _db.query(CertificateType).count() == 0:
+                for _code, _name, _tpl in _defaults:
+                    _db.add(CertificateType(id=str(_uuid.uuid4()), code=_code, name=_name, template=_tpl))
+                _db.commit()
+                app_logger.info("Seeded default certificate types")
+        finally:
+            _db.close()
+    except Exception as exc:
+        app_logger.warn(f"Cert type seed failed (non-fatal): {exc}")
+
     def on_elected():
         global _server_role
         _server_role = "leader"

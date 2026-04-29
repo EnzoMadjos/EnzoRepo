@@ -342,7 +342,7 @@ def preview_certificate(
             "certificate_type": {"id": ct.id, "code": ct.code, "name": ct.name},
             "meta": ci.meta or {},
         }
-        rendered = templates.get_template(template_name).render(**context)
+        rendered = templates.get_template(template_name).render(**context, **(context.get("meta") or {}))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"preview failed: {exc}")
 
@@ -429,6 +429,7 @@ def preview_certificate_with_overrides(
             resident=resident_ctx,
             household=household_ctx,
             meta=meta_ctx,
+            **meta_ctx,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"preview failed: {exc}")
@@ -666,6 +667,7 @@ def generate_certificate_file(
             resident=resident_ctx,
             household=household_ctx,
             meta=meta_ctx,
+            **meta_ctx,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"render failed: {exc}")

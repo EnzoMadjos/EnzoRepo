@@ -5,97 +5,259 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{{ app_name }} — Issue Certificate</title>
   <link rel="stylesheet" href="/static/css/app_ui.css">
+  <style>
+    .meta-section{margin-top:12px;padding:12px;background:#f8f9ff;border:1px solid #ddeeff;border-radius:8px;display:none}
+    .meta-section.visible{display:block}
+    .meta-section h4{margin:0 0 10px;color:#0038A8;font-size:.95rem;font-weight:600}
+    .field-row{display:flex;gap:10px;margin-bottom:8px;align-items:flex-end}
+    .field-row label{flex:1;display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:#444}
+    .field-row input,.field-row select{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
+    .preview-panel{margin-top:18px}
+    .preview-panel h3{margin:0 0 8px;font-size:1rem;color:#333}
+    #previewFrame{width:100%;height:680px;border:1px solid #ddd;border-radius:6px;background:#fff}
+    .action-bar{display:flex;gap:8px;align-items:center;margin-top:14px}
+    .cert-info-badge{padding:4px 10px;border-radius:12px;font-size:.78rem;background:#dce7f9;color:#0038A8;font-weight:600}
+    .status-line{font-size:.85rem;color:#666;margin-top:6px;min-height:20px}
+  </style>
 </head>
 <body>
   {% include 'partials/topbar.html' %}
-  <div style="padding:20px 24px">
-  <h1>Issue Certificate</h1>
+  <div style="padding:20px 24px;max-width:1100px">
+  <h1 style="margin-bottom:18px">Issue Certificate</h1>
 
-  <div id="form">
-    <label>Resident
-      <select id="residentSelect"><option>Loading...</option></select>
-    </label>
+  <div style="display:flex;gap:18px;align-items:flex-start">
+    <!-- Left: form -->
+    <div style="flex:1;min-width:0">
+      <div class="card" style="background:#fff;padding:18px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07)">
 
-    <label>Certificate Type
-      <select id="typeSelect"><option>Loading...</option></select>
-    </label>
+        <div class="field-row">
+          <label>Resident
+            <select id="residentSelect"><option value="">— loading —</option></select>
+          </label>
+          <label>Certificate Type
+            <select id="typeSelect"><option value="">— loading —</option></select>
+          </label>
+        </div>
 
-    <label>Purpose
-      <input id="purpose" type="text" placeholder="e.g. Employment, ID, Travel" class="input" />
-    </label>
+        <div class="field-row">
+          <label>Purpose
+            <input id="purpose" type="text" placeholder="e.g. Employment, Scholarship, Travel" />
+          </label>
+          <label>Address
+            <input id="address" type="text" placeholder="Auto-filled from household" />
+          </label>
+        </div>
 
-    <label>Address
-      <input id="address" type="text" placeholder="Address (prefilled from household)" class="input" />
-    </label>
+        <!-- Business Clearance fields -->
+        <div id="meta-business" class="meta-section">
+          <h4>Business Information</h4>
+          <div class="field-row">
+            <label>Business Name <input id="meta_business_name" type="text" placeholder="Business or establishment name" /></label>
+            <label>Owner Name <input id="meta_owner_name" type="text" placeholder="Owner / proprietor" /></label>
+          </div>
+        </div>
 
-    <div style="margin-top:10px">
-      <button id="previewBtn" class="btn">Create Draft & Preview</button>
-      <button id="generateBtn" class="btn btn-primary">Generate Final</button>
+        <!-- Cohabitation fields -->
+        <div id="meta-cohabitation" class="meta-section">
+          <h4>Cohabitation Details</h4>
+          <div class="field-row">
+            <label>Partner A (Person A full name) <input id="meta_partner_a" type="text" placeholder="Full name" /></label>
+            <label>Partner B (Person B full name) <input id="meta_partner_b" type="text" placeholder="Full name" /></label>
+          </div>
+          <div class="field-row">
+            <label style="max-width:260px">Duration living together
+              <input id="meta_duration" type="text" placeholder="e.g. 3 years" />
+            </label>
+          </div>
+        </div>
+
+        <!-- SSS Membership fields -->
+        <div id="meta-sss" class="meta-section">
+          <h4>SSS Details</h4>
+          <div class="field-row">
+            <label>SSS Number <input id="meta_sss_number" type="text" placeholder="SSS membership number" /></label>
+            <label>Member Since <input id="meta_member_since" type="text" placeholder="e.g. January 2019" /></label>
+          </div>
+        </div>
+
+        <!-- Same Person Certificate fields -->
+        <div id="meta-sameperson" class="meta-section">
+          <h4>Same Person Details</h4>
+          <div class="field-row">
+            <label>Alias / Other Name <input id="meta_other_name" type="text" placeholder="The other name used" /></label>
+          </div>
+        </div>
+
+        <div class="status-line" id="status"></div>
+
+        <div class="action-bar">
+          <button id="previewBtn" class="btn" onclick="issueCert('preview')" style="background:#0038A8;color:#fff;padding:9px 18px;border-radius:7px;border:none;font-weight:600;cursor:pointer">
+            ⬡ Preview
+          </button>
+          <button id="generateBtn" class="btn btn-primary" onclick="issueCert('generate')" style="background:#CE1126;color:#fff;padding:9px 18px;border-radius:7px;border:none;font-weight:600;cursor:pointer">
+            ⬡ Generate Final
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: preview panel -->
+    <div class="preview-panel" style="flex:1.1;min-width:0">
+      <h3>Document Preview</h3>
+      <iframe id="previewFrame" src="about:blank"></iframe>
     </div>
   </div>
 
-  <hr />
-  <h2>Preview</h2>
-  <iframe id="previewFrame" style="width:100%;height:640px;border:1px solid #ddd"></iframe>
-
   <script src="/static/js/ui_helpers.js"></script>
   <script>
-    async function loadData(){
-      try{
-        const types = await fetchJson('/api/certificate-types/', { headers: authHeaders() });
-        const residents = await fetchJson('/api/residents/', { headers: authHeaders() });
+  // cert type code → meta section id (for dynamic field show/hide)
+  const META_SECTIONS = {
+    'BUS':  'meta-business',
+    'COH':  'meta-cohabitation',
+    'SSS':  'meta-sss',
+    'SAM':  'meta-sameperson',
+    // legacy codes from manage.py seed
+    'BUSINESS': 'meta-business',
+    'COHAB':    'meta-cohabitation',
+  };
 
-        const tSel = document.getElementById('typeSelect'); tSel.innerHTML = '';
-        types.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name + ' ('+t.code+')'; tSel.appendChild(o); });
+  // map meta section id → field ids
+  const META_FIELDS = {
+    'meta-business':    ['meta_business_name','meta_owner_name'],
+    'meta-cohabitation':['meta_partner_a','meta_partner_b','meta_duration'],
+    'meta-sss':         ['meta_sss_number','meta_member_since'],
+    'meta-sameperson':  ['meta_other_name'],
+  };
 
-        const rSel = document.getElementById('residentSelect'); rSel.innerHTML = '';
-        residents.forEach(r => { const o = document.createElement('option'); o.value = r.id; o.textContent = (r.first_name||'') + ' ' + (r.last_name||''); o.dataset.household = r.household_id || ''; rSel.appendChild(o); });
+  let certTypeMap = {};  // id → {id, code, name, template}
 
-        fillAddressFromResident();
-      }catch(e){ showToast('Failed to load data: '+e.message, 'error'); }
-    }
+  async function loadData(){
+    setStatus('Loading data…');
+    try{
+      const [types, residents] = await Promise.all([
+        fetchJson('/api/certificate-types/', { headers: authHeaders() }),
+        fetchJson('/api/residents/', { headers: authHeaders() }),
+      ]);
 
-    async function fillAddressFromResident(){
+      const tSel = document.getElementById('typeSelect');
+      tSel.innerHTML = '<option value="">Select type…</option>';
+      (types || []).forEach(t => {
+        certTypeMap[t.id] = t;
+        const o = document.createElement('option');
+        o.value = t.id; o.textContent = t.name; tSel.appendChild(o);
+      });
+
       const rSel = document.getElementById('residentSelect');
-      const hid = rSel.value;
-      const addr = document.getElementById('address');
-      if(!hid){ addr.value = ''; return; }
-      try{
-        const h = await fetchJson('/api/households/' + hid, { headers: authHeaders() });
-        addr.value = [h.address_line, h.barangay, h.city].filter(Boolean).join(', ');
-      }catch(e){ addr.value = ''; }
+      rSel.innerHTML = '<option value="">Select resident…</option>';
+      (residents || []).forEach(r => {
+        const o = document.createElement('option');
+        o.value = r.id;
+        o.textContent = (r.last_name||'') + ', ' + (r.first_name||'') + (r.middle_name ? ' '+r.middle_name : '');
+        o.dataset.householdId = r.household_id || '';
+        rSel.appendChild(o);
+      });
+
+      fillAddressFromResident();
+      setStatus('');
+    }catch(e){ setStatus('Failed to load residents / cert types', true); }
+  }
+
+  async function fillAddressFromResident(){
+    const rSel = document.getElementById('residentSelect');
+    const opt = rSel.options[rSel.selectedIndex];
+    const hid = opt ? opt.dataset.householdId : '';
+    const addr = document.getElementById('address');
+    if(!hid){ addr.value = ''; return; }
+    try{
+      const h = await fetchJson('/api/households/' + hid, { headers: authHeaders() });
+      addr.value = [h.address_line, h.barangay, h.city].filter(Boolean).join(', ');
+    }catch(e){ addr.value = ''; }
+  }
+
+  function onTypeChange(){
+    const tSel = document.getElementById('typeSelect');
+    const ct = certTypeMap[tSel.value];
+    const code = ct ? ct.code : '';
+    // hide all meta sections first
+    document.querySelectorAll('.meta-section').forEach(s => s.classList.remove('visible'));
+    // show relevant one
+    const sectionId = META_SECTIONS[code];
+    if(sectionId){ document.getElementById(sectionId).classList.add('visible'); }
+  }
+
+  document.getElementById('residentSelect').addEventListener('change', fillAddressFromResident);
+  document.getElementById('typeSelect').addEventListener('change', onTypeChange);
+
+  function collectMeta(){
+    const tSel = document.getElementById('typeSelect');
+    const ct = certTypeMap[tSel.value];
+    const code = ct ? ct.code : '';
+    const sectionId = META_SECTIONS[code];
+    const meta = {
+      purpose: document.getElementById('purpose').value.trim(),
+      address: document.getElementById('address').value.trim(),
+    };
+    if(sectionId){
+      (META_FIELDS[sectionId] || []).forEach(fid => {
+        const el = document.getElementById(fid);
+        if(el && el.value.trim()){
+          // strip 'meta_' prefix to get the field name
+          meta[fid.replace('meta_','')] = el.value.trim();
+        }
+      });
     }
+    return meta;
+  }
 
-    document.getElementById('residentSelect').addEventListener('change', fillAddressFromResident);
+  function setStatus(msg, isError){
+    const s = document.getElementById('status');
+    s.textContent = msg;
+    s.style.color = isError ? '#CE1126' : '#555';
+  }
 
-    document.getElementById('previewBtn').addEventListener('click', async ()=>{
-      try{
-        const ct = document.getElementById('typeSelect').value;
-        const res = document.getElementById('residentSelect').value;
-        const purpose = document.getElementById('purpose').value;
-        const address = document.getElementById('address').value;
+  async function issueCert(mode){
+    const ctId = document.getElementById('typeSelect').value;
+    const resId = document.getElementById('residentSelect').value;
+    if(!ctId){ setStatus('Please select a certificate type', true); return; }
+    if(!resId){ setStatus('Please select a resident', true); return; }
 
-        const created = await fetchJson('/api/certificates/', { method:'POST', headers: Object.assign({}, authHeaders(), {'Content-Type':'application/json'}), body: JSON.stringify({ certificate_type_id: ct, resident_id: res, meta: { purpose: purpose, address: address } }) });
+    setStatus(mode === 'preview' ? 'Creating draft & loading preview…' : 'Generating final certificate…');
+    document.querySelectorAll('.action-bar button').forEach(b => b.disabled = true);
+
+    try{
+      const meta = collectMeta();
+      // Create the certificate record
+      const created = await fetchJson('/api/certificates/', {
+        method: 'POST',
+        headers: Object.assign({}, authHeaders(), {'Content-Type':'application/json'}),
+        body: JSON.stringify({ certificate_type_id: ctId, resident_id: resId, meta }),
+      });
+
+      if(mode === 'preview'){
         const pv = await fetchJson('/api/certificates/' + created.id + '/preview', { headers: authHeaders() });
-        const iframe = document.getElementById('previewFrame'); iframe.srcdoc = pv.html;
-      }catch(err){ showToast('Error: '+err.message, 'error'); }
-    });
+        document.getElementById('previewFrame').srcdoc = pv.html;
+        setStatus('Draft created — control # ' + (created.control_number || created.id));
+      } else {
+        const gen = await fetchJson('/api/certificates/' + created.id + '/generate', {
+          method: 'POST', headers: authHeaders(),
+        });
+        setStatus('✔ Certificate generated — ' + (created.control_number || created.id));
+        if(gen.download_url){
+          // also load preview
+          const pv = await fetchJson('/api/certificates/' + created.id + '/preview', { headers: authHeaders() }).catch(()=>null);
+          if(pv) document.getElementById('previewFrame').srcdoc = pv.html;
+          setTimeout(()=>{ window.open(gen.download_url, '_blank'); }, 400);
+        }
+      }
+    }catch(err){
+      setStatus('Error: ' + (err.message || 'Unknown error'), true);
+    } finally {
+      document.querySelectorAll('.action-bar button').forEach(b => b.disabled = false);
+    }
+  }
 
-    document.getElementById('generateBtn').addEventListener('click', async ()=>{
-      try{
-        const ct = document.getElementById('typeSelect').value;
-        const res = document.getElementById('residentSelect').value;
-        const purpose = document.getElementById('purpose').value;
-        const address = document.getElementById('address').value;
-
-        const created = await fetchJson('/api/certificates/', { method:'POST', headers: Object.assign({}, authHeaders(), {'Content-Type':'application/json'}), body: JSON.stringify({ certificate_type_id: ct, resident_id: res, meta: { purpose: purpose, address: address } }) });
-        const gen = await fetchJson('/api/certificates/' + created.id + '/generate', { method:'POST', headers: authHeaders() });
-        showToast('Generated: ' + gen.download_url, 'success');
-        window.open(gen.download_url, '_blank');
-      }catch(err){ showToast('Error: '+err.message, 'error'); }
-    });
-
-    loadData();
+  loadData();
   </script>
   </div>
 </body>

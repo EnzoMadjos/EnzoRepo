@@ -7,23 +7,33 @@
   <style>
     body{font-family:system-ui,'Segoe UI',Arial;margin:0;background:#f5f7fa;color:#111}
     .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
-    .row{display:flex;gap:8px}
-    input,select{padding:8px;border:1px solid #ddd;border-radius:6px}
-    button{padding:8px 12px;border-radius:6px;border:none;background:#0038A8;color:#fff;cursor:pointer}
-    button.btn-sm{padding:4px 8px;font-size:.8rem}
-    button.btn-secondary{background:#FCD116;color:#1a1a2e}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    input,select{padding:8px;border:1px solid #ddd;border-radius:6px;box-sizing:border-box}
+    .btn{padding:8px 14px;border-radius:6px;border:none;background:#0038A8;color:#fff;cursor:pointer;font-weight:600}
+    .btn-sm{padding:4px 8px;font-size:.78rem;border-radius:5px;border:none;cursor:pointer;font-weight:600}
+    .btn-edit{background:#FCD116;color:#1a1a2e}
+    .btn-danger{background:#CE1126;color:#fff}
+    .btn-secondary{background:#6c757d;color:#fff}
     table{width:100%;border-collapse:collapse;margin-top:12px}
-    th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
+    th,td{border-bottom:1px solid #eee;padding:8px;text-align:left;vertical-align:top}
+    th{background:#f8f9fa;font-size:.82rem;font-weight:600;color:#555;text-transform:uppercase}
     /* Modal */
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center}
     .modal-overlay.open{display:flex}
-    .modal-box{background:#fff;border-radius:10px;padding:24px;width:90%;max-width:760px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
-    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .modal-box{background:#fff;border-radius:10px;padding:24px;width:90%;max-width:680px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
     .modal-close{background:transparent;border:none;font-size:1.3rem;cursor:pointer;color:#555;padding:2px 6px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-grid .full{grid-column:1/-1}
+    .form-grid label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:#444;font-weight:500}
+    .form-grid input,.form-grid select{padding:8px;border:1px solid #ccc;border-radius:6px}
     .badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.75rem;font-weight:600}
     .badge-issued{background:#dce7f9;color:#0038A8}
     .badge-finalized{background:#e8f5e9;color:#2e7d32}
     .badge-voided{background:#fde8eb;color:#CE1126}
+    .status-bar{font-size:.85rem;color:#666;min-height:20px;margin-top:4px}
+    .search-bar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+    .search-bar input{flex:1;max-width:320px}
   </style>
 </head>
 <body>
@@ -31,18 +41,68 @@
   <div style="padding:20px 24px">
   <h2>Residents</h2>
   <div class="card">
-    <div style="margin-bottom:10px">Create resident</div>
-    <div class="row" style="margin-bottom:8px">
-      <input id="first_name" placeholder="First name" />
-      <input id="last_name" placeholder="Last name" />
-      <input id="national_id" placeholder="National ID (optional)" />
-      <button onclick="createResident()">Create</button>
+
+    <!-- Search + New Resident trigger -->
+    <div class="search-bar">
+      <input id="search" placeholder="Search by name or national ID…" oninput="debouncedSearch()" />
+      <button class="btn" onclick="openCreateModal()">+ Add Resident</button>
     </div>
-    <div id="status" style="color:#666;font-size:0.9rem"></div>
+    <div class="status-bar" id="status"></div>
+
     <table id="res-table">
-      <thead><tr><th>Name</th><th>National ID</th><th>Household</th><th>Certs</th><th></th></tr></thead>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Birthdate / Age</th>
+          <th>Contact</th>
+          <th>National ID</th>
+          <th>Household</th>
+          <th>Certs</th>
+          <th style="width:100px"></th>
+        </tr>
+      </thead>
       <tbody></tbody>
     </table>
+  </div>
+
+  <!-- Create / Edit Modal -->
+  <div class="modal-overlay" id="resident-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <strong id="modal-title">Add Resident</strong>
+        <button class="modal-close" onclick="closeResidentModal()">✕</button>
+      </div>
+      <div class="form-grid">
+        <label>First Name *
+          <input id="m_first_name" type="text" placeholder="First name" />
+        </label>
+        <label>Last Name *
+          <input id="m_last_name" type="text" placeholder="Last name" />
+        </label>
+        <label>Middle Name
+          <input id="m_middle_name" type="text" placeholder="Middle name (optional)" />
+        </label>
+        <label>Birthdate
+          <input id="m_birthdate" type="date" />
+        </label>
+        <label>Contact Number
+          <input id="m_contact" type="tel" placeholder="09xx-xxx-xxxx" />
+        </label>
+        <label>National ID
+          <input id="m_national_id" type="text" placeholder="PhilSys / any ID number" />
+        </label>
+        <label class="full">Household
+          <select id="m_household_id">
+            <option value="">— No household assigned —</option>
+          </select>
+        </label>
+      </div>
+      <div class="status-bar" id="modal-status" style="margin-top:8px"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeResidentModal()">Cancel</button>
+        <button class="btn" id="modal-save-btn" onclick="saveResident()">Save</button>
+      </div>
+    </div>
   </div>
 
   <!-- Cert History Modal -->
@@ -61,42 +121,142 @@
 
   <script>
   const token = localStorage.getItem('pitogo_token') || '';
-  const hdrs = token ? {'Authorization': 'Bearer '+token, 'Content-Type':'application/json'} : {'Content-Type':'application/json'};
+  const hdrs = {'Authorization': token ? 'Bearer '+token : '', 'Content-Type':'application/json'};
 
-  async function listResidents(){
-    const t = document.querySelector('#res-table tbody'); t.innerHTML = '<tr><td colspan=5>Loading…</td></tr>';
-    try{
-      const r = await fetch('/api/residents/', {headers: hdrs});
-      const data = await r.json();
-      if(!r.ok){ t.innerHTML = '<tr><td colspan=5>Error loading</td></tr>'; return; }
-      t.innerHTML = data.map(r => `<tr>
-        <td>${r.last_name}, ${r.first_name}</td>
-        <td>${r.national_id||''}</td>
-        <td>${r.household_id||''}</td>
-        <td><button class="btn-sm btn-secondary" onclick="openCertHistory('${r.id}','${r.last_name}, ${r.first_name}')">View Certs</button></td>
-        <td><button class="btn-sm" style="background:#CE1126;color:#fff" onclick="deleteResident('${r.id}')">Delete</button></td>
-      </tr>`).join('');
-    }catch(e){ t.innerHTML = '<tr><td colspan=5>Network error</td></tr>'; }
+  let householdMap = {};  // id → display string
+  let editingId = null;
+  let searchTimer = null;
+
+  function setStatus(msg, isError){
+    const s = document.getElementById('status');
+    s.textContent = msg;
+    s.style.color = isError ? '#CE1126' : '#666';
+  }
+  function setModalStatus(msg, isError){
+    const s = document.getElementById('modal-status');
+    s.textContent = msg;
+    s.style.color = isError ? '#CE1126' : '#666';
   }
 
-  async function createResident(){
-    const first = document.getElementById('first_name').value.trim();
-    const last = document.getElementById('last_name').value.trim();
-    const nid = document.getElementById('national_id').value.trim();
-    if(!first||!last){ document.getElementById('status').textContent='First and last required'; return; }
-    document.getElementById('status').textContent='Creating…';
+  function debouncedSearch(){
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(listResidents, 280);
+  }
+
+  async function loadHouseholds(){
     try{
-      const r = await fetch('/api/residents/', {method:'POST', headers: hdrs, body: JSON.stringify({first_name:first,last_name:last,national_id:nid})});
+      const res = await fetch('/api/households/?limit=500', {headers: hdrs});
+      const data = await res.json();
+      householdMap = {};
+      const sel = document.getElementById('m_household_id');
+      sel.innerHTML = '<option value="">— No household assigned —</option>';
+      (data || []).forEach(h => {
+        const label = [h.address_line, h.barangay].filter(Boolean).join(', ') || h.id;
+        householdMap[h.id] = label;
+        const o = document.createElement('option');
+        o.value = h.id; o.textContent = label;
+        sel.appendChild(o);
+      });
+    }catch(e){ /* non-fatal */ }
+  }
+
+  async function listResidents(){
+    const q = document.getElementById('search').value.trim();
+    const t = document.querySelector('#res-table tbody');
+    t.innerHTML = '<tr><td colspan=7 style="color:#aaa">Loading…</td></tr>';
+    try{
+      const url = '/api/residents/' + (q ? '?q='+encodeURIComponent(q) : '');
+      const r = await fetch(url, {headers: hdrs});
+      const data = await r.json();
+      if(!r.ok){ t.innerHTML = '<tr><td colspan=7 style="color:red">Error loading</td></tr>'; return; }
+      if(!data.length){ t.innerHTML = '<tr><td colspan=7 style="color:#aaa">No residents found</td></tr>'; return; }
+      t.innerHTML = data.map(r => {
+        const age = r.birthdate ? calcAge(r.birthdate) : '';
+        const bd = r.birthdate ? fmt(r.birthdate) + (age ? ' ('+age+'y)' : '') : '—';
+        const hhLabel = r.household_id ? (householdMap[r.household_id] || r.household_id.slice(0,8)+'…') : '—';
+        const dataJson = escAttr(JSON.stringify({
+          id:r.id, first_name:r.first_name, last_name:r.last_name, middle_name:r.middle_name||'',
+          birthdate:r.birthdate||'', contact:r.contact_number||'', national_id:r.national_id||'', household_id:r.household_id||''
+        }));
+        return `<tr>
+          <td><strong>${esc(r.last_name)}, ${esc(r.first_name)}</strong>${r.middle_name?' <span style="color:#888;font-size:.82rem">'+esc(r.middle_name)+'</span>':''}</td>
+          <td style="font-size:.85rem">${bd}</td>
+          <td style="font-size:.85rem">${esc(r.contact_number||'—')}</td>
+          <td style="font-family:monospace;font-size:.8rem">${esc(r.national_id||'—')}</td>
+          <td style="font-size:.82rem;max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(hhLabel)}</td>
+          <td><button class="btn-sm btn-edit" onclick="openCertHistory('${r.id}','${escQ(r.last_name)}, ${escQ(r.first_name)}')">Certs</button></td>
+          <td style="display:flex;gap:4px">
+            <button class="btn-sm btn-edit" onclick="openEditModal(${dataJson})">Edit</button>
+            <button class="btn-sm btn-danger" onclick="deleteResident('${r.id}')">Del</button>
+          </td>
+        </tr>`;
+      }).join('');
+      setStatus(data.length + ' resident(s)');
+    }catch(e){ t.innerHTML = '<tr><td colspan=7 style="color:red">Network error</td></tr>'; setStatus('Network error', true); }
+  }
+
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+  function escQ(s){ return String(s||'').replace(/'/g,"\\'"); }
+  function calcAge(dob){ const d = new Date(dob); const now = new Date(); let a = now.getFullYear()-d.getFullYear(); if(now.getMonth()<d.getMonth()||(now.getMonth()===d.getMonth()&&now.getDate()<d.getDate())) a--; return a; }
+  function fmt(d){ if(!d) return ''; const [y,m,dd] = d.split('-'); const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return (mo[+m-1]||m)+' '+dd+', '+y; }
+
+  // --- Create / Edit modal ---
+  function openCreateModal(){
+    editingId = null;
+    document.getElementById('modal-title').textContent = 'Add Resident';
+    ['m_first_name','m_last_name','m_middle_name','m_birthdate','m_contact','m_national_id'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('m_household_id').value = '';
+    setModalStatus('');
+    document.getElementById('resident-modal').classList.add('open');
+  }
+
+  function openEditModal(data){
+    editingId = data.id;
+    document.getElementById('modal-title').textContent = 'Edit Resident';
+    document.getElementById('m_first_name').value = data.first_name || '';
+    document.getElementById('m_last_name').value = data.last_name || '';
+    document.getElementById('m_middle_name').value = data.middle_name || '';
+    document.getElementById('m_birthdate').value = data.birthdate || '';
+    document.getElementById('m_contact').value = data.contact || '';
+    document.getElementById('m_national_id').value = data.national_id || '';
+    document.getElementById('m_household_id').value = data.household_id || '';
+    setModalStatus('');
+    document.getElementById('resident-modal').classList.add('open');
+  }
+
+  function closeResidentModal(){
+    document.getElementById('resident-modal').classList.remove('open');
+    editingId = null;
+  }
+
+  async function saveResident(){
+    const first = document.getElementById('m_first_name').value.trim();
+    const last = document.getElementById('m_last_name').value.trim();
+    if(!first || !last){ setModalStatus('First and last name are required', true); return; }
+    document.getElementById('modal-save-btn').disabled = true;
+    setModalStatus(editingId ? 'Saving…' : 'Creating…');
+    const payload = {
+      first_name: first, last_name: last,
+      middle_name: document.getElementById('m_middle_name').value.trim() || null,
+      birthdate: document.getElementById('m_birthdate').value || null,
+      contact_number: document.getElementById('m_contact').value.trim() || null,
+      national_id: document.getElementById('m_national_id').value.trim() || null,
+      household_id: document.getElementById('m_household_id').value || null,
+    };
+    try{
+      const url = editingId ? '/api/residents/'+editingId : '/api/residents/';
+      const method = editingId ? 'PUT' : 'POST';
+      const r = await fetch(url, {method, headers: hdrs, body: JSON.stringify(payload)});
       const d = await r.json();
-      if(!r.ok){ document.getElementById('status').textContent = d.detail || 'Create failed'; return; }
-      document.getElementById('first_name').value=''; document.getElementById('last_name').value=''; document.getElementById('national_id').value='';
-      document.getElementById('status').textContent='Created';
+      if(!r.ok){ setModalStatus(d.detail || 'Save failed', true); document.getElementById('modal-save-btn').disabled=false; return; }
+      closeResidentModal();
       listResidents();
-    }catch(e){ document.getElementById('status').textContent='Network error'; }
+    }catch(e){ setModalStatus('Network error', true); document.getElementById('modal-save-btn').disabled=false; }
   }
 
   async function deleteResident(id){
-    if(!confirm('Delete resident?')) return;
+    if(!confirm('Delete this resident? This will not delete their certificates.')) return;
     await fetch('/api/residents/'+id, {method:'DELETE', headers: hdrs});
     listResidents();
   }
@@ -115,30 +275,28 @@
       tbody.innerHTML = d.items.map(c => {
         const badge = c.status === 'voided'
           ? '<span class="badge badge-voided">Voided</span>'
-          : c.finalized_at
-            ? '<span class="badge badge-finalized">Finalized</span>'
-            : '<span class="badge badge-issued">Issued</span>';
-        const dt = new Date(c.issued_at).toLocaleString();
+          : c.finalized_at ? '<span class="badge badge-finalized">Finalized</span>'
+          : '<span class="badge badge-issued">Issued</span>';
         return `<tr>
-          <td style="font-family:monospace;font-size:.82rem">${c.control_number}</td>
-          <td>${c.certificate_type_name||'—'}</td>
+          <td style="font-family:monospace;font-size:.82rem">${esc(c.control_number)}</td>
+          <td>${esc(c.certificate_type_name||'—')}</td>
           <td>${badge}</td>
-          <td>${dt}</td>
-          <td>${c.issued_by}</td>
+          <td style="font-size:.82rem">${new Date(c.issued_at).toLocaleString()}</td>
+          <td style="font-size:.82rem">${esc(c.issued_by)}</td>
         </tr>`;
       }).join('');
     } catch(e) { tbody.innerHTML = '<tr><td colspan=5 style="color:red">Network error</td></tr>'; }
   }
 
-  function closeCertModal() {
-    document.getElementById('cert-modal').classList.remove('open');
-  }
+  function closeCertModal() { document.getElementById('cert-modal').classList.remove('open'); }
 
-  document.getElementById('cert-modal').addEventListener('click', e => {
-    if (e.target === document.getElementById('cert-modal')) closeCertModal();
+  document.getElementById('cert-modal').addEventListener('click', e => { if(e.target===document.getElementById('cert-modal')) closeCertModal(); });
+  document.getElementById('resident-modal').addEventListener('click', e => { if(e.target===document.getElementById('resident-modal')) closeResidentModal(); });
+
+  window.addEventListener('DOMContentLoaded', async ()=>{
+    await loadHouseholds();
+    listResidents();
   });
-
-  window.addEventListener('DOMContentLoaded', ()=>{ listResidents(); });
   </script>
   </div>
 </body>

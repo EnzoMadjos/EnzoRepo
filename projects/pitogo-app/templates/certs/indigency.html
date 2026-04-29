@@ -1,0 +1,19 @@
+{% extends 'certs/base_cert.html' %}
+{% block body %}
+<p style="text-align:center; font-weight:600; text-decoration:underline;">CERTIFICATE OF INDIGENCY</p>
+<p>
+  This is to certify that <strong>{{ resident.full_name }}</strong>,
+  {% if resident.age %} {{ resident.age }} years of age, {% endif %}
+  a resident of <strong>{{ address or household.address_line }}</strong>,
+  Barangay <strong>{{ household.barangay }}</strong>, is a bonafide indigent member of this community.
+</p>
+<p>
+  This certification is issued upon the request of
+  <strong>{{ resident.full_name }}</strong>
+  for <strong>{{ purpose or 'whatever legal purpose it may serve' }}</strong>.
+</p>
+<p>
+  Issued this <strong>{{ issued_at }}</strong> at the Office of the Punong Barangay,
+  Barangay {{ household.barangay }}, Philippines.
+</p>
+{% endblock %}
