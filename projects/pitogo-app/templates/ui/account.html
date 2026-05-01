@@ -3,45 +3,116 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{{ app_name }} — Account</title>
-  <link rel="stylesheet" href="/static/css/app_ui.css">
+  <title>{{ app_name }} — My Account</title>
+  <style>
+    body{font-family:system-ui,'Segoe UI',Arial;margin:0;background:#f5f7fa;color:#111}
+    .card{background:#fff;padding:24px;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);margin-bottom:20px;max-width:480px}
+    .form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+    .form-row label{font-size:.78rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.03em}
+    input[type=password],input[type=text]{padding:9px 11px;border:1px solid #dee2e6;border-radius:7px;font-size:.9rem;width:100%;box-sizing:border-box}
+    input:focus{outline:none;border-color:#0038A8}
+    button{padding:9px 18px;border-radius:7px;border:none;cursor:pointer;font-size:.88rem;font-weight:700}
+    .btn-primary{background:#0038A8;color:#fff}.btn-primary:hover{background:#002d8a}
+    .btn-primary:disabled{opacity:.55;cursor:default}
+    .info-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;margin-bottom:6px}
+    .info-label{font-size:.78rem;font-weight:700;color:#6c757d;width:110px;flex-shrink:0;text-transform:uppercase;letter-spacing:.03em}
+    .info-value{font-size:.9rem;color:#1a1a2e;font-weight:600}
+    .role-badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:.73rem;font-weight:700;background:#e8ecf8;color:#0038A8}
+    .role-badge.admin{background:#fff3cd;color:#856404}
+  </style>
 </head>
 <body>
   {% include 'partials/topbar.html' %}
+
   <div style="padding:20px 24px">
-  <h1>Account</h1>
-  <div>
-    <label>Username: <span id="username">Loading...</span></label>
-    <label>Current password<br/><input id="current_pw" type="password" class="input" /></label>
-    <label>New password<br/><input id="new_pw" type="password" class="input" /></label>
-    <label>Confirm new password<br/><input id="confirm_pw" type="password" class="input" /></label>
-    <div style="margin-top:8px"><button id="changeBtn" class="btn btn-primary">Change password</button></div>
+  <h2 style="margin:0 0 18px;font-size:1.15rem;color:#1a1a2e">My Account</h2>
+
+  <div class="card">
+    <div style="font-size:.88rem;font-weight:700;margin-bottom:14px;color:#333">Profile</div>
+    <div class="info-row">
+      <span class="info-label">Username</span>
+      <span class="info-value" id="username">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Display Name</span>
+      <span class="info-value" id="display_name">—</span>
+    </div>
+    <div class="info-row" style="border-bottom:none">
+      <span class="info-label">Role</span>
+      <span class="role-badge" id="role">—</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:.88rem;font-weight:700;margin-bottom:14px;color:#333">Change Password</div>
+    <div class="form-row">
+      <label>Current Password</label>
+      <input id="current_pw" type="password" placeholder="Enter current password" autocomplete="current-password" />
+    </div>
+    <div class="form-row">
+      <label>New Password</label>
+      <input id="new_pw" type="password" placeholder="At least 6 characters" autocomplete="new-password" />
+    </div>
+    <div class="form-row">
+      <label>Confirm New Password</label>
+      <input id="confirm_pw" type="password" placeholder="Repeat new password" autocomplete="new-password" />
+    </div>
+    <button class="btn-primary" id="changeBtn">Change Password</button>
+  </div>
   </div>
 
   <script src="/static/js/ui_helpers.js"></script>
   <script>
-    async function load(){
-      try{
-        const me = await fetchJson('/api/users/me', { headers: authHeaders() });
-        document.getElementById('username').textContent = me.username;
-      }catch(e){ showToast('Failed to get user: '+e.message, 'error'); }
-    }
+  let currentUsername = '';
 
-    document.getElementById('changeBtn').addEventListener('click', async ()=>{
-      const user = document.getElementById('username').textContent;
-      const cur = document.getElementById('current_pw').value;
-      const nw = document.getElementById('new_pw').value;
-      const conf = document.getElementById('confirm_pw').value;
-      if(!nw || nw.length < 6){ showToast('New password must be at least 6 characters', 'warn'); return; }
-      if(nw !== conf){ showToast('Passwords do not match', 'warn'); return; }
-      try{
-        await fetchJson('/api/users/'+user+'/password', { method:'POST', headers: authHeaders(), body: JSON.stringify({ new_password: nw, current_password: cur }) });
-        showToast('Password changed', 'success'); document.getElementById('current_pw').value=''; document.getElementById('new_pw').value=''; document.getElementById('confirm_pw').value='';
-      }catch(e){ showToast('Change failed: '+e.message, 'error'); }
+  async function loadProfile(){
+    try{
+      const me = await fetchJson('/api/users/me', {headers: authHeaders()});
+      currentUsername = me.username || '';
+      document.getElementById('username').textContent = me.username || '—';
+      document.getElementById('display_name').textContent = me.display_name || me.username || '—';
+      const roleEl = document.getElementById('role');
+      roleEl.textContent = me.role || '—';
+      if(me.role === 'admin') roleEl.classList.add('admin');
+    }catch(e){ showToast('Failed to load profile', 'error'); }
+  }
+
+  // Enter-key navigation between fields
+  ['current_pw','new_pw','confirm_pw'].forEach((id, i, arr)=>{
+    document.getElementById(id).addEventListener('keydown', e=>{
+      if(e.key==='Enter'){
+        if(i < arr.length-1) document.getElementById(arr[i+1]).focus();
+        else changePassword();
+      }
     });
+  });
 
-    load();
+  document.getElementById('changeBtn').addEventListener('click', changePassword);
+
+  async function changePassword(){
+    const cur = document.getElementById('current_pw').value;
+    const nw  = document.getElementById('new_pw').value;
+    const conf = document.getElementById('confirm_pw').value;
+    if(!cur){ showToast('Enter your current password', 'warn'); document.getElementById('current_pw').focus(); return; }
+    if(!nw || nw.length < 6){ showToast('New password must be at least 6 characters', 'warn'); document.getElementById('new_pw').focus(); return; }
+    if(nw !== conf){ showToast('Passwords do not match', 'warn'); document.getElementById('confirm_pw').focus(); return; }
+    const btn = document.getElementById('changeBtn'); btn.disabled=true; btn.textContent='Saving…';
+    try{
+      const r = await fetch('/api/users/'+encodeURIComponent(currentUsername)+'/password', {
+        method:'POST', headers: authHeaders(),
+        body: JSON.stringify({new_password: nw, current_password: cur})
+      });
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok){ showToast(d.detail||'Change failed', 'error'); btn.disabled=false; btn.textContent='Change Password'; return; }
+      showToast('Password changed successfully', 'success');
+      document.getElementById('current_pw').value='';
+      document.getElementById('new_pw').value='';
+      document.getElementById('confirm_pw').value='';
+    }catch(e){ showToast('Network error', 'error'); }
+    btn.disabled=false; btn.textContent='Change Password';
+  }
+
+  loadProfile();
   </script>
-  </div>
 </body>
 </html>

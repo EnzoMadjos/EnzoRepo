@@ -63,9 +63,9 @@
     <div class="pagination" id="pagination"></div>
   </div>
 
+  <script src="/static/js/ui_helpers.js"></script>
   <script>
-  const token = localStorage.getItem('pitogo_token') || '';
-  const hdrs = {'Authorization': token ? 'Bearer '+token : '', 'Content-Type':'application/json'};
+  function hdrs(){ return authHeaders(); }
   let currentPage = 1;
   const PER_PAGE = 100;
 
@@ -97,7 +97,7 @@
     setStatus('Loading…');
     try{
       const p = buildParams({page, per_page: PER_PAGE});
-      const r = await fetch('/admin/logs?' + p.toString(), {headers: hdrs});
+      const r = await fetch('/admin/logs?' + p.toString(), {headers: hdrs()});
       const data = await r.json();
       if(!r.ok){ setStatus('Failed to load logs: ' + (data.detail||r.status)); return; }
       const items = data.items || [];
@@ -147,7 +147,7 @@
     setStatus('Preparing ' + format.toUpperCase() + ' export…');
     try{
       const p = buildParams({per_page: 10000, format});
-      const r = await fetch('/admin/logs?' + p.toString(), {headers: hdrs});
+      const r = await fetch('/admin/logs?' + p.toString(), {headers: hdrs()});
       if(!r.ok){ setStatus('Export failed'); return; }
       const blob = await r.blob();
       const disp = r.headers.get('content-disposition') || '';
@@ -161,18 +161,19 @@
   }
 
   async function archiveLogs(){
-    if(!confirm('Archive and optionally clear current logs?')) return;
-    const clear = confirm('Clear log file after archiving?');
+    const ok = await showConfirm('Archive logs?', 'This will package current logs into a ZIP file.');
+    if(!ok) return;
+    const clear = await showConfirm('Clear log file after archiving?', 'The active log will be emptied. Archived copy is kept.');
     setStatus('Archiving…');
     try{
       const f = getFilters();
       const body = { format: 'zip', clear_after: clear, ...f };
-      const r = await fetch('/admin/logs/archive', {method:'POST', headers: hdrs, body: JSON.stringify(body)});
+      const r = await fetch('/admin/logs/archive', {method:'POST', headers: hdrs(), body: JSON.stringify(body)});
       const j = await r.json();
       if(!r.ok){ setStatus(j.detail || 'Archive failed'); return; }
       setStatus('Archive created: ' + (j.archive || 'done'));
       if(j.download_url){
-        const fr = await fetch(j.download_url, {headers: hdrs});
+        const fr = await fetch(j.download_url, {headers: hdrs()});
         if(fr.ok){
           const blob = await fr.blob();
           const u = URL.createObjectURL(blob);
