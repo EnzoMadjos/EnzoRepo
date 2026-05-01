@@ -119,9 +119,9 @@
     </div>
   </div>
 
+  <script src="/static/js/ui_helpers.js"></script>
   <script>
-  const token = localStorage.getItem('pitogo_token') || '';
-  const hdrs = {'Authorization': token ? 'Bearer '+token : '', 'Content-Type':'application/json'};
+  function hdrs(){ return authHeaders(); }
 
   let householdMap = {};  // id → display string
   let editingId = null;
@@ -145,7 +145,7 @@
 
   async function loadHouseholds(){
     try{
-      const res = await fetch('/api/households/?limit=500', {headers: hdrs});
+      const res = await fetch('/api/households/', {headers: hdrs()});
       const data = await res.json();
       householdMap = {};
       const sel = document.getElementById('m_household_id');
@@ -166,7 +166,7 @@
     t.innerHTML = '<tr><td colspan=7 style="color:#aaa">Loading…</td></tr>';
     try{
       const url = '/api/residents/' + (q ? '?q='+encodeURIComponent(q) : '');
-      const r = await fetch(url, {headers: hdrs});
+      const r = await fetch(url, {headers: hdrs()});
       const data = await r.json();
       if(!r.ok){ t.innerHTML = '<tr><td colspan=7 style="color:red">Error loading</td></tr>'; return; }
       if(!data.length){ t.innerHTML = '<tr><td colspan=7 style="color:#aaa">No residents found</td></tr>'; return; }
@@ -207,6 +207,7 @@
     document.getElementById('modal-title').textContent = 'Add Resident';
     ['m_first_name','m_last_name','m_middle_name','m_birthdate','m_contact','m_national_id'].forEach(id => document.getElementById(id).value='');
     document.getElementById('m_household_id').value = '';
+    document.getElementById('modal-save-btn').disabled = false;
     setModalStatus('');
     document.getElementById('resident-modal').classList.add('open');
   }
@@ -221,6 +222,7 @@
     document.getElementById('m_contact').value = data.contact || '';
     document.getElementById('m_national_id').value = data.national_id || '';
     document.getElementById('m_household_id').value = data.household_id || '';
+    document.getElementById('modal-save-btn').disabled = false;
     setModalStatus('');
     document.getElementById('resident-modal').classList.add('open');
   }
@@ -247,17 +249,18 @@
     try{
       const url = editingId ? '/api/residents/'+editingId : '/api/residents/';
       const method = editingId ? 'PUT' : 'POST';
-      const r = await fetch(url, {method, headers: hdrs, body: JSON.stringify(payload)});
+      const r = await fetch(url, {method, headers: hdrs(), body: JSON.stringify(payload)});
       const d = await r.json();
       if(!r.ok){ setModalStatus(d.detail || 'Save failed', true); document.getElementById('modal-save-btn').disabled=false; return; }
+      document.getElementById('modal-save-btn').disabled = false;
       closeResidentModal();
       listResidents();
     }catch(e){ setModalStatus('Network error', true); document.getElementById('modal-save-btn').disabled=false; }
   }
 
   async function deleteResident(id){
-    if(!confirm('Delete this resident? This will not delete their certificates.')) return;
-    await fetch('/api/residents/'+id, {method:'DELETE', headers: hdrs});
+    if(!await showConfirm('Delete this resident? This will not remove their certificates.')) return;
+    await fetch('/api/residents/'+id, {method:'DELETE', headers: hdrs()});
     listResidents();
   }
 
@@ -268,7 +271,7 @@
     tbody.innerHTML = '<tr><td colspan=5 style="color:#aaa">Loading…</td></tr>';
     document.getElementById('cert-modal').classList.add('open');
     try {
-      const r = await fetch('/api/certificates/?resident_id=' + residentId + '&limit=100', {headers: hdrs});
+      const r = await fetch('/api/certificates/?resident_id=' + residentId + '&limit=100', {headers: hdrs()});
       const d = await r.json();
       if (!r.ok) { tbody.innerHTML = '<tr><td colspan=5 style="color:red">Error: '+(d.detail||'Failed')+'</td></tr>'; return; }
       if (!d.items || !d.items.length) { tbody.innerHTML = '<tr><td colspan=5 style="color:#aaa">No certificates found</td></tr>'; return; }
