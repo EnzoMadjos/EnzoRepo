@@ -51,3 +51,9 @@ Thumbs.db
 *.accdb
 *.jar
 *:Zone.Identifier
+
+# graphify cache (heavy, regenerated locally)
+**/graphify-out/cache/
+**/graphify-out/manifest.json
+**/graphify-out/cost.json
+**/graphify-out/converted/

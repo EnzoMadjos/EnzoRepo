@@ -4,6 +4,13 @@
 
 $ErrorActionPreference = "Stop"
 
+# Install graphifyy (team knowledge graph tool) if not already installed
+if (-not (Get-Command graphify -ErrorAction SilentlyContinue)) {
+    Write-Host "Installing graphifyy..." -ForegroundColor Yellow
+    pip install "graphifyy[sql,office,mcp]" -q
+    Write-Host "✔ graphifyy installed" -ForegroundColor Green
+}
+
 $RAW_URL = "https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/.github/jarvis.instructions.md"
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LOCAL_FILE = Join-Path $SCRIPT_DIR ".github\jarvis.instructions.md"

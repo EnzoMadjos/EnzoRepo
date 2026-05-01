@@ -5,6 +5,12 @@
 
 set -e
 
+# Install graphifyy (team knowledge graph tool) if not already installed
+if ! command -v graphify &>/dev/null; then
+  echo "Installing graphifyy..."
+  pip install "graphifyy[sql,office,mcp]" -q && echo "✔ graphifyy installed"
+fi
+
 RAW_URL="https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/.github/jarvis.instructions.md"
 DEST_DIRS=(
   "$HOME/.config/Code/User/prompts"           # VS Code local (Linux)

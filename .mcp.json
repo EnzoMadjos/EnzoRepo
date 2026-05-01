@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "graphify-pitogo": {
+      "type": "stdio",
+      "command": "/home/enzo/ai-lab/.venv/bin/python3",
+      "args": ["-m", "graphify.serve", "graphify-out/graph.json"],
+      "cwd": "/home/enzo/ai-lab/projects/pitogo-app"
+    },
+    "graphify-sf-qa": {
+      "type": "stdio",
+      "command": "/home/enzo/ai-lab/.venv/bin/python3",
+      "args": ["-m", "graphify.serve", "graphify-out/graph.json"],
+      "cwd": "/home/enzo/ai-lab/sf-qa-agent"
+    },
+    "graphify-atlas": {
+      "type": "stdio",
+      "command": "/home/enzo/ai-lab/.venv/bin/python3",
+      "args": ["-m", "graphify.serve", "graphify-out/graph.json"],
+      "cwd": "/home/enzo/ai-lab/local-chatbot"
+    }
+  }
+}
