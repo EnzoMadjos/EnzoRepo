@@ -9,25 +9,27 @@
     .meta-section{margin-top:12px;padding:12px;background:#f8f9ff;border:1px solid #ddeeff;border-radius:8px;display:none}
     .meta-section.visible{display:block}
     .meta-section h4{margin:0 0 10px;color:#0038A8;font-size:.95rem;font-weight:600}
-    .field-row{display:flex;gap:10px;margin-bottom:8px;align-items:flex-end}
-    .field-row label{flex:1;display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:#444}
-    .field-row input,.field-row select{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
+    .field-row{display:flex;gap:10px;margin-bottom:8px;align-items:flex-end;flex-wrap:wrap}
+    .field-row label{flex:1;min-width:140px;display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:#444}
+    .field-row input,.field-row select,.field-row textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
     .preview-panel{margin-top:18px}
     .preview-panel h3{margin:0 0 8px;font-size:1rem;color:#333}
-    #previewFrame{width:100%;height:680px;border:1px solid #ddd;border-radius:6px;background:#fff}
-    .action-bar{display:flex;gap:8px;align-items:center;margin-top:14px}
-    .cert-info-badge{padding:4px 10px;border-radius:12px;font-size:.78rem;background:#dce7f9;color:#0038A8;font-weight:600}
+    #previewFrame{width:100%;height:720px;border:1px solid #ddd;border-radius:6px;background:#fff}
+    .action-bar{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
     .status-line{font-size:.85rem;color:#666;margin-top:6px;min-height:20px}
+    .download-bar{display:none;margin-top:10px;padding:10px 14px;background:#e8f5e9;border-radius:8px;border:1px solid #a5d6a7;align-items:center;gap:10px}
+    .download-bar a{font-weight:700;color:#2e7d32;text-decoration:none}
+    .download-bar a:hover{text-decoration:underline}
   </style>
 </head>
 <body>
   {% include 'partials/topbar.html' %}
-  <div style="padding:20px 24px;max-width:1100px">
+  <div style="padding:20px 24px;max-width:1200px">
   <h1 style="margin-bottom:18px">Issue Certificate</h1>
 
   <div style="display:flex;gap:18px;align-items:flex-start">
     <!-- Left: form -->
-    <div style="flex:1;min-width:0">
+    <div style="flex:1;min-width:300px">
       <div class="card" style="background:#fff;padding:18px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07)">
 
         <div class="field-row">
@@ -40,70 +42,179 @@
         </div>
 
         <div class="field-row">
-          <label>Purpose
+          <label>Purpose / Use
             <input id="purpose" type="text" placeholder="e.g. Employment, Scholarship, Travel" />
-          </label>
-          <label>Address
-            <input id="address" type="text" placeholder="Auto-filled from household" />
           </label>
         </div>
 
-        <!-- Business Clearance fields -->
+        <!-- ── Business Clearance (BUS) ─────────────────────── -->
         <div id="meta-business" class="meta-section">
           <h4>Business Information</h4>
           <div class="field-row">
             <label>Business Name <input id="meta_business_name" type="text" placeholder="Business or establishment name" /></label>
-            <label>Owner Name <input id="meta_owner_name" type="text" placeholder="Owner / proprietor" /></label>
+            <label>Owner / Proprietor <input id="meta_owner_name" type="text" placeholder="Full name of owner" /></label>
           </div>
         </div>
 
-        <!-- Cohabitation fields -->
+        <!-- ── Barangay Business Clearance (BBC) ───────────── -->
+        <div id="meta-bbc" class="meta-section">
+          <h4>Barangay Business Clearance</h4>
+          <div class="field-row">
+            <label>Business Name <input id="meta_bbc_business_name" type="text" placeholder="Business or establishment name" /></label>
+            <label>Owner / Proprietor <input id="meta_bbc_owner_name" type="text" placeholder="Full name of owner" /></label>
+          </div>
+          <div class="field-row">
+            <label style="max-width:220px">Amount Paid (₱) <input id="meta_bbc_amount_paid" type="text" placeholder="e.g. 300.00" /></label>
+          </div>
+        </div>
+
+        <!-- ── Cohabitation (COH) ────────────────────────────── -->
         <div id="meta-cohabitation" class="meta-section">
           <h4>Cohabitation Details</h4>
           <div class="field-row">
-            <label>Partner A (Person A full name) <input id="meta_partner_a" type="text" placeholder="Full name" /></label>
-            <label>Partner B (Person B full name) <input id="meta_partner_b" type="text" placeholder="Full name" /></label>
+            <label>Partner / Second Person Full Name <input id="meta_partner2_name" type="text" placeholder="Full name of partner" /></label>
+            <label style="max-width:200px">Years Cohabiting <input id="meta_years_cohabiting" type="text" placeholder="e.g. 3" /></label>
+          </div>
+        </div>
+
+        <!-- ── SSS Membership (SSS) ──────────────────────────── -->
+        <div id="meta-sss" class="meta-section">
+          <h4>SSS Membership Details</h4>
+          <div class="field-row">
+            <label>Relationship to Deceased
+              <select id="meta_relationship">
+                <option value="wife">Wife</option>
+                <option value="husband">Husband</option>
+                <option value="beneficiary">Beneficiary</option>
+              </select>
+            </label>
+            <label>Deceased Person's Full Name <input id="meta_deceased_name" type="text" placeholder="Full name of the deceased" /></label>
+          </div>
+        </div>
+
+        <!-- ── Same Person (SAM) ─────────────────────────────── -->
+        <div id="meta-sameperson" class="meta-section">
+          <h4>Same Person Details</h4>
+          <div class="field-row">
+            <label>Name on COMELEC / ID Record <input id="meta_id_name" type="text" placeholder="Name as it appears on the official record" /></label>
+          </div>
+        </div>
+
+        <!-- ── Transfer of Residency (COT) ──────────────────── -->
+        <div id="meta-transfer" class="meta-section">
+          <h4>Transfer of Residency</h4>
+          <div class="field-row">
+            <label>New Address / Destination <input id="meta_new_residence" type="text" placeholder="New full address" /></label>
+            <label style="max-width:220px">Date of Transfer <input id="meta_date_transfer" type="text" placeholder="e.g. January 15, 2025" /></label>
           </div>
           <div class="field-row">
-            <label style="max-width:260px">Duration living together
-              <input id="meta_duration" type="text" placeholder="e.g. 3 years" />
+            <label>Children (one name per line)
+              <textarea id="meta_children_raw" rows="3" style="resize:vertical" placeholder="Juan Dela Cruz&#10;Maria Dela Cruz"></textarea>
             </label>
           </div>
         </div>
 
-        <!-- SSS Membership fields -->
-        <div id="meta-sss" class="meta-section">
-          <h4>SSS Details</h4>
+        <!-- ── Common Law Partner (CLP) ─────────────────────── -->
+        <div id="meta-commonlaw" class="meta-section">
+          <h4>Common Law Partner</h4>
           <div class="field-row">
-            <label>SSS Number <input id="meta_sss_number" type="text" placeholder="SSS membership number" /></label>
-            <label>Member Since <input id="meta_member_since" type="text" placeholder="e.g. January 2019" /></label>
+            <label>Partner's Full Name <input id="meta_partner_name" type="text" placeholder="Full name" /></label>
+            <label style="max-width:180px">Years Together <input id="meta_years_together" type="text" placeholder="e.g. 5" /></label>
+          </div>
+          <div class="field-row">
+            <label>What happened to partner
+              <select id="meta_reason"><option value="died">Died</option><option value="left">Left</option></select>
+            </label>
+            <label>Date of Event <input id="meta_date_event" type="text" placeholder="e.g. March 10, 2024" /></label>
           </div>
         </div>
 
-        <!-- Same Person Certificate fields -->
-        <div id="meta-sameperson" class="meta-section">
-          <h4>Same Person Details</h4>
+        <!-- ── Fencing Clearance (FEN) ───────────────────────── -->
+        <div id="meta-fencing" class="meta-section">
+          <h4>Fencing Clearance</h4>
           <div class="field-row">
-            <label>Alias / Other Name <input id="meta_other_name" type="text" placeholder="The other name used" /></label>
+            <label>Description of Work <input id="meta_description" type="text" placeholder="e.g. CHB fence, perimeter lot" /></label>
+          </div>
+          <div class="field-row">
+            <label>Cost in Words <input id="meta_cost_words" type="text" placeholder="e.g. Twenty Thousand Pesos" /></label>
+            <label style="max-width:200px">Cost (Numeric) <input id="meta_cost_number" type="text" placeholder="e.g. 20,000.00" /></label>
+          </div>
+        </div>
+
+        <!-- ── Electrical Installation (ELC) ────────────────── -->
+        <div id="meta-elec" class="meta-section">
+          <h4>Electrical Installation</h4>
+          <div class="field-row">
+            <label>Description <input id="meta_elec_description" type="text" placeholder="e.g. single-storey residential building" /></label>
+          </div>
+          <div class="field-row">
+            <label>Floor Area in Words <input id="meta_elec_area_words" type="text" placeholder="e.g. Forty-Five Square Meters" /></label>
+            <label style="max-width:160px">Area (sq. m.) <input id="meta_elec_area_sqm" type="text" placeholder="e.g. 45" /></label>
+            <label style="max-width:180px">Est. Cost (₱) <input id="meta_elec_cost" type="text" placeholder="e.g. 150,000.00" /></label>
+          </div>
+        </div>
+
+        <!-- ── Water Installation (WAT) ─────────────────────── -->
+        <div id="meta-water" class="meta-section">
+          <h4>Water Installation</h4>
+          <div class="field-row">
+            <label>Description <input id="meta_wat_description" type="text" placeholder="e.g. single-storey residential building" /></label>
+          </div>
+          <div class="field-row">
+            <label>Floor Area in Words <input id="meta_wat_area_words" type="text" placeholder="e.g. Forty-Five Square Meters" /></label>
+            <label style="max-width:160px">Area (sq. m.) <input id="meta_wat_area_sqm" type="text" placeholder="e.g. 45" /></label>
+            <label style="max-width:180px">Est. Cost (₱) <input id="meta_wat_cost" type="text" placeholder="e.g. 150,000.00" /></label>
+          </div>
+        </div>
+
+        <!-- ── No Flood History (NFH) ────────────────────────── -->
+        <div id="meta-nfh" class="meta-section">
+          <h4>No Flood History</h4>
+          <div class="field-row">
+            <label>Company / Applicant Name <input id="meta_company_name" type="text" placeholder="Company or individual name" /></label>
+            <label>Requestor (person submitting) <input id="meta_requestor" type="text" placeholder="Full name of requestor" /></label>
+          </div>
+        </div>
+
+        <!-- ── Construction Clearance (CON) ─────────────────── -->
+        <div id="meta-construction" class="meta-section">
+          <h4>Construction Clearance</h4>
+          <div class="field-row">
+            <label>Purok <input id="meta_purok" type="text" placeholder="Purok number or name" /></label>
+            <label>Lot No. <input id="meta_lot_number" type="text" placeholder="Lot number" /></label>
+          </div>
+          <div class="field-row">
+            <label>Description of Structure <input id="meta_construction_description" type="text" placeholder="e.g. single-storey residential building" /></label>
+          </div>
+          <div class="field-row">
+            <label>Floor Area in Words <input id="meta_area_words" type="text" placeholder="e.g. Forty-Five Square Meters" /></label>
+            <label style="max-width:160px">Area (sq. m.) <input id="meta_area" type="text" placeholder="e.g. 45" /></label>
+            <label style="max-width:200px">Construction Cost (₱) <input id="meta_construction_cost" type="text" placeholder="e.g. 500,000.00" /></label>
           </div>
         </div>
 
         <div class="status-line" id="status"></div>
 
         <div class="action-bar">
-          <button id="previewBtn" class="btn" onclick="issueCert('preview')" style="background:#0038A8;color:#fff;padding:9px 18px;border-radius:7px;border:none;font-weight:600;cursor:pointer">
-            ⬡ Preview
+          <button id="previewBtn" onclick="issueCert('preview')" style="background:#0038A8;color:#fff;padding:9px 18px;border-radius:7px;border:none;font-weight:600;cursor:pointer">
+            Preview
           </button>
-          <button id="generateBtn" class="btn btn-primary" onclick="issueCert('generate')" style="background:#CE1126;color:#fff;padding:9px 18px;border-radius:7px;border:none;font-weight:600;cursor:pointer">
-            ⬡ Generate Final
+          <button id="generateBtn" onclick="issueCert('generate')" style="background:#CE1126;color:#fff;padding:9px 18px;border-radius:7px;border:none;font-weight:600;cursor:pointer">
+            Generate Final
           </button>
+        </div>
+
+        <div class="download-bar" id="downloadBar">
+          <span>&#10003; Generated — </span>
+          <a id="downloadLink" href="#" target="_blank">Download PDF</a>
+          <span id="controlNum" style="font-size:.8rem;color:#555"></span>
         </div>
 
       </div>
     </div>
 
     <!-- Right: preview panel -->
-    <div class="preview-panel" style="flex:1.1;min-width:0">
+    <div class="preview-panel" style="flex:1.2;min-width:300px">
       <h3>Document Preview</h3>
       <iframe id="previewFrame" src="about:blank"></iframe>
     </div>
@@ -111,30 +222,63 @@
 
   <script src="/static/js/ui_helpers.js"></script>
   <script>
-  // cert type code → meta section id (for dynamic field show/hide)
+  // cert type code → meta section id
   const META_SECTIONS = {
-    'BUS':  'meta-business',
-    'COH':  'meta-cohabitation',
-    'SSS':  'meta-sss',
-    'SAM':  'meta-sameperson',
-    // legacy codes from manage.py seed
+    'BUS': 'meta-business',
+    'BBC': 'meta-bbc',
+    'COH': 'meta-cohabitation',
+    'SSS': 'meta-sss',
+    'SAM': 'meta-sameperson',
+    'COT': 'meta-transfer',
+    'CLP': 'meta-commonlaw',
+    'FEN': 'meta-fencing',
+    'ELC': 'meta-elec',
+    'WAT': 'meta-water',
+    'NFH': 'meta-nfh',
+    'CON': 'meta-construction',
+    // legacy
     'BUSINESS': 'meta-business',
     'COHAB':    'meta-cohabitation',
   };
 
-  // map meta section id → field ids
+  // elementId → meta key (only needed when id doesn't match after stripping 'meta_')
+  const META_KEY_MAP = {
+    'meta_bbc_business_name':        'business_name',
+    'meta_bbc_owner_name':           'owner_name',
+    'meta_bbc_amount_paid':          'amount_paid',
+    'meta_elec_description':         'description',
+    'meta_elec_area_words':          'area_words',
+    'meta_elec_area_sqm':            'area_sqm',
+    'meta_elec_cost':                'cost',
+    'meta_wat_description':          'description',
+    'meta_wat_area_words':           'area_words',
+    'meta_wat_area_sqm':             'area_sqm',
+    'meta_wat_cost':                 'cost',
+    'meta_construction_description': 'description',
+  };
+
+  // meta section id → list of input element ids
   const META_FIELDS = {
-    'meta-business':    ['meta_business_name','meta_owner_name'],
-    'meta-cohabitation':['meta_partner_a','meta_partner_b','meta_duration'],
-    'meta-sss':         ['meta_sss_number','meta_member_since'],
-    'meta-sameperson':  ['meta_other_name'],
+    'meta-business':     ['meta_business_name', 'meta_owner_name'],
+    'meta-bbc':          ['meta_bbc_business_name', 'meta_bbc_owner_name', 'meta_bbc_amount_paid'],
+    'meta-cohabitation': ['meta_partner2_name', 'meta_years_cohabiting'],
+    'meta-sss':          ['meta_relationship', 'meta_deceased_name'],
+    'meta-sameperson':   ['meta_id_name'],
+    'meta-transfer':     ['meta_new_residence', 'meta_date_transfer'],
+    'meta-commonlaw':    ['meta_partner_name', 'meta_years_together', 'meta_reason', 'meta_date_event'],
+    'meta-fencing':      ['meta_description', 'meta_cost_words', 'meta_cost_number'],
+    'meta-elec':         ['meta_elec_description', 'meta_elec_area_words', 'meta_elec_area_sqm', 'meta_elec_cost'],
+    'meta-water':        ['meta_wat_description', 'meta_wat_area_words', 'meta_wat_area_sqm', 'meta_wat_cost'],
+    'meta-nfh':          ['meta_company_name', 'meta_requestor'],
+    'meta-construction': ['meta_purok', 'meta_lot_number', 'meta_construction_description', 'meta_area_words', 'meta_area', 'meta_construction_cost'],
   };
 
   let certTypeMap = {};  // id → {id, code, name, template}
+  let lastCertId = null;
 
-  async function loadData(){
-    setStatus('Loading data…');
-    try{
+  async function loadData() {
+    setStatus('Loading…');
+    try {
       const [types, residents] = await Promise.all([
         fetchJson('/api/certificate-types/', { headers: authHeaders() }),
         fetchJson('/api/residents/', { headers: authHeaders() }),
@@ -153,104 +297,108 @@
       (residents || []).forEach(r => {
         const o = document.createElement('option');
         o.value = r.id;
-        o.textContent = (r.last_name||'') + ', ' + (r.first_name||'') + (r.middle_name ? ' '+r.middle_name : '');
+        o.textContent = (r.last_name || '') + ', ' + (r.first_name || '') + (r.middle_name ? ' ' + r.middle_name : '');
         o.dataset.householdId = r.household_id || '';
         rSel.appendChild(o);
       });
 
-      fillAddressFromResident();
       setStatus('');
-    }catch(e){ setStatus('Failed to load residents / cert types', true); }
+    } catch (e) { setStatus('Failed to load data — ' + e.message, true); }
   }
 
-  async function fillAddressFromResident(){
-    const rSel = document.getElementById('residentSelect');
-    const opt = rSel.options[rSel.selectedIndex];
-    const hid = opt ? opt.dataset.householdId : '';
-    const addr = document.getElementById('address');
-    if(!hid){ addr.value = ''; return; }
-    try{
-      const h = await fetchJson('/api/households/' + hid, { headers: authHeaders() });
-      addr.value = [h.address_line, h.barangay, h.city].filter(Boolean).join(', ');
-    }catch(e){ addr.value = ''; }
-  }
-
-  function onTypeChange(){
+  function onTypeChange() {
     const tSel = document.getElementById('typeSelect');
     const ct = certTypeMap[tSel.value];
     const code = ct ? ct.code : '';
-    // hide all meta sections first
     document.querySelectorAll('.meta-section').forEach(s => s.classList.remove('visible'));
-    // show relevant one
     const sectionId = META_SECTIONS[code];
-    if(sectionId){ document.getElementById(sectionId).classList.add('visible'); }
+    if (sectionId) document.getElementById(sectionId).classList.add('visible');
+    // reset download bar on type change
+    document.getElementById('downloadBar').style.display = 'none';
+    lastCertId = null;
   }
 
-  document.getElementById('residentSelect').addEventListener('change', fillAddressFromResident);
   document.getElementById('typeSelect').addEventListener('change', onTypeChange);
 
-  function collectMeta(){
+  function collectMeta() {
     const tSel = document.getElementById('typeSelect');
     const ct = certTypeMap[tSel.value];
     const code = ct ? ct.code : '';
     const sectionId = META_SECTIONS[code];
     const meta = {
       purpose: document.getElementById('purpose').value.trim(),
-      address: document.getElementById('address').value.trim(),
     };
-    if(sectionId){
+    if (sectionId) {
       (META_FIELDS[sectionId] || []).forEach(fid => {
         const el = document.getElementById(fid);
-        if(el && el.value.trim()){
-          // strip 'meta_' prefix to get the field name
-          meta[fid.replace('meta_','')] = el.value.trim();
+        if (el) {
+          const val = el.value.trim();
+          if (val) {
+            const key = META_KEY_MAP[fid] || fid.replace(/^meta_/, '');
+            meta[key] = val;
+          }
         }
       });
+      // Transfer: parse children textarea into array
+      if (sectionId === 'meta-transfer') {
+        const raw = (document.getElementById('meta_children_raw') || {}).value || '';
+        const children = raw.split('\n').map(s => s.trim()).filter(Boolean);
+        meta.children = children;
+        meta.num_children = children.length;
+      }
     }
     return meta;
   }
 
-  function setStatus(msg, isError){
+  function setStatus(msg, isError) {
     const s = document.getElementById('status');
     s.textContent = msg;
     s.style.color = isError ? '#CE1126' : '#555';
   }
 
-  async function issueCert(mode){
+  async function issueCert(mode) {
     const ctId = document.getElementById('typeSelect').value;
     const resId = document.getElementById('residentSelect').value;
-    if(!ctId){ setStatus('Please select a certificate type', true); return; }
-    if(!resId){ setStatus('Please select a resident', true); return; }
+    if (!ctId) { setStatus('Please select a certificate type', true); return; }
+    if (!resId) { setStatus('Please select a resident', true); return; }
 
-    setStatus(mode === 'preview' ? 'Creating draft & loading preview…' : 'Generating final certificate…');
+    setStatus(mode === 'preview' ? 'Creating draft…' : 'Generating final certificate…');
     document.querySelectorAll('.action-bar button').forEach(b => b.disabled = true);
+    document.getElementById('downloadBar').style.display = 'none';
 
-    try{
+    try {
       const meta = collectMeta();
-      // Create the certificate record
+
+      // Always create a new cert record (each click = new issue)
       const created = await fetchJson('/api/certificates/', {
         method: 'POST',
-        headers: Object.assign({}, authHeaders(), {'Content-Type':'application/json'}),
+        headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ certificate_type_id: ctId, resident_id: resId, meta }),
       });
+      lastCertId = created.id;
 
-      if(mode === 'preview'){
+      if (mode === 'preview') {
         const pv = await fetchJson('/api/certificates/' + created.id + '/preview', { headers: authHeaders() });
         document.getElementById('previewFrame').srcdoc = pv.html;
-        setStatus('Draft created — control # ' + (created.control_number || created.id));
+        setStatus('Draft — ' + (created.control_number || created.id));
       } else {
         const gen = await fetchJson('/api/certificates/' + created.id + '/generate', {
           method: 'POST', headers: authHeaders(),
         });
-        setStatus('✔ Certificate generated — ' + (created.control_number || created.id));
-        if(gen.download_url){
-          // also load preview
-          const pv = await fetchJson('/api/certificates/' + created.id + '/preview', { headers: authHeaders() }).catch(()=>null);
-          if(pv) document.getElementById('previewFrame').srcdoc = pv.html;
-          setTimeout(()=>{ window.open(gen.download_url, '_blank'); }, 400);
+        setStatus('Generated — ' + (created.control_number || created.id));
+        // Load preview at the same time
+        fetchJson('/api/certificates/' + created.id + '/preview', { headers: authHeaders() })
+          .then(pv => { document.getElementById('previewFrame').srcdoc = pv.html; })
+          .catch(() => {});
+        if (gen.download_url) {
+          const bar = document.getElementById('downloadBar');
+          const link = document.getElementById('downloadLink');
+          link.href = gen.download_url;
+          document.getElementById('controlNum').textContent = '  (' + (created.control_number || '') + ')';
+          bar.style.display = 'flex';
         }
       }
-    }catch(err){
+    } catch (err) {
       setStatus('Error: ' + (err.message || 'Unknown error'), true);
     } finally {
       document.querySelectorAll('.action-bar button').forEach(b => b.disabled = false);

@@ -99,15 +99,22 @@ async def _startup() -> None:
         from models import CertificateType
         import uuid as _uuid
         _defaults = [
-            ("BCL", "Barangay Clearance",           "barangay_clearance.html"),
-            ("COR", "Certificate of Residency",     "certofresidency.html"),
-            ("COI", "Certificate of Indigency",     "indigency.html"),
-            ("BUS", "Business Clearance",           "business_clearance.html"),
-            ("COH", "Cohabitation Certificate",     "cohabitation.html"),
-            ("SSS", "SSS Membership Certificate",   "sss_membership.html"),
-            ("SAM", "Same Person Certificate",      "same_person.html"),
-            ("CON", "Construction Clearance",       "constructionclearance.html"),
-            ("NFH", "No Flood History",             "no_flood_history.html"),
+            ("BCL", "Barangay Clearance",                  "barangay_clearance.html"),
+            ("COR", "Certificate of Residency",            "certofresidency.html"),
+            ("COI", "Certificate of Indigency",            "indigency.html"),
+            ("BUS", "Business Clearance",                  "business_clearance.html"),
+            ("COH", "Cohabitation Certificate",            "cohabitation.html"),
+            ("SSS", "SSS Membership Certificate",          "sss_membership.html"),
+            ("SAM", "Same Person Certificate",             "same_person.html"),
+            ("CON", "Construction Clearance",              "constructionclearance.html"),
+            ("NFH", "No Flood History",                    "no_flood_history.html"),
+            ("COT", "Transfer of Residency",               "certoftransferofresidency.html"),
+            ("CLP", "Common Law Partner Certificate",      "certforcommonlawpartner.html"),
+            ("FEN", "Fencing Clearance",                   "fencingclearance.html"),
+            ("ELC", "Electrical Installation Clearance",   "elecinstalclearance.html"),
+            ("EXC", "Excavation Clearance",                "excavationclearance.html"),
+            ("WAT", "Water Installation Clearance",        "waterclearance.html"),
+            ("BBC", "Barangay Business Clearance",         "barangaybusinessclearance.html"),
         ]
         # Legacy paths seeded by old manage.py seed → fix to correct filename-only format
         _legacy_fixes = {
