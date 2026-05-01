@@ -23,6 +23,8 @@
     .form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
     .form-row label{font-size:.78rem;font-weight:700;color:#555}
     .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+    .badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.73rem;font-weight:700}
+    .badge-blue{background:#e8ecf8;color:#0038A8}
   </style>
 </head>
 <body>
@@ -39,13 +41,14 @@
       <div id="edit-status" style="font-size:.82rem;color:#dc3545;min-height:16px"></div>
       <div class="modal-footer">
         <button onclick="closeEditModal()" style="background:#eee;color:#333;padding:8px 14px;border-radius:6px;border:none;cursor:pointer">Cancel</button>
-        <button class="btn-primary" onclick="saveHousehold()">Save</button>
+        <button class="btn-primary" id="save-btn" onclick="saveHousehold()">Save</button>
       </div>
     </div>
   </div>
 
   <div style="padding:20px 24px">
   <h2 style="margin:0 0 18px;font-size:1.15rem;color:#1a1a2e">Households</h2>
+
   <div class="card">
     <div style="font-size:.88rem;font-weight:700;margin-bottom:12px;color:#333">Add Household</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
@@ -56,26 +59,66 @@
       <button class="btn-primary" onclick="createHousehold()">+ Add</button>
     </div>
     <div id="status"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+      <input id="search" placeholder="Search households…" style="flex:1;max-width:320px" oninput="onSearch()" />
+      <span id="count-label" style="font-size:.82rem;color:#6c757d"></span>
+    </div>
     <table id="hh-table">
-      <thead><tr><th>Address</th><th>Barangay</th><th>City</th><th>ZIP</th><th></th></tr></thead>
+      <thead><tr><th>Address</th><th>Barangay</th><th>City</th><th>ZIP</th><th>Members</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
   </div>
 
+  <script src="/static/js/ui_helpers.js"></script>
   <script>
-  const token = localStorage.getItem('pitogo_token') || '';
-  const hdrs = token ? {'Authorization': 'Bearer '+token, 'Content-Type':'application/json'} : {'Content-Type':'application/json'};
+  function hdrs(){ return authHeaders(); }
 
-  async function listHouseholds(){
-    const t = document.querySelector('#hh-table tbody'); t.innerHTML = '<tr><td colspan=5>Loading…</td></tr>';
+  let households = [];
+  let searchTimer = null;
+
+  function onSearch(){
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(()=>loadHouseholds(), 300);
+  }
+
+  function escHtml(s){
+    return String(s==null?'':s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function loadHouseholds(){
+    const q = document.getElementById('search').value.trim();
+    const t = document.querySelector('#hh-table tbody');
+    t.innerHTML = '<tr><td colspan=6>Loading…</td></tr>';
     try{
-      const r = await fetch('/api/households/', {headers: hdrs});
+      const url = '/api/households/' + (q ? '?q='+encodeURIComponent(q) : '');
+      const r = await fetch(url, {headers: hdrs()});
       const data = await r.json();
-      if(!r.ok){ t.innerHTML = '<tr><td colspan=5 style="color:red">Error loading</td></tr>'; return; }
-      if(!data.length){ t.innerHTML = '<tr><td colspan=5 style="color:#aaa">No households yet</td></tr>'; return; }
-      t.innerHTML = data.map(h => `<tr><td>${h.address_line}</td><td>${h.barangay}</td><td>${h.city}</td><td>${h.zip_code||'—'}</td><td style="display:flex;gap:6px"><button class="btn-primary btn-sm" onclick="openEditModal('${h.id}','${h.address_line.replace(/'/g,"\\'")}','${h.barangay.replace(/'/g,"\\'")}','${h.city.replace(/'/g,"\\'")}','${h.zip_code||''}')">Edit</button><button class="btn-danger btn-sm" onclick="deleteHousehold('${h.id}')">Delete</button></td></tr>`).join('');
-    }catch(e){ t.innerHTML = '<tr><td colspan=5 style="color:red">Network error</td></tr>'; }
+      if(!r.ok){ t.innerHTML = '<tr><td colspan=6 style="color:red">Error loading</td></tr>'; return; }
+      households = data;
+      document.getElementById('count-label').textContent =
+        data.length ? `${data.length} household${data.length===1?'':'s'}` : '';
+      if(!data.length){
+        t.innerHTML = '<tr><td colspan=6 style="color:#aaa">No households found</td></tr>'; return;
+      }
+      t.innerHTML = data.map(h => {
+        const mc = h.member_count || 0;
+        return `<tr>
+          <td>${escHtml(h.address_line)}</td>
+          <td>${escHtml(h.barangay)}</td>
+          <td>${escHtml(h.city)}</td>
+          <td>${escHtml(h.zip_code||'—')}</td>
+          <td><span class="badge badge-blue">${mc}</span></td>
+          <td style="display:flex;gap:6px">
+            <button class="btn-primary btn-sm" onclick="openEditModal('${escHtml(h.id)}')">Edit</button>
+            <button class="btn-danger btn-sm" onclick="deleteHousehold('${escHtml(h.id)}')">Delete</button>
+          </td></tr>`;
+      }).join('');
+    }catch(e){ t.innerHTML = '<tr><td colspan=6 style="color:red">Network error</td></tr>'; }
   }
 
   async function createHousehold(){
@@ -84,39 +127,54 @@
     const city = document.getElementById('city').value.trim();
     const zip = document.getElementById('zip_code').value.trim();
     const msg = document.getElementById('status');
-    if(!address||!barangay||!city){ msg.textContent='Address, barangay and city are required'; msg.style.color='#dc3545'; return; }
+    if(!address||!barangay||!city){ showToast('Address, barangay and city are required','error'); return; }
     msg.textContent='Creating…'; msg.style.color='#6c757d';
     try{
-      const r = await fetch('/api/households/', {method:'POST', headers: hdrs, body: JSON.stringify({address_line:address,barangay,city,zip_code:zip||null})});
+      const r = await fetch('/api/households/', {method:'POST', headers: hdrs(),
+        body: JSON.stringify({address_line:address,barangay,city,zip_code:zip||null})});
       const d = await r.json();
-      if(!r.ok){ msg.textContent = d.detail || 'Create failed'; msg.style.color='#dc3545'; return; }
-      document.getElementById('address_line').value=''; document.getElementById('barangay').value=''; document.getElementById('city').value=''; document.getElementById('zip_code').value='';
-      msg.textContent='✓ Household added'; msg.style.color='#28a745';
-      listHouseholds();
-    }catch(e){ msg.textContent='Network error'; msg.style.color='#dc3545'; }
+      if(!r.ok){ showToast(d.detail||'Create failed','error'); msg.textContent=''; return; }
+      ['address_line','barangay','city','zip_code'].forEach(id=>document.getElementById(id).value='');
+      msg.textContent='';
+      showToast('Household added','success');
+      loadHouseholds();
+    }catch(e){ showToast('Network error','error'); msg.textContent=''; }
   }
 
   async function deleteHousehold(id){
-    if(!confirm('Delete this household? (Only possible if no residents are assigned)')) return;
-    const r = await fetch('/api/households/'+id, {method:'DELETE', headers: hdrs});
-    if(r.status===400){ const d = await r.json().catch(()=>({detail:'Has members'})); alert(d.detail); }
-    listHouseholds();
+    const ok = await showConfirm('Delete this household?','Only possible if no residents are assigned.');
+    if(!ok) return;
+    const r = await fetch('/api/households/'+id, {method:'DELETE', headers: hdrs()});
+    if(r.status===400){
+      const d = await r.json().catch(()=>({detail:'Household has members'}));
+      showToast(d.detail,'error'); return;
+    }
+    if(!r.ok){ showToast('Delete failed','error'); return; }
+    showToast('Household deleted','success');
+    loadHouseholds();
   }
 
   let editId = null;
-  function openEditModal(id, address, barangay, city, zip){
+  function openEditModal(id){
+    const h = households.find(x=>x.id===id);
+    if(!h) return;
     editId = id;
-    document.getElementById('e-address').value = address;
-    document.getElementById('e-barangay').value = barangay;
-    document.getElementById('e-city').value = city;
-    document.getElementById('e-zip').value = zip;
+    document.getElementById('e-address').value = h.address_line;
+    document.getElementById('e-barangay').value = h.barangay;
+    document.getElementById('e-city').value = h.city;
+    document.getElementById('e-zip').value = h.zip_code || '';
     document.getElementById('edit-status').textContent = '';
+    const btn = document.getElementById('save-btn'); btn.disabled=false; btn.textContent='Save';
     document.getElementById('edit-modal').classList.add('open');
   }
   function closeEditModal(){
     document.getElementById('edit-modal').classList.remove('open');
     editId = null;
   }
+  document.getElementById('edit-modal').addEventListener('click', e=>{
+    if(e.target===document.getElementById('edit-modal')) closeEditModal();
+  });
+
   async function saveHousehold(){
     const address = document.getElementById('e-address').value.trim();
     const barangay = document.getElementById('e-barangay').value.trim();
@@ -124,17 +182,18 @@
     const zip = document.getElementById('e-zip').value.trim();
     const msg = document.getElementById('edit-status');
     if(!address||!barangay||!city){ msg.textContent='Address, barangay and city are required'; return; }
-    msg.textContent='Saving…'; msg.style.color='#6c757d';
+    const btn = document.getElementById('save-btn'); btn.disabled=true; btn.textContent='Saving…';
+    msg.textContent=''; msg.style.color='#dc3545';
     try{
-      const r = await fetch('/api/households/'+editId, {method:'PUT', headers: hdrs,
+      const r = await fetch('/api/households/'+editId, {method:'PUT', headers: hdrs(),
         body: JSON.stringify({address_line:address,barangay,city,zip_code:zip||null})});
       const d = await r.json();
-      if(!r.ok){ msg.textContent=d.detail||'Save failed'; msg.style.color='#dc3545'; return; }
-      closeEditModal(); listHouseholds();
-    }catch(e){ msg.textContent='Network error'; msg.style.color='#dc3545'; }
+      if(!r.ok){ msg.textContent=d.detail||'Save failed'; btn.disabled=false; btn.textContent='Save'; return; }
+      closeEditModal(); showToast('Household updated','success'); loadHouseholds();
+    }catch(e){ msg.textContent='Network error'; btn.disabled=false; btn.textContent='Save'; }
   }
 
-  window.addEventListener('DOMContentLoaded', ()=>{ listHouseholds(); });
+  window.addEventListener('DOMContentLoaded', ()=>{ loadHouseholds(); });
   </script>
 </body>
 </html>

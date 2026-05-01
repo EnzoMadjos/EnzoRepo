@@ -7,6 +7,7 @@ from api.deps import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from models import Household, Resident
 from pydantic import BaseModel
+from sqlalchemy import func
 
 router = APIRouter(prefix="/api/households", tags=["households"])
 
@@ -47,7 +48,21 @@ def list_households(
             | (Household.city.ilike(qlike))
         )
     rows = query.order_by(Household.created_at.desc()).limit(200).all()
-    return [_to_dict(r) for r in rows]
+    # batch member counts in a single query
+    ids = [r.id for r in rows]
+    counts: dict[str, int] = {}
+    if ids:
+        count_rows = (
+            db.query(Resident.household_id, func.count(Resident.id))
+            .filter(Resident.household_id.in_(ids))
+            .group_by(Resident.household_id)
+            .all()
+        )
+        counts = {hid: cnt for hid, cnt in count_rows}
+    result = [_to_dict(r) for r in rows]
+    for d in result:
+        d["member_count"] = counts.get(d["id"], 0)
+    return result
 
 
 @router.post("/", status_code=201)
