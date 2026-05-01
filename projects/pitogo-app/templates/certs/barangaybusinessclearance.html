@@ -1,5 +1,32 @@
-<!DOCTYPE html>
+{% extends "certs/_layout.html" %}
+{% block cert_body %}
+<div class="cert-main-title">
+  <span><em>BARANGAY BUSINESS CLEARANCE</em></span>
+</div>
 
-<html><head><meta charset="utf-8"/><title>BarangayBusinessClearance</title></head><body>
-<p>TO WHOM IT MAY CONCERN:</p><p> </p><p>		This is to certify that  <a id="txtBusinessName"></a><strong>      </strong>is a registered business establishment conducting business activity within the jurisdiction of   Barangay: {{ household.barangay }}<a id="txtBarangay"></a>PITOGO, CONSOLACION, CEBU.</p><p>		This clearance is issued upon the request of <a id="txtName"></a><strong>     </strong> proprietor/manager of the stated establishment, pursuant to Section 152 of the Local Government Code of 1991 in connection with his/her application for business permit with the office of the Municipal Mayor of <a id="txtMunCit1"></a>CONSOLACION, <a id="txtProvince1"></a>CEBU.</p><p>		Issued this <a id="txtDay"></a>27th day of <a id="txtMonth"></a>April, 2026.</p><p> <a id="txtKapitan"></a><strong>ALLEN CLAIRE PARADO-MADJOS, PH. D.</strong></p><p>         Punong Barangay: {{ household.barangay }}</p><p>NOT VALID WITHOUT O.R. &amp; OFFICIAL SEAL</p><p>                                      O.R. No.		:  <a id="txtORNo"></a>             </p><p>Issued on	:  <a id="txtIssuedOn"></a>     </p><p>Amount Paid	:  <a id="txtAmountPaid"></a>      </p><p>				Note: Barangay: {{ household.barangay }}<a id="txtYearNow"></a>2026.</p>
-</body></html>
+<p class="to-whom">TO WHOM IT MAY CONCERN:</p>
+
+<p class="cert-paragraph">
+  This is to certify that <strong>{{ meta.business_name }}</strong>,
+  owned and operated by <strong>{{ meta.owner_name }}</strong>,
+  located at <strong>{{ household.address_line }}</strong>,
+  Barangay PITOGO, Municipality of CONSOLACION, Province of CEBU,
+  has been issued this Barangay Business Clearance.
+</p>
+
+<p class="cert-paragraph">
+  Issued this <strong>{{ issued_at }}</strong> at the Office of the
+  Punong Barangay, Barangay PITOGO, Municipality of CONSOLACION,
+  Province of CEBU, Philippines.
+</p>
+{% endblock %}
+
+{% block extra_footer %}
+<div class="extra-footer" style="border-top:1px solid #000;padding-top:6px;margin-top:12px;font-size:9.5pt;">
+  <p><strong>NOT VALID WITHOUT O.R. &amp; OFFICIAL SEAL</strong></p>
+  <p>O.R. No.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: &nbsp;&nbsp;<strong>{{ control_number }}</strong></p>
+  <p>Amount Paid&nbsp;: &nbsp;&nbsp;<strong>&#x20B1;{{ meta.amount_paid or "___" }}</strong></p>
+  <p>Date Paid&nbsp;&nbsp;&nbsp;&nbsp;: &nbsp;&nbsp;<strong>{{ issued_at }}</strong></p>
+  <p>Doc. Stamp&nbsp;&nbsp;: &nbsp;&nbsp;<strong>&#x20B1;30.00</strong></p>
+</div>
+{% endblock %}

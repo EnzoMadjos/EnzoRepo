@@ -1,19 +1,28 @@
-{% extends 'certs/base_cert.html' %}
-{% block body %}
-<p style="text-align:center; font-weight:600; text-decoration:underline;">CERTIFICATE OF INDIGENCY</p>
-<p>
+{% extends "certs/_layout.html" %}
+{% block cert_body %}
+<div class="cert-main-title">
+  <span><em>CERTIFICATE OF INDIGENCY</em></span>
+</div>
+
+<p class="to-whom">TO WHOM IT MAY CONCERN:</p>
+
+<p class="cert-paragraph">
   This is to certify that <strong>{{ resident.full_name }}</strong>,
-  {% if resident.age %} {{ resident.age }} years of age, {% endif %}
-  a resident of <strong>{{ address or household.address_line }}</strong>,
-  Barangay <strong>{{ household.barangay }}</strong>, is a bonafide indigent member of this community.
+  {{ resident.age }} years old, residing at
+  <strong>{{ address or household.address_line }}</strong>,
+  Barangay PITOGO, Municipality of CONSOLACION, Province of CEBU,
+  belongs to the indigent families of this barangay.
 </p>
-<p>
-  This certification is issued upon the request of
+
+<p class="cert-paragraph">
+  This certificate is issued upon the request of
   <strong>{{ resident.full_name }}</strong>
-  for <strong>{{ purpose or 'whatever legal purpose it may serve' }}</strong>.
+  for <strong>{{ purpose or "whatever legal purpose it may serve" }}</strong>.
 </p>
-<p>
-  Issued this <strong>{{ issued_at }}</strong> at the Office of the Punong Barangay,
-  Barangay {{ household.barangay }}, Philippines.
+
+<p class="cert-paragraph">
+  Issued this <strong>{{ issued_at }}</strong> at the Office of the
+  Punong Barangay, Barangay PITOGO, Municipality of CONSOLACION,
+  Province of CEBU, Philippines.
 </p>
 {% endblock %}

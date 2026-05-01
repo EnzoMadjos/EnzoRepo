@@ -34,14 +34,76 @@
 
   <table id="usersTable" class="table">
     <thead>
-      <tr><th>Username</th><th>Display</th><th>Role</th><th class="small">Actions</th></tr>
+      <tr><th>Username</th><th>Display Name</th><th>Role</th><th>Actions</th></tr>
     </thead>
     <tbody></tbody>
   </table>
 
+  <!-- Password Reset Modal -->
+  <div id="pw-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:10px;padding:24px;width:90%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <strong id="pw-modal-title">Reset Password</strong>
+        <button onclick="closePwModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#555">✕</button>
+      </div>
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:#444;font-weight:500">New Password
+        <input id="pw-new" type="password" class="input" placeholder="Minimum 6 characters" autocomplete="new-password" />
+      </label>
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:#444;font-weight:500;margin-top:10px">Confirm Password
+        <input id="pw-confirm" type="password" class="input" placeholder="Repeat password" autocomplete="new-password" />
+      </label>
+      <div id="pw-modal-status" style="font-size:.83rem;color:#CE1126;min-height:18px;margin-top:6px"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+        <button class="btn" onclick="closePwModal()" style="background:#6c757d;color:#fff">Cancel</button>
+        <button class="btn" id="pw-save-btn" onclick="submitPwReset()" style="background:#0038A8;color:#fff">Reset Password</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/static/js/ui_helpers.js"></script>
   <script>
     let CUR_PAGE = 1;
+    let _pwUsername = null;
+
+    function openPwModal(username) {
+      _pwUsername = username;
+      document.getElementById('pw-modal-title').textContent = 'Reset Password — ' + username;
+      document.getElementById('pw-new').value = '';
+      document.getElementById('pw-confirm').value = '';
+      document.getElementById('pw-modal-status').textContent = '';
+      document.getElementById('pw-save-btn').disabled = false;
+      document.getElementById('pw-modal').style.display = 'flex';
+      setTimeout(() => document.getElementById('pw-new').focus(), 50);
+    }
+    function closePwModal() {
+      document.getElementById('pw-modal').style.display = 'none';
+      _pwUsername = null;
+    }
+    async function submitPwReset() {
+      const np = document.getElementById('pw-new').value;
+      const nc = document.getElementById('pw-confirm').value;
+      const statusEl = document.getElementById('pw-modal-status');
+      if (!np || np.length < 6) { statusEl.textContent = 'Password must be at least 6 characters'; return; }
+      if (np !== nc) { statusEl.textContent = 'Passwords do not match'; return; }
+      document.getElementById('pw-save-btn').disabled = true;
+      statusEl.textContent = '';
+      try {
+        await fetchJson('/api/users/' + _pwUsername + '/password', {
+          method: 'POST', headers: authHeaders(), body: JSON.stringify({ new_password: np })
+        });
+        showToast('Password reset for ' + _pwUsername, 'success');
+        closePwModal();
+      } catch(e) {
+        statusEl.textContent = 'Reset failed: ' + e.message;
+        document.getElementById('pw-save-btn').disabled = false;
+      }
+    }
+    document.getElementById('pw-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('pw-modal')) closePwModal();
+    });
+    document.getElementById('pw-new').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('pw-confirm').focus(); });
+    document.getElementById('pw-confirm').addEventListener('keydown', e => { if(e.key==='Enter') submitPwReset(); });
+
     async function loadUsers(){
       try{
         const q = document.getElementById('q').value.trim();
@@ -51,7 +113,7 @@
         const users = resp.items || [];
         users.forEach(u => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${u.username}</td><td><input class="display input" value="${u.display_name||''}" /></td><td><select class="role input"><option value="clerk">clerk</option><option value="admin">admin</option></select></td><td></td>`;
+          tr.innerHTML = `<td style="font-weight:600">${u.username}</td><td><input class="display input" value="${u.display_name||''}" style="width:180px" /></td><td><select class="role input"><option value="clerk">clerk</option><option value="admin">admin</option></select></td><td style="display:flex;gap:4px;flex-wrap:wrap"></td>`;
           tr.querySelector('.role').value = u.role;
 
           const actionsCell = tr.querySelector('td:last-child');
@@ -63,11 +125,7 @@
           });
 
           const pwBtn = document.createElement('button'); pwBtn.className='btn small'; pwBtn.textContent='Reset PW';
-          pwBtn.addEventListener('click', async ()=>{
-            const np = prompt('Enter new password for ' + u.username);
-            if(!np) return;
-            try{ await fetchJson('/api/users/'+u.username+'/password', { method:'POST', headers: authHeaders(), body: JSON.stringify({ new_password: np }) }); showToast('Password reset','success'); }catch(e){ showToast('Reset failed: '+e.message,'error'); }
-          });
+          pwBtn.addEventListener('click', () => openPwModal(u.username));
 
           const delBtn = document.createElement('button'); delBtn.className='btn btn-danger small'; delBtn.textContent='Delete';
           delBtn.addEventListener('click', async ()=>{

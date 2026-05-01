@@ -1,6 +1,27 @@
-{% extends 'certs/base_cert.html' %}
-{% block body %}
-<p style="text-align:center; font-weight:600;">CERTIFICATE OF COHABITATION</p>
-<p>This is to certify that <strong>{{ partner_a }}</strong> and <strong>{{ partner_b }}</strong> have cohabited together at <strong>{{ address }}</strong> {{ household.address_line }}<strong>{{ duration }}</strong>.</p>
-<p>Purpose: {{ purpose }}</p>
+{% extends "certs/_layout.html" %}
+{% block cert_body %}
+<div class="cert-main-title">
+  <span><em>CERTIFICATION OF COHABITATION</em></span>
+</div>
+
+<p class="to-whom">TO WHOM IT MAY CONCERN:</p>
+
+<p class="cert-paragraph">
+  This is to certify that <strong>{{ resident.full_name }}</strong>
+  and <strong>{{ meta.partner2_name }}</strong>, both bonafide residents of
+  Barangay PITOGO, Municipality of CONSOLACION, Province of CEBU,
+  have been living together as <strong>LIVE-IN PARTNERS</strong> for
+  <strong>{{ meta.years_cohabiting }}</strong> year(s).
+</p>
+
+<p class="cert-paragraph">
+  This certification is issued upon the request of the above-mentioned parties
+  for <strong>{{ meta.purpose or "whatever legal purpose it may serve" }}</strong>.
+</p>
+
+<p class="cert-paragraph">
+  Issued this <strong>{{ issued_at }}</strong> at the Office of the
+  Punong Barangay, Barangay PITOGO, Municipality of CONSOLACION,
+  Province of CEBU, Philippines.
+</p>
 {% endblock %}

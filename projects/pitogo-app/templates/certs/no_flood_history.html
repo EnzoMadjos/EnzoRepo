@@ -1,6 +1,28 @@
-{% extends 'certs/base_cert.html' %}
-{% block body %}
-<p style="text-align:center; font-weight:600;">CERTIFICATE OF NO FLOOD HISTORY</p>
-<p>This is to certify that the property located at <strong>{{ address }}</strong> {{ household.address_line }}<strong>{{ issued_at }}</strong>.</p>
-<p>Owner / Resident: {{ full_name }}</p>
+{% extends "certs/_layout.html" %}
+{% block cert_body %}
+<div class="cert-main-title">
+  <span><em>CERTIFICATION OF NO FLOOD HISTORY</em></span>
+</div>
+
+<p class="to-whom">TO WHOM IT MAY CONCERN:</p>
+
+<p class="cert-paragraph">
+  This is to certify that the proposed site of
+  <strong>{{ meta.company_name }}</strong>, located at
+  <strong>{{ household.address_line }}</strong>,
+  Barangay PITOGO, Municipality of CONSOLACION, Province of CEBU,
+  has <strong>NO FLOOD HISTORY</strong> as of the date of this certification.
+</p>
+
+<p class="cert-paragraph">
+  This certification is issued upon the request of
+  <strong>{{ meta.requestor }}</strong>
+  for <strong>{{ meta.purpose or "whatever legal purpose it may serve" }}</strong>.
+</p>
+
+<p class="cert-paragraph">
+  Issued this <strong>{{ issued_at }}</strong> at the Office of the
+  Punong Barangay, Barangay PITOGO, Municipality of CONSOLACION,
+  Province of CEBU, Philippines.
+</p>
 {% endblock %}

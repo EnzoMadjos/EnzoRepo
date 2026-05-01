@@ -1,5 +1,41 @@
-<!DOCTYPE html>
+{% extends "certs/_layout.html" %}
+{% block cert_body %}
+<div class="cert-main-title">
+  <span><em>WATER INSTALLATION CLEARANCE</em></span>
+</div>
 
-<html><head><meta charset="utf-8"/><title>WaterClearance</title></head><body>
-<p> </p><p>To whom it may concern:</p><p>As provided for the Local Government Code, Republic Act 7160, this water installation clearance is hereby granted to <a id="txtName"></a><strong>      </strong>for the installation of <strong> </strong><a id="txtDescription"></a><strong>     , </strong>with the total area of <a id="txtAreaWords"></a><strong>     </strong> (<a id="txtArea"></a><strong>     </strong>) square meters more or less with a total water installation cost of <a id="txtCost"></a><strong>     </strong> at Purok <a id="txtPurok"></a><strong>     </strong>, <a id="txtBarangay"></a>PITOGO, <a id="txtMunCitProv"></a>CONSOLACION, CEBU.</p><p>This clearance is issued upon the personal request of said person for the application of Permit and for any legal purpose: {{ meta.purpose }}</p><p>Given this <a id="txtDay"></a><strong>27th  </strong>day of <a id="txtMonth"></a><strong>April</strong>, year <a id="txtYear"></a><strong>2026</strong> .</p><p> <strong> </strong></p><p> <a id="txtKapitan"></a><strong>ALLEN CLAIRE PARADO-MADJOS, PH. D.</strong></p><p>   	      Punong Barangay: {{ household.barangay }}</p><p>                                      Paid Under</p><p>                                      O.R. No.             :<a id="txtORNo"></a>     </p><p>Amount Paid	: ₱ <a id="txtORAmount"></a>75.00</p><p>Date Paid	:   <a id="txtORDate"></a>4/27/2026</p><p>Doc. Stamp	: ₱ <a id="txtDSAmount"></a>30.00</p>
-</body></html>
+<p class="to-whom">TO WHOM IT MAY CONCERN:</p>
+
+<p class="cert-paragraph">
+  This is to certify that <strong>{{ resident.full_name }}</strong>,
+  bonafide resident of <strong>{{ household.address_line }}</strong>,
+  Barangay PITOGO, Municipality of CONSOLACION, Province of CEBU,
+  is hereby granted clearance to proceed with water installation of
+  <strong>{{ meta.description }}</strong>,
+  with a floor area of <strong>{{ meta.area_words }}</strong>
+  ({{ meta.area_sqm }} sq. m.) at a cost of
+  &#x20B1;<strong>{{ meta.cost }}</strong>.
+</p>
+
+<p class="cert-paragraph">
+  This clearance is issued upon the request of
+  <strong>{{ resident.full_name }}</strong>
+  for <strong>{{ meta.purpose or "whatever legal purpose it may serve" }}</strong>.
+</p>
+
+<p class="cert-paragraph">
+  Issued this <strong>{{ issued_at }}</strong> at the Office of the
+  Punong Barangay, Barangay PITOGO, Municipality of CONSOLACION,
+  Province of CEBU, Philippines.
+</p>
+{% endblock %}
+
+{% block extra_footer %}
+<div class="extra-footer" style="border-top:1px solid #000;padding-top:6px;margin-top:12px;font-size:9.5pt;">
+  <p><strong>NOT VALID WITHOUT O.R. &amp; OFFICIAL SEAL</strong></p>
+  <p>O.R. No.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: &nbsp;&nbsp;<strong>{{ control_number }}</strong></p>
+  <p>Amount Paid&nbsp;: &nbsp;&nbsp;<strong>&#x20B1;75.00</strong></p>
+  <p>Date Paid&nbsp;&nbsp;&nbsp;&nbsp;: &nbsp;&nbsp;<strong>{{ issued_at }}</strong></p>
+  <p>Doc. Stamp&nbsp;&nbsp;: &nbsp;&nbsp;<strong>&#x20B1;30.00</strong></p>
+</div>
+{% endblock %}

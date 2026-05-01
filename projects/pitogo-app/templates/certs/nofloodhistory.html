@@ -1,5 +1,28 @@
-<!DOCTYPE html>
+{% extends "certs/_layout.html" %}
+{% block cert_body %}
+<div class="cert-main-title">
+  <span><em>CERTIFICATION OF NO FLOOD HISTORY</em></span>
+</div>
 
-<html><head><meta charset="utf-8"/><title>NoFloodHistory</title></head><body>
-<p> </p><p>This is to certify that the proposed site by <a id="txtTelco"></a>     , located at Purok <a id="txtpurok"></a>      of<strong> </strong><a id="txtBarangay"></a>PITOGO, Municipality of <a id="txtMunCitProv"></a>CONSOLACION, CEBU has NO FLOOD HISTORY.</p><p>This certification is being issued upon the request of <a id="txtContractor"></a>      for whatever legal purpose: {{ meta.purpose }}</p><p>	Given this <a id="txtDay"></a>27th<strong> </strong>of <a id="txtMonth"></a>April<strong> </strong><a id="txtYear"></a>2026<strong> </strong>at the Barangay: {{ household.barangay }}<a id="txtBarangay1"></a>PITOGO, <a id="txtMunCitProv1"></a>CONSOLACION, CEBU.</p>
-</body></html>
+<p class="to-whom">TO WHOM IT MAY CONCERN:</p>
+
+<p class="cert-paragraph">
+  This is to certify that the proposed site of
+  <strong>{{ meta.company_name }}</strong>, located at
+  <strong>{{ household.address_line }}</strong>,
+  Barangay PITOGO, Municipality of CONSOLACION, Province of CEBU,
+  has <strong>NO FLOOD HISTORY</strong> as of the date of this certification.
+</p>
+
+<p class="cert-paragraph">
+  This certification is issued upon the request of
+  <strong>{{ meta.requestor }}</strong>
+  for <strong>{{ meta.purpose or "whatever legal purpose it may serve" }}</strong>.
+</p>
+
+<p class="cert-paragraph">
+  Issued this <strong>{{ issued_at }}</strong> at the Office of the
+  Punong Barangay, Barangay PITOGO, Municipality of CONSOLACION,
+  Province of CEBU, Philippines.
+</p>
+{% endblock %}
