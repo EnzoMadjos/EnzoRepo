@@ -112,6 +112,35 @@
         "SALESFORCE_CLIENT_SECRET": "${input:sf-client-secret}"
       },
       "autoApprove": ["run_soql_query", "run_sosl_search", "get_object_fields", "list_sobjects", "get_record"]
+    },
+    "brain": {
+      "command": "/home/enzo/.local/bin/uvx",
+      "args": [
+        "--from",
+        "zettelkasten-mcp @ git+https://github.com/entanglr/zettelkasten-mcp.git",
+        "python",
+        "-m",
+        "zettelkasten_mcp.main",
+        "--notes-dir",
+        "/home/enzo/ai-lab/brain",
+        "--database-path",
+        "/home/enzo/ai-lab/brain/.index/brain.db"
+      ],
+      "autoApprove": [
+        "zk_get_note",
+        "zk_search_notes",
+        "zk_get_linked_notes",
+        "zk_get_all_tags",
+        "zk_find_similar_notes",
+        "zk_find_central_notes",
+        "zk_find_orphaned_notes",
+        "zk_list_notes_by_date",
+        "zk_create_note",
+        "zk_update_note",
+        "zk_create_link",
+        "zk_remove_link",
+        "zk_rebuild_index"
+      ]
     }
   }
 }
