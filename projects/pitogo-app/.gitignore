@@ -1,0 +1,22 @@
+# Environment (contains secrets — never commit)
+.env
+secure/
+*.db
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Alembic generated pyc
+alembic/__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

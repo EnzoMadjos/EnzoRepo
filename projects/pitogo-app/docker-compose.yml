@@ -1,22 +1,56 @@
 version: "3.9"
 
+# ──────────────────────────────────────────────────────────────────────────────
+# PITOGO Barangay App — Docker Compose
+#
+# Leader mode  (office main PC):  docker compose --profile leader up -d
+# ──────────────────────────────────────────────────────────────────────────────
+
 services:
-  enzo-app:
-    image: ghcr.io/enzomadjos/enzo-repo:latest
-    container_name: enzo-app
+
+  # ── PostgreSQL 16 (leader only) ───────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: pitogo-db
     restart: unless-stopped
+    profiles: ["leader"]
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-pitogo}
+      POSTGRES_USER:     ${DB_USER:-pitogo}
+      POSTGRES_PASSWORD: ${DB_PASS:?DB_PASS is required — run install_leader script}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     ports:
-      - "80:8300"
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pitogo} -d ${DB_NAME:-pitogo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Pitogo FastAPI App (leader only, connects to db) ─────────────────────
+  app:
+    build: .
+    container_name: pitogo-app
+    restart: unless-stopped
+    profiles: ["leader"]
+    ports:
+      - "${APP_PORT:-8300}:8300"
     env_file:
       - .env
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
-      - app_data:/app/secure/storage
+      - app_secure:/app/secure
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8300/status"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 15s
+      start_period: 20s
 
 volumes:
-  app_data:
+  pgdata:
+  app_secure:
