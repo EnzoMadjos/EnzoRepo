@@ -45,17 +45,8 @@
       "autoApprove": ["sequentialthinking"]
     },
     "context7": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--init",
-        "mcp/context7"
-      ],
-      "env": {
-        "DEFAULT_MINIMUM_TOKENS": "10000"
-      },
+      "type": "sse",
+      "url": "http://localhost:8080/sse",
       "autoApprove": ["resolve-library-id", "get-library-docs"]
     },
     "playwright": {

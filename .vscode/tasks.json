@@ -15,6 +15,21 @@
         "close": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "MCP: Start Context7 Server",
+      "type": "shell",
+      "command": "docker rm -f mcp-context7 2>/dev/null; docker run -d --name mcp-context7 -p 8080:8080 mcp/context7 && echo '[Context7] Running on http://localhost:8080/sse' || echo '[Context7] FAILED to start'",
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "close": true
+      },
+      "problemMatcher": []
     }
   ]
 }
