@@ -111,27 +111,27 @@ statistics:
   ignored_enabled: false
 filters:
   - enabled: true
-    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/pro.txt
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.txt
     name: HaGeZi Multi PRO
     id: 1
   - enabled: true
-    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/tif.txt
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/tif.txt
     name: HaGeZi Threat Intelligence Feeds
     id: 2
   - enabled: true
-    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/fake.txt
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/fake.txt
     name: HaGeZi Fake (Scam/Traps)
     id: 3
   - enabled: true
-    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/popup-ads.txt
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/popupads.txt
     name: HaGeZi Pop-Up Ads
     id: 4
   - enabled: true
-    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/most-abused-tlds.txt
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/spam-tlds-adblock.txt
     name: HaGeZi Most Abused TLDs
     id: 5
   - enabled: true
-    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.tracker.txt
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/native.winoffice.txt
     name: HaGeZi Native Tracker (All Brands)
     id: 6
   - enabled: true
