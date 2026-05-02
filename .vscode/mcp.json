@@ -5,6 +5,22 @@
       "id": "github-pat",
       "description": "GitHub Personal Access Token (PAT)",
       "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "sf-instance-url",
+      "description": "Salesforce Instance URL (e.g. https://yourorg.my.salesforce.com)"
+    },
+    {
+      "type": "promptString",
+      "id": "sf-client-id",
+      "description": "Salesforce Connected App Client ID"
+    },
+    {
+      "type": "promptString",
+      "id": "sf-client-secret",
+      "description": "Salesforce Connected App Client Secret",
+      "password": true
     }
   ],
   "servers": {
@@ -81,6 +97,21 @@
         "mcp/git"
       ],
       "autoApprove": ["git_status", "git_diff", "git_log", "git_show", "git_branch", "git_add", "git_commit", "git_push"]
+    },
+    "salesforce": {
+      "command": "/home/enzo/.local/bin/uvx",
+      "args": [
+        "--from",
+        "mcp-salesforce-connector",
+        "salesforce"
+      ],
+      "env": {
+        "SALESFORCE_CONNECTION_TYPE": "OAuth_2.0_Client_Credentials",
+        "SALESFORCE_INSTANCE_URL": "${input:sf-instance-url}",
+        "SALESFORCE_CLIENT_ID": "${input:sf-client-id}",
+        "SALESFORCE_CLIENT_SECRET": "${input:sf-client-secret}"
+      },
+      "autoApprove": ["run_soql_query", "run_sosl_search", "get_object_fields", "list_sobjects", "get_record"]
     }
   }
 }
