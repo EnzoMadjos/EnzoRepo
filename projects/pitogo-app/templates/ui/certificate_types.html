@@ -144,6 +144,9 @@
         return r.text();
       })
       .then(html => {
+        // Fix relative /static/ paths → absolute so blob iframe can load them
+        const origin = window.location.origin;
+        html = html.replace(/src="\/static\//g, `src="${origin}/static/`);
         const blob = new Blob([html], {type: 'text/html'});
         const url = URL.createObjectURL(blob);
         iframe.onload = () => { loader.style.display = 'none'; URL.revokeObjectURL(url); };
