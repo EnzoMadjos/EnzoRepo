@@ -14,16 +14,18 @@
   is a bonafide resident of
   {{ household.address_line if household and household.address_line else "___________________" }},
   Barangay PITOGO, Municipality of CONSOLACION and Province of CEBU, Philippines,
-  is personally known to me and has been found to be of
-  <strong>GOOD MORAL CHARACTER</strong>
-  and has no derogatory record on file in this Barangay.
+  is personally known to me and has not been brought before the Lupon/Pangkat ng Tagapagkasundo,
+  nor committed any infraction of law and ordinances and is known to be a law-abiding citizen.
 </p>
 
-<p class="cert-paragraph">
-  This clearance is issued upon the request of
-  <strong>{{ resident.full_name if resident else "___________________" }}</strong>
-  for <strong>{{ purpose or meta.purpose or "whatever legal purpose it may serve" }}</strong>.
-</p>
+<table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:10pt">
+  <tr><td style="width:40%;padding:3px 6px;border:1px solid #ccc;font-weight:700">NAME</td><td style="padding:3px 8px;border:1px solid #ccc">{{ resident.full_name if resident else "" }}</td></tr>
+  <tr><td style="padding:3px 6px;border:1px solid #ccc;font-weight:700">HOME ADDRESS</td><td style="padding:3px 8px;border:1px solid #ccc">PUROK {{ meta.purok or (household.purok if household else '') }}, PITOGO</td></tr>
+  <tr><td style="padding:3px 6px;border:1px solid #ccc;font-weight:700">PLACE OF BIRTH</td><td style="padding:3px 8px;border:1px solid #ccc">{{ resident.place_of_birth if resident and resident.place_of_birth else meta.place_of_birth or '' }}</td></tr>
+  <tr><td style="padding:3px 6px;border:1px solid #ccc;font-weight:700">DATE OF BIRTH</td><td style="padding:3px 8px;border:1px solid #ccc">{{ resident.birth_date if resident and resident.birth_date else meta.date_of_birth or '' }}</td></tr>
+  <tr><td style="padding:3px 6px;border:1px solid #ccc;font-weight:700">REMARKS</td><td style="padding:3px 8px;border:1px solid #ccc">{{ meta.remarks or 'NO DEROGATORY RECORD' }}</td></tr>
+  <tr><td style="padding:3px 6px;border:1px solid #ccc;font-weight:700">PURPOSE</td><td style="padding:3px 8px;border:1px solid #ccc">{{ purpose or meta.purpose or 'FOR POSTAL ID' }}</td></tr>
+</table>
 
 <p class="cert-paragraph">
   Issued this <strong>{{ issued_at }}</strong> at the Office of the Punong

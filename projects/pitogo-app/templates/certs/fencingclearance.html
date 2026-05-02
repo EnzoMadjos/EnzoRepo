@@ -7,19 +7,20 @@
 <p class="to-whom">TO WHOM IT MAY CONCERN:</p>
 
 <p class="cert-paragraph">
-  This is to certify that <strong>{{ resident.full_name }}</strong>,
+  This is to certify that Clearance is hereby granted to
+  <strong>{{ resident.full_name }}</strong>,
   {{ resident.age }} years old, bonafide resident of
   Barangay PITOGO, Municipality of CONSOLACION, Province of CEBU,
-  is hereby granted clearance to proceed with fencing of
-  <strong>{{ meta.description }}</strong>,
-  with an estimated cost of
+  of legal age, to construct <strong>{{ meta.fence_type or "Concrete" }}</strong> Fence
+  in Purok <strong>{{ meta.purok or '9' }}</strong>, Barangay PITOGO,
+  with an estimated cost of approximately
   <strong>{{ meta.cost_words }}</strong> (&#x20B1;{{ meta.cost_number }}).
+  Project specifications to be attached to this certification.
 </p>
 
 <p class="cert-paragraph">
-  This clearance is issued upon the request of
-  <strong>{{ resident.full_name }}</strong>
-  for <strong>{{ meta.purpose or "whatever legal purpose it may serve" }}</strong>.
+  This clearance is issued in connection with the application for building permit
+  at the Office of the Building Official.
 </p>
 
 <p class="cert-paragraph">

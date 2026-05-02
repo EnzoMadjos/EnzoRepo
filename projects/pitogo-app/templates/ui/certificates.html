@@ -117,9 +117,9 @@
     </div>
   </div>
 
+  <script src="/static/js/ui_helpers.js"></script>
   <script>
-  const token = localStorage.getItem('pitogo_token') || '';
-  const hdrs = token ? {'Authorization':'Bearer '+token,'Content-Type':'application/json'} : {'Content-Type':'application/json'};
+  function hdrs(){ return authHeaders(); }
   let currentPage = 1;
   let totalPages = 1;
   let voidTargetId = null;
@@ -127,7 +127,7 @@
   // --- Cert types dropdown ---
   async function loadTypes() {
     try {
-      const r = await fetch('/api/certificate-types/', {headers: hdrs});
+      const r = await fetch('/api/certificate-types/', {headers: hdrs()});
       if (!r.ok) return;
       const data = await r.json();
       const sel = document.getElementById('type-filter');
@@ -155,7 +155,7 @@
     document.getElementById('status-msg').textContent = '';
 
     try {
-      const r = await fetch('/api/certificates/?' + params, {headers: hdrs});
+      const r = await fetch('/api/certificates/?' + params, {headers: hdrs()});
       const data = await r.json();
       if (!r.ok) {
         tbody.innerHTML = '<tr><td colspan=7 style="color:red">Error: ' + (data.detail || 'Failed') + '</td></tr>';
@@ -183,7 +183,7 @@
         const dt = new Date(c.issued_at).toLocaleString();
         const attachBtn = `&nbsp;<button class="btn-sm" style="background:#FCD116;color:#1a1a2e;font-weight:600" onclick="openAttachModal('${c.id}','${c.control_number}')">📎</button>`;
         const actions = c.status === 'issued'
-          <a href="/api/certificates/${c.id}/render" target="_blank" style="color:#0038A8;font-size:.8rem">Preview</a>
+          ? `<a href="/api/certificates/${c.id}/render" target="_blank" style="color:#0038A8;font-size:.8rem">Preview</a>
              ${c.finalized_at
                ? `&nbsp;<a href="/api/certificates/${c.id}/file" style="color:#0038A8;font-size:.8rem">Download</a>`
                : `&nbsp;<button class="btn-primary btn-sm" onclick="generateCert('${c.id}',this)">Generate</button>`}
@@ -209,12 +209,12 @@
   async function generateCert(certId, btn) {
     btn.disabled = true; btn.textContent = '…';
     try {
-      const r = await fetch(`/api/certificates/${certId}/generate`, {method:'POST', headers: hdrs, body: '{}'});
+      const r = await fetch(`/api/certificates/${certId}/generate`, {method:'POST', headers: hdrs(), body: '{}'});
       const d = await r.json();
-      if (!r.ok) { alert(d.detail || 'Generate failed'); btn.disabled=false; btn.textContent='Generate'; return; }
+      if (!r.ok) { showToast(d.detail || 'Generate failed', 'error'); btn.disabled=false; btn.textContent='Generate'; return; }
       document.getElementById('status-msg').textContent = '✓ Generated: ' + d.pdf_path;
       loadCerts(currentPage);
-    } catch(e) { alert('Network error'); btn.disabled=false; btn.textContent='Generate'; }
+    } catch(e) { showToast('Network error', 'error'); btn.disabled=false; btn.textContent='Generate'; }
   }
 
   // --- Void ---
@@ -232,18 +232,18 @@
 
   async function confirmVoid() {
     const reason = document.getElementById('void-reason').value.trim();
-    if (!reason) { alert('Reason is required'); return; }
+    if (!reason) { showToast('Reason is required', 'error'); return; }
     try {
       const r = await fetch(`/api/certificates/${voidTargetId}/void`, {
-        method:'POST', headers: hdrs,
+        method:'POST', headers: hdrs(),
         body: JSON.stringify({reason})
       });
       const d = await r.json();
-      if (!r.ok) { alert(d.detail || 'Void failed'); return; }
+      if (!r.ok) { showToast(d.detail || 'Void failed', 'error'); return; }
       closeVoidModal();
       document.getElementById('status-msg').textContent = '✓ Certificate voided';
       loadCerts(currentPage);
-    } catch(e) { alert('Network error'); }
+    } catch(e) { showToast('Network error', 'error'); }
   }
 
   // --- Pagination ---
@@ -264,8 +264,8 @@
     if (status) params.set('status', status);
     if (typeId) params.set('certificate_type_id', typeId);
     try {
-      const r = await fetch('/api/certificates/export?' + params, {headers: hdrs});
-      if (!r.ok) { alert('Export failed'); return; }
+      const r = await fetch('/api/certificates/export?' + params, {headers: hdrs()});
+      if (!r.ok) { showToast('Export failed', 'error'); return; }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -273,7 +273,7 @@
       a.download = 'certificates_' + new Date().toISOString().slice(0,10) + '.csv';
       a.click();
       URL.revokeObjectURL(url);
-    } catch(e) { alert('Network error during export'); }
+    } catch(e) { showToast('Network error during export', 'error'); }
   }
 
   // --- Attachment Modal ---
@@ -297,7 +297,7 @@
     const el = document.getElementById('attach-list');
     el.innerHTML = '<p style="color:#aaa;font-size:.85rem">Loading…</p>';
     try {
-      const r = await fetch('/api/attachments/?owner_type=certificate&owner_id='+attachTargetId, {headers: hdrs});
+      const r = await fetch('/api/attachments/?owner_type=certificate&owner_id='+attachTargetId, {headers: hdrs()});
       const data = await r.json();
       if (!r.ok) { el.innerHTML = '<p style="color:red;font-size:.85rem">Error loading attachments</p>'; return; }
       if (!data.length) { el.innerHTML = '<p style="color:#aaa;font-size:.85rem">No attachments yet</p>'; return; }
@@ -321,7 +321,7 @@
     fd.append('file', fileInput.files[0]);
     statusEl.textContent = 'Uploading…';
     try {
-      const authHdr = token ? {'Authorization': 'Bearer '+token} : {};
+      const authHdr = { 'Authorization': 'Bearer ' + (localStorage.getItem('pitogo_token') || localStorage.getItem('token') || '') };
       const r = await fetch('/api/attachments/upload?owner_type=certificate&owner_id='+attachTargetId, {
         method: 'POST', headers: authHdr, body: fd
       });
@@ -334,11 +334,11 @@
   }
 
   async function deleteAttachment(attachId) {
-    if (!confirm('Delete this attachment?')) return;
+    if (!await showConfirm('Delete this attachment?')) return;
     try {
-      await fetch('/api/attachments/'+attachId, {method:'DELETE', headers: hdrs});
+      await fetch('/api/attachments/'+attachId, {method:'DELETE', headers: hdrs()});
       await refreshAttachList();
-    } catch(e) { alert('Delete failed'); }
+    } catch(e) { showToast('Delete failed', 'error'); }
   }
 
   document.getElementById('attach-modal').addEventListener('click', e => {

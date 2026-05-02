@@ -63,36 +63,33 @@
       </div>
       <table id="types-table">
         <thead>
-          <tr><th>Code</th><th>Name</th><th>Template</th><th style="width:80px"></th></tr>
+          <tr><th>Code</th><th>Name</th><th>Template</th><th style="width:130px"></th></tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
   </div>
 
+  <script src="/static/js/ui_helpers.js"></script>
   <script>
-  const token = localStorage.getItem('pitogo_token') || '';
-  const hdrs = {
-    'Authorization': token ? 'Bearer ' + token : '',
-    'Content-Type': 'application/json'
-  };
+  function hdrs(){ return authHeaders(); }
 
   async function loadTypes() {
     const tbody = document.querySelector('#types-table tbody');
     tbody.innerHTML = '<tr><td colspan=4 style="color:#aaa">Loading…</td></tr>';
     try {
-      const r = await fetch('/api/certificate-types/', {headers: hdrs});
+      const r = await fetch('/api/certificate-types/', {headers: hdrs()});
       const data = await r.json();
-      if (!r.ok) { tbody.innerHTML = '<tr><td colspan=4 style="color:red">Error loading</td></tr>'; return; }
-      if (!data.length) { tbody.innerHTML = '<tr><td colspan=4 style="color:#aaa">No certificate types yet. Add one above.</td></tr>'; return; }
+      if (!r.ok) { tbody.innerHTML = '<tr><td colspan=5 style="color:red">Error loading</td></tr>'; return; }
+      if (!data.length) { tbody.innerHTML = '<tr><td colspan=5 style="color:#aaa">No certificate types yet. Add one above.</td></tr>'; return; }
       tbody.innerHTML = data.map(ct => `<tr>
         <td><span class="code-pill">${ct.code}</span></td>
         <td>${ct.name}</td>
         <td class="tmpl-cell" title="${ct.template}">${ct.template}</td>
-        <td><button class="btn-danger btn-sm" onclick="deleteType('${ct.id}','${ct.name}')">Delete</button></td>
+        <td><a href="/ui/issue?type=${ct.code}" target="_blank" class="btn-primary btn-sm" style="text-decoration:none;padding:5px 10px;border-radius:7px;font-size:.78rem;font-weight:600;display:inline-block;margin-right:4px">Preview</a><button class="btn-danger btn-sm" onclick="deleteType('${ct.id}','${ct.name}')">Delete</button></td>
       </tr>`).join('');
     } catch(e) {
-      tbody.innerHTML = '<tr><td colspan=4 style="color:red">Network error</td></tr>';
+      tbody.innerHTML = '<tr><td colspan=5 style="color:red">Network error</td></tr>';
     }
   }
 
@@ -105,7 +102,7 @@
     msg.textContent = 'Creating…'; msg.style.color = '#6c757d';
     try {
       const r = await fetch('/api/certificate-types/', {
-        method: 'POST', headers: hdrs,
+        method: 'POST', headers: hdrs(),
         body: JSON.stringify({code, name, template})
       });
       const d = await r.json();
@@ -119,16 +116,16 @@
   }
 
   async function deleteType(id, name) {
-    if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
+    if (!await showConfirm('Delete "' + name + '"? This cannot be undone.')) return;
     try {
-      const r = await fetch('/api/certificate-types/' + id, {method: 'DELETE', headers: hdrs});
+      const r = await fetch('/api/certificate-types/' + id, {method: 'DELETE', headers: hdrs()});
       if (!r.ok) {
         const d = await r.json().catch(() => ({}));
-        alert(d.detail || 'Delete failed');
+        showToast(d.detail || 'Delete failed', 'error');
         return;
       }
       loadTypes();
-    } catch(e) { alert('Network error'); }
+    } catch(e) { showToast('Network error', 'error'); }
   }
 
   window.addEventListener('DOMContentLoaded', loadTypes);

@@ -49,14 +49,14 @@
   </div>
 </div>
 
+<script src="/static/js/ui_helpers.js"></script>
 <script>
-const token = localStorage.getItem('pitogo_token') || '';
-const hdrs = token ? {'Authorization':'Bearer '+token} : {};
+function hdrs(){ return authHeaders(); }
 
 async function load() {
   const t0 = Date.now();
   try {
-    const r = await fetch('/api/dashboard/stats', {headers: hdrs});
+    const r = await fetch('/api/dashboard/stats', {headers: hdrs()});
     if (!r.ok) { document.querySelector('#recent-table tbody').innerHTML = '<tr><td colspan=6 style="color:red">Auth error — please log in</td></tr>'; return; }
     const d = await r.json();
 

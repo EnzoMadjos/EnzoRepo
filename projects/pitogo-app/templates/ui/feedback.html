@@ -40,9 +40,9 @@
     </div>
   </div>
 
+  <script src="/static/js/ui_helpers.js"></script>
   <script>
-  const token = localStorage.getItem('pitogo_token') || '';
-  const hdrs = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'};
+  function hdrs(){ return authHeaders(); }
 
   function stars(n) {
     return '★'.repeat(n) + '☆'.repeat(5 - n);
@@ -52,7 +52,7 @@
     const tbody = document.querySelector('#fb-table tbody');
     tbody.innerHTML = '<tr><td colspan=5 style="color:#aaa;text-align:center;padding:20px">Loading…</td></tr>';
     try {
-      const r = await fetch('/api/feedback', {headers: hdrs});
+      const r = await fetch('/api/feedback', {headers: hdrs()});
       if (!r.ok) { tbody.innerHTML = '<tr><td colspan=5 style="color:#CE1126;text-align:center">Not authorized or error loading</td></tr>'; return; }
       const data = await r.json();
 
