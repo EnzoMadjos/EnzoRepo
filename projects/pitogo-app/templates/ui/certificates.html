@@ -37,6 +37,11 @@
     .attach-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee;font-size:.85rem}
     .attach-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:12px}
     .attach-meta{color:#888;font-size:.75rem;margin-right:12px;white-space:nowrap}
+    .modal-preview{background:#fff;border-radius:10px;padding:0;width:820px;max-width:96vw;height:80vh;display:flex;flex-direction:column;overflow:hidden}
+    .modal-preview-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #eee}
+    .modal-preview-body{flex:1;position:relative}
+    .modal-preview-body iframe{width:100%;height:100%;border:none}
+    .modal-preview-loader{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.8);font-size:.9rem;color:#666}
   </style>
 </head>
 <body>
@@ -59,6 +64,20 @@
           <button class="btn-primary btn-sm" onclick="uploadAttachment()">Upload</button>
         </div>
         <div id="attach-status" style="font-size:.8rem;color:#666;margin-top:4px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Certificate Preview modal -->
+  <div class="modal-overlay" id="cert-preview-modal" style="display:none">
+    <div class="modal-preview">
+      <div class="modal-preview-header">
+        <span style="font-weight:600;font-size:.95rem">Certificate Preview</span>
+        <button onclick="closePreviewModal()" style="background:transparent;border:none;font-size:1.3rem;cursor:pointer;color:#555">✕</button>
+      </div>
+      <div class="modal-preview-body">
+        <div class="modal-preview-loader" id="cert-preview-loader">Loading preview…</div>
+        <iframe id="cert-preview-iframe"></iframe>
       </div>
     </div>
   </div>
@@ -183,7 +202,7 @@
         const dt = new Date(c.issued_at).toLocaleString();
         const attachBtn = `&nbsp;<button class="btn-sm" style="background:#FCD116;color:#1a1a2e;font-weight:600" onclick="openAttachModal('${c.id}','${c.control_number}')">📎</button>`;
         const actions = c.status === 'issued'
-          ? `<a href="/api/certificates/${c.id}/render" target="_blank" style="color:#0038A8;font-size:.8rem">Preview</a>
+          ? `<button class="btn-sm" style="background:#e8f0fe;color:#0038A8;border:1px solid #c4d2f5" onclick="previewCert('${c.id}')">Preview</button>
              ${c.finalized_at
                ? `&nbsp;<a href="/api/certificates/${c.id}/file" style="color:#0038A8;font-size:.8rem">Download</a>`
                : `&nbsp;<button class="btn-primary btn-sm" onclick="generateCert('${c.id}',this)">Generate</button>`}
@@ -344,6 +363,41 @@
   document.getElementById('attach-modal').addEventListener('click', e => {
     if (e.target === document.getElementById('attach-modal')) closeAttachModal();
   });
+
+  // --- Certificate Preview Modal ---
+  function previewCert(certId) {
+    const modal = document.getElementById('cert-preview-modal');
+    const iframe = document.getElementById('cert-preview-iframe');
+    const loader = document.getElementById('cert-preview-loader');
+    iframe.src = '';
+    loader.style.display = 'flex';
+    modal.style.display = 'flex';
+    fetch(`/api/certificates/${certId}/render`, {headers: hdrs()})
+      .then(r => {
+        if (!r.ok) return r.json().then(d => { throw new Error(d.detail || 'Preview failed'); });
+        return r.text();
+      })
+      .then(html => {
+        const origin = window.location.origin;
+        html = html.replace(/src="\/static\//g, `src="${origin}/static/`);
+        const blob = new Blob([html], {type: 'text/html'});
+        const url = URL.createObjectURL(blob);
+        iframe.onload = () => { loader.style.display = 'none'; URL.revokeObjectURL(url); };
+        iframe.src = url;
+      })
+      .catch(err => {
+        loader.style.display = 'none';
+        iframe.srcdoc = `<div style="font-family:sans-serif;padding:40px;color:#CE1126;font-size:1rem">Error: ${err.message}</div>`;
+      });
+  }
+  function closePreviewModal() {
+    document.getElementById('cert-preview-modal').style.display = 'none';
+    document.getElementById('cert-preview-iframe').src = '';
+  }
+  document.getElementById('cert-preview-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('cert-preview-modal')) closePreviewModal();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePreviewModal(); });
 
   // Init
   loadTypes();
