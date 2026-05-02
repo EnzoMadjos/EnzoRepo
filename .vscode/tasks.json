@@ -1,0 +1,20 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "MCP: Pre-warm Docker Images",
+      "type": "shell",
+      "command": "docker inspect mcp/memory mcp/sequentialthinking mcp/context7 mcp/playwright mcp/fetch mcp/git ghcr.io/github/github-mcp-server > /dev/null 2>&1 && echo '[MCP] All images ready' || echo '[MCP] WARNING: some images missing, run docker pull'",
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "close": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

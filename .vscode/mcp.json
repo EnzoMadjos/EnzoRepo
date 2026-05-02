@@ -1,0 +1,95 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "github-pat",
+      "description": "GitHub Personal Access Token (PAT)",
+      "password": true
+    }
+  ],
+  "servers": {
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github-pat}"
+      }
+    },
+    "memory": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-v",
+        "/home/enzo/ai-lab/.vscode/mcp-data/memory:/data",
+        "mcp/memory"
+      ],
+      "autoApprove": ["create_entities", "create_relations", "add_observations", "delete_entities", "delete_observations", "delete_relations", "open_nodes", "read_graph", "search_nodes"]
+    },
+    "sequential-thinking": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "mcp/sequentialthinking"
+      ],
+      "autoApprove": ["sequentialthinking"]
+    },
+    "context7": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--init",
+        "mcp/context7"
+      ],
+      "env": {
+        "DEFAULT_MINIMUM_TOKENS": "10000"
+      },
+      "autoApprove": ["resolve-library-id", "get-library-docs"]
+    },
+    "playwright": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--init",
+        "mcp/playwright"
+      ],
+      "autoApprove": ["browser_navigate", "browser_screenshot", "browser_click", "browser_type", "browser_wait_for", "browser_evaluate", "browser_snapshot"]
+    },
+    "fetch": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "mcp/fetch"
+      ],
+      "autoApprove": ["fetch"]
+    },
+    "git": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-v",
+        "/home/enzo/ai-lab:/workspace",
+        "mcp/git"
+      ],
+      "autoApprove": ["git_status", "git_diff", "git_log", "git_show", "git_branch", "git_add", "git_commit", "git_push"]
+    }
+  }
+}
