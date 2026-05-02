@@ -269,6 +269,39 @@ async def ui_certificate_types(request: Request) -> HTMLResponse:
     )
 
 
+@app.get("/api/certificate-types/{code}/preview", response_class=HTMLResponse)
+async def preview_cert_template(
+    code: str,
+    session: auth.SessionData = Depends(auth.require_auth),
+) -> HTMLResponse:
+    """Render a certificate template with blank/sample data for preview."""
+    from models import CertificateType
+    from api.deps import get_db as _get_db
+    db = next(_get_db())
+    ct = db.query(CertificateType).filter_by(code=code.upper()).first()
+    if not ct:
+        raise HTTPException(status_code=404, detail="Certificate type not found")
+    template_name = ct.template if ct.template.startswith("certs/") else f"certs/{ct.template}"
+
+    class _Blank:
+        def __getattr__(self, _): return "___________________"
+
+    blank = _Blank()
+    try:
+        rendered = templates.get_template(template_name).render(
+            resident=blank,
+            household=blank,
+            meta=blank,
+            purpose="[PURPOSE]",
+            issued_at=time.strftime("%B %d, %Y"),
+            serial_no="XXXX-0000",
+        )
+    except Exception as exc:
+        app_logger.error("Preview render error", exc=exc, code=code)
+        raise HTTPException(status_code=500, detail=f"Template render failed: {exc}")
+    return HTMLResponse(rendered)
+
+
 @app.get("/demo", response_class=HTMLResponse)
 async def demo_landing(request: Request) -> HTMLResponse:
     """Public demo landing page — no login required."""
