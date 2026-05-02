@@ -13,7 +13,7 @@ http:
   session_ttl: 720h
 users:
   - name: admin
-    password: $2a$10$placeholder_change_on_first_login
+    password: $2b$10$E/Oxiws/Mvo5tadQVasi/uwv8THSQvVbg4He1j5kvY9WmXiqNygbK
 auth_attempts: 5
 block_auth_min: 15
 http_proxy: ""

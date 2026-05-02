@@ -20,7 +20,7 @@
 
     /* ── Login ── */
     .login-wrap {
-      display: flex; align-items: center; justify-content: center; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh;
       background: #CE1126;
       background-image:
         repeating-linear-gradient(-55deg, transparent, transparent 18px, rgba(0,0,0,.07) 18px, rgba(0,0,0,.07) 20px),
@@ -388,12 +388,8 @@ function enableDemo() {
 }
 
 function showApp() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app-screen').style.display = '';
-  document.getElementById('topbar-user').textContent = _username;
-  showSection('sec-clearance');
-  checkRelayStatus();
-  setInterval(checkRelayStatus, 30000);
+  // Redirect to the proper dashboard UI
+  window.location.href = '/ui/dashboard';
 }
 
 // ── Navigation ────────────────────────────────────────────────
