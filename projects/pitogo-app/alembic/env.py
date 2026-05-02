@@ -25,9 +25,8 @@ if config_obj.config_file_name:
         # missing logging sections in minimal alembic.ini; continue without fileConfig
         pass
 
-# set DB url programmatically (use config.SECURE_DIR pitogo.db)
-db_path = str(config.SECURE_DIR / "pitogo.db")
-config_obj.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+# Set DB URL programmatically from config (supports postgres + sqlite backends)
+config_obj.set_main_option("sqlalchemy.url", config.get_database_url())
 
 target_metadata = Base.metadata
 
@@ -47,7 +46,9 @@ def run_migrations_online() -> None:
     )
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, render_as_batch=True
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=(config.DB_BACKEND == "sqlite"),  # only needed for SQLite
         )
         with context.begin_transaction():
             context.run_migrations()

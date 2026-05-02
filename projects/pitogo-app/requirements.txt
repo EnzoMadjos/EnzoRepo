@@ -6,6 +6,7 @@ httpx==0.28.1
 cryptography==41.0.3
 SQLAlchemy==2.0.22
 alembic==1.11.2
+psycopg2-binary==2.9.9
 mammoth
 python-multipart
 weasyprint

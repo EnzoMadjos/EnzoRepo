@@ -48,3 +48,24 @@ DOWNLOAD_SECRET = os.getenv("DOWNLOAD_SECRET", "")
 # Directory to store archived logs/exports
 LOG_ARCHIVE_DIR = SECURE_DIR / "log_archives"
 LOG_ARCHIVE_DIR.mkdir(exist_ok=True)
+
+# ── Database ───────────────────────────────────────────────────────────────────
+# DB_BACKEND: "postgres" (default) | "sqlite" (emergency fallback)
+DB_BACKEND = os.getenv("DB_BACKEND", "sqlite").lower()  # default sqlite for dev safety
+
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "pitogo")
+DB_USER = os.getenv("DB_USER", "pitogo")
+DB_PASS = os.getenv("DB_PASS", "")
+
+# Node role: "leader" (runs postgres) | "client" (connects to leader)
+NODE_ROLE = os.getenv("NODE_ROLE", "leader")
+
+def get_database_url() -> str:
+    """Return the SQLAlchemy database URL based on DB_BACKEND."""
+    if DB_BACKEND == "postgres":
+        return f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    # sqlite fallback
+    db_path = SECURE_DIR / "pitogo.db"
+    return f"sqlite:///{db_path}"

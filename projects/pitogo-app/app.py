@@ -181,10 +181,16 @@ async def _startup() -> None:
 
     discovery.start(config.APP_PORT, on_elected, on_client, on_leader_lost)
 
+    # Start offline sync monitor (no-op when DB_BACKEND=sqlite)
+    from sync_engine import sync_engine
+    sync_engine.start()
+
 
 @app.on_event("shutdown")
 async def _shutdown() -> None:
     discovery.stop()
+    from sync_engine import sync_engine
+    sync_engine.stop()
 
 
 # Register API routers
@@ -619,6 +625,30 @@ async def server_status() -> JSONResponse:
             "port": config.APP_PORT,
         }
     )
+
+
+@app.get("/api/sync/status")
+async def sync_status() -> JSONResponse:
+    """Return current database backend and sync queue state."""
+    from sync_engine import sync_engine
+    result: dict = {
+        "db_backend": sync_engine.active_backend,
+        "is_online": sync_engine.is_online,
+        "config_backend": config.DB_BACKEND,
+    }
+    # Count pending queue entries if in sqlite fallback
+    if not sync_engine.is_online and config.DB_BACKEND == "postgres":
+        try:
+            import sqlalchemy as sa
+            sqlite_url = f"sqlite:///{config.SECURE_DIR / 'pitogo_fallback.db'}"
+            eng = sa.create_engine(sqlite_url, connect_args={"check_same_thread": False})
+            with eng.connect() as conn:
+                row = conn.execute(sa.text("SELECT COUNT(*) FROM sync_queue WHERE synced_at IS NULL")).fetchone()
+                result["pending_sync_count"] = row[0] if row else 0
+            eng.dispose()
+        except Exception:
+            result["pending_sync_count"] = "unavailable"
+    return JSONResponse(result)
 
 
 @app.get("/download/{token}")
