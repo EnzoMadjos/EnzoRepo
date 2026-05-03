@@ -748,6 +748,7 @@
     <div id="nstate">STANDBY</div>
     <span id="sbadge">● —</span>
     <button class="orb-build-btn" onclick="event.stopPropagation();openPanel('build')">&#x26A1; BUILD</button>
+    <button class="orb-build-btn" onclick="event.stopPropagation();openPanel('vault')" style="margin-left:4px">🧠 BRAIN</button>
     <button id="deep-think-btn" class="deep-think-btn" onclick="event.stopPropagation();toggleDeepThink()" title="Two-pass reasoning for complex tasks">&#x1F9E0; DEEP THINK</button>
     <select id="model-select" class="model-select" onchange="setProvider(this.value)" onclick="event.stopPropagation()">
       <option value="auto">&#x26A1; AUTO</option>
@@ -807,6 +808,7 @@
       <div id="orb-big-badge">● —</div>
       <button class="orb-close-btn" onclick="closeOrbExpanded()">✕ CLOSE</button>
       <button class="orb-close-btn" style="margin-top:0" onclick="closeOrbExpanded();openPanel('build')">⚡ BUILD</button>
+      <button class="orb-close-btn" style="margin-top:0" onclick="closeOrbExpanded();openPanel('vault')">🧠 BRAIN</button>
       <button class="orb-close-btn" style="margin-top:0" onclick="openSetupModal()">&#x2699; SETUP</button>
     </div>
     <!-- Right widget tiles -->
@@ -1154,6 +1156,52 @@
           <pre id="fs-viewer-body" style="background:rgba(0,0,0,.3);border-radius:4px;padding:12px;overflow:auto;max-height:340px;font-size:.7rem;line-height:1.6;white-space:pre-wrap;word-break:break-word"></pre>
           <div id="fs-viewer-info" style="font-size:.6rem;color:var(--txm);margin-top:6px"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- ══ BRAIN VAULT PANEL ══════════════════════════════════════════════ -->
+    <div class="panel" id="tab-vault">
+      <div class="phdr">
+        <h2>🧠 BRAIN VAULT</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="vault-status-badge" style="font-family:var(--fm);font-size:.6rem;color:var(--txm)">—</span>
+          <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="vaultSync()">↻ SYNC</button>
+        </div>
+      </div>
+      <div class="pcontent">
+
+        <!-- Search -->
+        <div class="card">
+          <h3>SEARCH VAULT</h3>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="vault-search-q" type="text" placeholder="Search your notes..." style="flex:1"
+              onkeydown="if(event.key==='Enter') vaultSearch()">
+            <button class="btn" onclick="vaultSearch()">SEARCH</button>
+          </div>
+          <div id="vault-search-results"></div>
+        </div>
+
+        <!-- Browser -->
+        <div class="card">
+          <h3>BROWSE — <span id="vault-folder-label" style="color:var(--ac);font-weight:400">all notes</span></h3>
+          <div id="vault-folder-tabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+          <div id="vault-note-list"></div>
+        </div>
+
+        <!-- Note viewer -->
+        <div class="card" id="vault-viewer-card" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <h3 id="vault-viewer-title" style="margin:0;word-break:break-all"></h3>
+            <div style="display:flex;gap:6px">
+              <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="vaultInjectToChat()">+ CHAT</button>
+              <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="document.getElementById('vault-viewer-card').style.display='none'">✕</button>
+            </div>
+          </div>
+          <div id="vault-viewer-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+          <div id="vault-viewer-body" style="max-height:400px;overflow-y:auto;font-size:.75rem;line-height:1.65;color:var(--tx);word-break:break-word"></div>
+          <div id="vault-viewer-links" style="margin-top:10px;font-size:.65rem;color:var(--txm)"></div>
+        </div>
+
       </div>
     </div>
 
@@ -1834,6 +1882,7 @@ function openPanel(name){
   if(name==='files') fsBoot();
   if(name==='tunnel') _tunSyncPanel();
   if(name==='build') loadProjects();
+  if(name==='vault') vaultOpen();
 }
 function closePanel(){
   if(!_activePanel) return;
@@ -2776,6 +2825,169 @@ function _timeAgo(d){
   if(s<3600) return Math.floor(s/60)+'m ago';
   if(s<86400) return Math.floor(s/3600)+'h ago';
   return Math.floor(s/86400)+'d ago';
+}
+
+// ══ BRAIN VAULT ══════════════════════════════════════════════════════════════
+
+let _vaultAllNotes = [];  // cached full note list
+let _vaultActiveFolder = null;
+let _vaultCurrentNote = null;
+
+async function vaultOpen() {
+  // Called when vault panel is opened
+  await vaultLoadStatus();
+  await vaultLoadNotes();
+}
+
+async function vaultLoadStatus() {
+  try {
+    const r = await fetch('/vault/status', {headers: _authHdr()});
+    if (!r.ok) return;
+    const d = await r.json();
+    const badge = document.getElementById('vault-status-badge');
+    if (badge) {
+      const files = d.total_files || 0;
+      const chunks = d.total_chunks || 0;
+      const ago = d.last_sync ? _timeAgo(new Date(d.last_sync * 1000)) : 'never';
+      badge.textContent = `${files} notes · ${chunks} chunks · synced ${ago}`;
+    }
+  } catch(e) {}
+}
+
+async function vaultSync() {
+  const badge = document.getElementById('vault-status-badge');
+  if (badge) badge.textContent = '↻ syncing...';
+  try {
+    await fetch('/vault/sync', {method:'POST', headers: _authHdr()});
+    setTimeout(async () => { await vaultLoadStatus(); await vaultLoadNotes(); }, 3000);
+  } catch(e) {}
+}
+
+async function vaultLoadNotes() {
+  try {
+    const r = await fetch('/vault/notes', {headers: _authHdr()});
+    if (!r.ok) return;
+    const d = await r.json();
+    _vaultAllNotes = d.notes || [];
+    vaultRenderFolders();
+    vaultRenderNoteList(_vaultAllNotes);
+  } catch(e) {}
+}
+
+function vaultRenderFolders() {
+  const tabs = document.getElementById('vault-folder-tabs');
+  if (!tabs) return;
+  const folders = ['(all)', ...new Set(_vaultAllNotes.map(n => n.folder).filter(f => f && f !== '.'))];
+  tabs.innerHTML = folders.map(f => {
+    const active = (f === '(all)' && !_vaultActiveFolder) || f === _vaultActiveFolder;
+    return `<button class="btn ${active ? '' : 'sec'}" style="font-size:.6rem;padding:3px 10px"
+      onclick="vaultFilterFolder('${esc(f)}')">${esc(f === '(all)' ? 'ALL' : f)}</button>`;
+  }).join('');
+}
+
+function vaultFilterFolder(folder) {
+  _vaultActiveFolder = folder === '(all)' ? null : folder;
+  const lbl = document.getElementById('vault-folder-label');
+  if (lbl) lbl.textContent = _vaultActiveFolder || 'all notes';
+  const filtered = _vaultActiveFolder
+    ? _vaultAllNotes.filter(n => n.folder === _vaultActiveFolder)
+    : _vaultAllNotes;
+  vaultRenderNoteList(filtered);
+  vaultRenderFolders();
+}
+
+function vaultRenderNoteList(notes) {
+  const el = document.getElementById('vault-note-list');
+  if (!el) return;
+  if (!notes.length) { el.innerHTML = '<span class="hint">No notes found.</span>'; return; }
+  el.innerHTML = notes.map(n =>
+    `<div class="nh" style="cursor:pointer;padding:5px 8px;border-radius:4px;transition:background .15s"
+      onmouseover="this.style.background='rgba(108,182,255,.07)'" onmouseout="this.style.background=''"
+      onclick="vaultOpenNote('${esc(n.path)}')">
+      <div class="nh-src" style="font-size:.6rem">${esc(n.folder === '.' ? '' : n.folder + ' /')}</div>
+      <div style="font-size:.72rem;color:var(--tx)">${esc(n.title)}</div>
+      ${n.tags.length ? `<div style="font-size:.58rem;color:var(--txm);margin-top:2px">${n.tags.map(t=>`<span style="background:rgba(108,182,255,.1);padding:1px 5px;border-radius:3px;margin-right:3px">${esc(t)}</span>`).join('')}</div>` : ''}
+    </div>`
+  ).join('');
+}
+
+async function vaultSearch() {
+  const q = document.getElementById('vault-search-q')?.value?.trim();
+  if (!q) return;
+  const el = document.getElementById('vault-search-results');
+  if (el) el.innerHTML = '<span class="hint">Searching...</span>';
+  try {
+    const r = await fetch('/vault/search', {
+      method: 'POST',
+      headers: {..._authHdr(), 'Content-Type': 'application/json'},
+      body: JSON.stringify({query: q, top_k: 8})
+    });
+    const d = await r.json();
+    const results = d.results || [];
+    if (!el) return;
+    if (!results.length) { el.innerHTML = '<span class="hint">No matches found.</span>'; return; }
+    el.innerHTML = results.map(res =>
+      `<div class="nh" style="cursor:pointer;padding:6px 8px;border-radius:4px;transition:background .15s"
+        onmouseover="this.style.background='rgba(108,182,255,.07)'" onmouseout="this.style.background=''"
+        onclick="vaultOpenNote('${esc(res.file_path)}')">
+        <div class="nh-src" style="font-size:.6rem">${esc(res.file_path)} · score ${res.score}</div>
+        <div style="font-size:.72rem;color:var(--tx)">${esc(res.title)}${res.section && res.section !== '__intro__' && res.section !== '__full__' ? ' — ' + esc(res.section) : ''}</div>
+        <div style="font-size:.63rem;color:var(--txm);margin-top:3px;white-space:pre-wrap;word-break:break-word">${esc(res.text.substring(0,160))}…</div>
+      </div>`
+    ).join('');
+  } catch(e) {
+    if (el) el.innerHTML = `<span class="hint">Error: ${esc(String(e))}</span>`;
+  }
+}
+
+async function vaultOpenNote(path) {
+  try {
+    const r = await fetch('/vault/note', {
+      method: 'POST',
+      headers: {..._authHdr(), 'Content-Type': 'application/json'},
+      body: JSON.stringify({path})
+    });
+    if (!r.ok) return;
+    const note = await r.json();
+    _vaultCurrentNote = note;
+
+    document.getElementById('vault-viewer-card').style.display = '';
+    document.getElementById('vault-viewer-title').textContent = note.title;
+
+    const tagsEl = document.getElementById('vault-viewer-tags');
+    tagsEl.innerHTML = (note.tags || []).map(t =>
+      `<span style="background:rgba(108,182,255,.12);padding:2px 7px;border-radius:4px;font-size:.6rem">${esc(t)}</span>`
+    ).join('');
+
+    const bodyEl = document.getElementById('vault-viewer-body');
+    bodyEl.innerHTML = renderMd(note.body || note.content || '');
+
+    const linksEl = document.getElementById('vault-viewer-links');
+    if (note.links && note.links.length) {
+      linksEl.innerHTML = '🔗 Links: ' + note.links.slice(0, 10).map(l =>
+        `<span style="cursor:pointer;color:var(--ac)" onclick="vaultSearchLinked('${esc(l)}')">${esc(l)}</span>`
+      ).join(' · ');
+    } else {
+      linksEl.innerHTML = '';
+    }
+
+    document.getElementById('vault-viewer-card').scrollIntoView({behavior:'smooth', block:'nearest'});
+  } catch(e) {}
+}
+
+function vaultSearchLinked(noteName) {
+  const qEl = document.getElementById('vault-search-q');
+  if (qEl) { qEl.value = noteName; vaultSearch(); }
+}
+
+function vaultInjectToChat() {
+  if (!_vaultCurrentNote) return;
+  const input = document.getElementById('input');
+  if (!input) return;
+  const snippet = `[Brain Vault: ${_vaultCurrentNote.title}]\n${(_vaultCurrentNote.body || '').substring(0, 800)}`;
+  input.value = (input.value ? input.value + '\n\n' : '') + snippet;
+  closePanel();
+  input.focus();
 }
 
 // ══ INIT ══════════════════════════════════════════════════════════════════════

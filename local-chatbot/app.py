@@ -242,6 +242,14 @@ from conversation_memory import (
     prune_old_sessions,
     session_exists,
 )
+from brain_index import (
+    search_vault as _search_vault,
+    list_vault_notes as _list_vault_notes,
+    get_vault_note as _get_vault_note,
+    get_status as _vault_status,
+    start_auto_sync as _vault_start_auto_sync,
+    sync as _vault_sync,
+)
 
 app = FastAPI(dependencies=[Depends(verify_api_key)])
 
@@ -280,6 +288,9 @@ def _on_startup():
             pass
 
     _thr.Thread(target=_recover, daemon=True).start()
+
+    # Brain vault — start background sync + auto-refresh every 5 min
+    _thr.Thread(target=_vault_start_auto_sync, daemon=True).start()
 
 
 # --- Chat UI (no auth) ---------------------------------------------------
@@ -626,6 +637,19 @@ def ask_ai_stream(request: PromptRequest):
                     f"- {m[:200]}" for m in relevant
                 )
                 messages[0]["content"] += mem_block
+        except Exception:
+            pass
+
+    # Inject relevant brain vault notes — skip for GitHub
+    if not _skip_rag:
+        try:
+            vault_hits = _search_vault(request.prompt, top_k=3)
+            if vault_hits:
+                vault_block = "\n\nBRAIN VAULT CONTEXT (your personal knowledge base):\n" + "\n---\n".join(
+                    f"[{h['title']} — {h['section']}]\n{h['text'][:600]}"
+                    for h in vault_hits
+                )
+                messages[0]["content"] += vault_block
         except Exception:
             pass
 
@@ -1373,6 +1397,54 @@ def web_status():
         "web_fetch_enabled": web_fetch_enabled,
         "allowlist": web_access_allowlist,
     }
+
+
+# ---------------------------------------------------------------------------
+# Vault API routes
+# ---------------------------------------------------------------------------
+
+
+class _VaultSearchRequest(BaseModel):
+    query: str
+    top_k: int = 5
+
+
+class _VaultNoteRequest(BaseModel):
+    path: str
+
+
+@app.get("/vault/status")
+def vault_status_route():
+    return _vault_status()
+
+
+@app.post("/vault/sync")
+def vault_sync_route():
+    import threading as _t
+    _t.Thread(target=_vault_sync, kwargs={"force": True}, daemon=True).start()
+    return {"status": "sync started"}
+
+
+@app.post("/vault/search")
+def vault_search_route(request: _VaultSearchRequest):
+    results = _search_vault(request.query, top_k=request.top_k)
+    return {"results": results}
+
+
+@app.get("/vault/notes")
+def vault_notes_route():
+    return {"notes": _list_vault_notes()}
+
+
+@app.post("/vault/note")
+def vault_note_route(request: _VaultNoteRequest):
+    note = _get_vault_note(request.path)
+    if note is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return note
+
+
+# ---------------------------------------------------------------------------
 
 
 @app.get("/brain/status")

@@ -8,13 +8,44 @@ Cross-step references use $stepN.id syntax.
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
 
+import instructor
 import app_logger
 import config
-import httpx
+from openai import OpenAI as _OpenAI
+from pydantic import BaseModel as _BaseModel
+from pydantic import Field as _Field
+from pydantic import model_validator as _model_validator
+
+# ---------------------------------------------------------------------------
+# Pydantic models for structured extraction (instructor)
+# ---------------------------------------------------------------------------
+
+
+class _PlanStep(_BaseModel):
+    step: int
+    action: str
+    object: str = ""
+    label: str = ""
+    fields: dict[str, Any] = _Field(default_factory=dict)
+    record_id: str | None = None
+    soql: str | None = None
+    message: str | None = None
+
+
+class _Plan(_BaseModel):
+    steps: list[_PlanStep]
+
+    @_model_validator(mode="before")
+    @classmethod
+    def _coerce_array(cls, data: Any) -> Any:
+        """Accept a raw JSON array from the LLM in addition to {"steps": [...]}.""" 
+        if isinstance(data, list):
+            return {"steps": data}
+        return data
+
 
 # ---------------------------------------------------------------------------
 # System prompt — injected schema appended at call time
@@ -611,33 +642,29 @@ def _sanitize_step_references(plan: list[dict[str, Any]]) -> list[dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
-# Ollama call + JSON extraction
+# Instructor-powered structured call (replaces raw Ollama + regex JSON extraction)
 # ---------------------------------------------------------------------------
 
 
-def _call_ollama(system_prompt: str, user_prompt: str) -> str:
-    payload = {
-        "model": config.OLLAMA_MODEL,
-        "messages": [
+def _call_instructor(system_prompt: str, user_prompt: str) -> list[dict[str, Any]]:
+    """Call Ollama via instructor for validated, auto-retried structured output."""
+    raw_client = _OpenAI(
+        base_url=f"{config.OLLAMA_BASE_URL}/v1",
+        api_key="ollama",
+    )
+    client = instructor.from_openai(raw_client, mode=instructor.Mode.JSON)
+    result = client.chat.completions.create(
+        model=config.OLLAMA_MODEL,
+        response_model=_Plan,
+        messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "stream": False,
-        "options": {"temperature": 0.1, "num_ctx": 8192},
-    }
-    with httpx.Client(timeout=600) as client:
-        resp = client.post(f"{config.OLLAMA_BASE_URL}/api/chat", json=payload)
-        resp.raise_for_status()
-        return resp.json()["message"]["content"]
-
-
-def _extract_json(raw: str) -> list[dict[str, Any]]:
-    cleaned = re.sub(r"```(?:json)?", "", raw).strip().strip("`").strip()
-    start = cleaned.find("[")
-    end = cleaned.rfind("]")
-    if start == -1 or end == -1:
-        raise ValueError(f"No JSON array found in LLM output:\n{raw}")
-    return json.loads(cleaned[start : end + 1])
+        max_retries=3,
+        temperature=0.1,
+        extra_body={"options": {"num_ctx": 8192}},
+    )
+    return [step.model_dump(exclude_none=True) for step in result.steps]
 
 
 # ---------------------------------------------------------------------------
@@ -667,20 +694,13 @@ def plan(test_script: str, client=None) -> list[dict[str, Any]]:
     schema_ctx = _build_schema_context(test_script, client) if client else ""
     system_prompt = _SYSTEM_PROMPT_BASE + schema_ctx
 
-    raw = ""
-    for attempt in range(2):
-        try:
-            raw = _call_ollama(system_prompt, test_script)
-            result = _sanitize_step_references(_normalize_actions(_extract_json(raw)))
-            app_logger.info(f"LLM plan ready — {len(result)} step(s)")
-            if client:
-                result = _validate_plan(result, client)
-            return result
-        except (ValueError, json.JSONDecodeError) as exc:
-            if attempt == 1:
-                app_logger.error("LLM returned invalid JSON after 2 attempts", exc=exc)
-                raise RuntimeError(
-                    f"LLM returned invalid JSON after 2 attempts. Last error: {exc}\n"
-                    f"Raw output:\n{raw}"
-                ) from exc
-    return []
+    try:
+        raw_steps = _call_instructor(system_prompt, test_script)
+        result = _sanitize_step_references(_normalize_actions(raw_steps))
+        app_logger.info(f"LLM plan ready — {len(result)} step(s)")
+        if client:
+            result = _validate_plan(result, client)
+        return result
+    except Exception as exc:
+        app_logger.error("Instructor LLM call failed", exc=str(exc))
+        raise RuntimeError(f"LLM planning failed: {exc}") from exc
