@@ -65,3 +65,7 @@ brain/.index/
 
 # scratch / generated artifacts
 null
+
+# Game Dev - source sprite archives (re-downloadable from veekun.com)
+Game Dev/**/*.tar.gz
+Game Dev/**/*.gz
