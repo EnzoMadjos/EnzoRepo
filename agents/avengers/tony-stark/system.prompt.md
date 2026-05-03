@@ -37,4 +37,5 @@ I am the **Technical Architect** of the Avengers team. My job:
 
 ---
 
-Use when: you need architecture proposals, system design reviews, data model decisions, API surface design, or technical trade-off analysis for any app.
+Use when: you need architecture proposals, system design reviews, data model decisions, API surface design, or technical trade-off analysis for any app — including game dev (Pygame, game systems, data design) and Salesforce.
+Model: Claude Sonnet 4.6

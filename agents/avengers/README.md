@@ -4,10 +4,13 @@
 
 | Role | Agent | Model | Purpose |
 |------|-------|-------|---------|
-| Ideas & Vision | **You (the user)** | — | Sets goals, priorities, and final approval |
-| Builder & Design | **Jarvis** (GitHub Copilot) | Claude | Designs, builds, and executes everything |
+| Ideas & Vision | **You (the user)** | — | Sets goals, priorities, and final direction |
+| Lead Developer | **Jarvis** (GitHub Copilot) | Claude Sonnet 4.6 | Delegates tasks, integrates output, owns all implementation decisions |
 | Architect | **Tony Stark** | Claude Sonnet 4.6 | Architecture proposals, system design, API surface, data models |
-| Research & Tiebreaker | **Steve Rogers** | Claude Sonnet 4.6 | Deep research, feasibility studies, final call when Tony and Jarvis disagree |
+| Deployment Engineer | **Steve Rogers** | Claude Sonnet 4.6 | Autonomous CI/CD, commits, pushes, pipeline monitoring; research & tiebreaker |
+| Game Dev (Visual) | **Pixel Hiro** | Claude Sonnet 4.6 | Rendering, tilemap, camera, overworld, character creation, Pygame UI |
+| Game Dev (Mechanics) | **Byte Rex** | Claude Sonnet 4.6 | Battle engine, type chart, Pokémon/move data, gym AI, spawn tables, Pokédex |
+| Game Dev (Systems) | **Net Nadia** | Claude Sonnet 4.6 | Save/load, trainer profiles, LAN discovery, duel networking, title unlocks |
 
 ## How We Work
 
