@@ -5,6 +5,7 @@ import sys as _sys
 import urllib.parse
 from pathlib import Path
 
+import litellm as _litellm
 import ollama
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,6 +40,10 @@ _RATE_LIMIT_TTL = 3600.0  # 1 hour cooldown after 429
 
 # Manual provider override: "github", "local", or "" for auto
 _PROVIDER_OVERRIDE: str = ""
+
+# LiteLLM config — suppress verbose HTTP debug logs
+_litellm.suppress_debug_info = True
+_litellm.set_verbose = False
 
 
 def _mark_rate_limited(provider: str):
@@ -98,67 +103,50 @@ def _active_cloud_provider() -> str:
     return "local"
 
 
-def _cloud_client(provider: str = None):
-    if provider is None:
-        provider = _active_cloud_provider()
-    try:
-        from openai import OpenAI
-
-        if provider == "github":
-            return OpenAI(api_key=_GITHUB_API_KEY, base_url=_GITHUB_BASE_URL)
-    except ImportError:
-        pass
-    return None
-
-
 def _cloud_model(provider: str = None) -> str:
     return _GITHUB_MODEL_OVERRIDE if _GITHUB_MODEL_OVERRIDE else _GITHUB_MODEL
 
 
 def llm_chat(messages: list, stream: bool = False, **kwargs):
-    """Unified chat call — GitHub Models → local Ollama."""
+    """Unified chat call — GitHub Models → local Ollama (via LiteLLM)."""
     provider = _active_cloud_provider()
+    extra = {k: v for k, v in kwargs.items() if k in ("temperature", "max_tokens")}
+    if kwargs.get("tools"):
+        extra["tools"] = kwargs["tools"]
+        extra["tool_choice"] = kwargs.get("tool_choice", "auto")
+
     if provider == "github":
-        client = _cloud_client("github")
-        if client:
-            try:
-                extra = {
-                    k: v
-                    for k, v in kwargs.items()
-                    if k in ("temperature", "max_tokens")
-                }
-                if kwargs.get("tools"):
-                    extra["tools"] = kwargs["tools"]
-                    extra["tool_choice"] = kwargs.get("tool_choice", "auto")
-                return (
-                    "github",
-                    client.chat.completions.create(
-                        model=_GITHUB_MODEL,
-                        messages=messages,
-                        stream=stream,
-                        **extra,
-                    ),
-                )
-            except Exception as _e:
-                if "429" in str(_e) or "rate_limit" in str(_e).lower():
-                    _mark_rate_limited("github")
-                else:
-                    raise
-    # Local Ollama fallback
-    opts = {}
+        try:
+            resp = _litellm.completion(
+                model=f"openai/{_cloud_model()}",
+                api_base=_GITHUB_BASE_URL,
+                api_key=_GITHUB_API_KEY,
+                messages=messages,
+                stream=stream,
+                **extra,
+            )
+            return ("github", resp)
+        except Exception as _e:
+            if "429" in str(_e) or "rate_limit" in str(_e).lower():
+                _mark_rate_limited("github")
+            else:
+                raise
+
+    # Local Ollama fallback via LiteLLM — wrap response as ollama-dict for caller compat
+    local_extra = {"options": {"num_ctx": kwargs.get("num_ctx", 8192)}}
     if "temperature" in kwargs:
-        opts["temperature"] = kwargs["temperature"]
-    opts["num_ctx"] = kwargs.get("num_ctx", 8192)
-    return (
-        "local",
-        ollama.chat(
-            model=_LOCAL_MODEL,
-            messages=messages,
-            stream=stream,
-            options=opts,
-            tools=kwargs.get("tools"),
-        ),
+        local_extra["options"]["temperature"] = kwargs["temperature"]
+    resp = _litellm.completion(
+        model=f"ollama/{_LOCAL_MODEL}",
+        messages=messages,
+        stream=stream,
+        **local_extra,
     )
+    if stream:
+        return ("local", resp)
+    # Non-streaming: wrap into ollama-dict format so existing callers work unchanged
+    _content = resp.choices[0].message.content or ""
+    return ("local", {"message": {"content": _content}})
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -693,9 +681,6 @@ def ask_ai_stream(request: PromptRequest):
         if request.image_b64 and use_cloud():
             yield f"data: {_json.dumps({'type': 'backend', 'backend': 'cloud'})}\n\n"
             try:
-                from openai import OpenAI as _OAI
-
-                _vc = _OAI(api_key=_GITHUB_API_KEY, base_url=_GITHUB_BASE_URL)
                 _vision_messages = [
                     {"role": "system", "content": build_atlas_system_prompt()},
                     {
@@ -715,8 +700,10 @@ def ask_ai_stream(request: PromptRequest):
                         ],
                     },
                 ]
-                _vision_resp = _vc.chat.completions.create(
-                    model=_GITHUB_MODEL,
+                _vision_resp = _litellm.completion(
+                    model=f"openai/{_GITHUB_MODEL}",
+                    api_base=_GITHUB_BASE_URL,
+                    api_key=_GITHUB_API_KEY,
                     messages=_vision_messages,
                     stream=True,
                     max_tokens=1024,
@@ -769,192 +756,147 @@ def ask_ai_stream(request: PromptRequest):
             _think_mode = False  # True while inside <think>...</think>
 
             try:
+                # ── LiteLLM unified streaming ──────────────────────────────────────────
+                # DeepSeek-R1 on GitHub streams reasoning inline (no <think> tags)
+                _inline_reasoning = (
+                    _provider == "github"
+                    and "deepseek" in _cloud_model().lower()
+                )
+                _inline_past_reasoning = False
+
+                # Build model string + provider-specific kwargs
                 if _using_cloud:
-                    # Cloud streaming — auto-fallback on 429
-                    client = _cloud_client(_provider)
-                    if not client:
-                        raise RuntimeError("openai package not installed")
-                    # DeepSeek-R1 on GitHub streams reasoning inline (no <think> tags)
-                    # We treat initial output as thinking until double-newline paragraph break
-                    _inline_reasoning = (
-                        _provider == "github"
-                        and "deepseek" in _cloud_model(_provider).lower()
-                    )
-                    _inline_past_reasoning = False  # flips once we see double-newline
-                    _cloud_call_kwargs = {
-                        "model": _cloud_model(_provider),
-                        "messages": current_messages,
-                        "stream": True,
-                        "temperature": 0.75,
+                    _lm_model = f"openai/{_cloud_model()}"
+                    _lm_extra = {
+                        "api_base": _GITHUB_BASE_URL,
+                        "api_key": _GITHUB_API_KEY,
                     }
-                    if active_tools:
-                        _cloud_call_kwargs["tools"] = active_tools
-                        _cloud_call_kwargs["tool_choice"] = "auto"
-                    try:
-                        stream_resp = client.chat.completions.create(
-                            **_cloud_call_kwargs
-                        )
-                    except Exception as _ce:
-                        if "429" in str(_ce) or "rate_limit" in str(_ce).lower():
-                            _mark_rate_limited("github")
-                            _provider = "local"
-                            _using_cloud = False
-                            yield f"data: {_json.dumps({'type': 'backend', 'backend': _provider})}\n\n"
-                            raise  # drop to local Ollama block below
-                        else:
-                            raise
+                else:
+                    _lm_model = f"ollama/{_LOCAL_MODEL}"
+                    _lm_extra = {"options": {"num_ctx": 8192}}
+
+                _lm_kwargs = {
+                    "model": _lm_model,
+                    "messages": current_messages,
+                    "stream": True,
+                    "temperature": 0.75,
+                    **_lm_extra,
+                }
+                if active_tools:
+                    _lm_kwargs["tools"] = active_tools
                     if _using_cloud:
-                        _tc_accum: dict = {}  # index -> {id, name, arguments}
-                        for chunk in stream_resp:
-                            if not chunk.choices:
-                                continue
-                            delta = chunk.choices[0].delta
-                            token = delta.content or ""
-                            full_text += token
-                            reply_buf += token
-                            # Inline reasoning model (GitHub DeepSeek-R1): treat text as
-                            # thinking until a double-newline paragraph break appears
-                            if _inline_reasoning and not _inline_past_reasoning:
-                                if "\n\n" in reply_buf:
-                                    _inline_past_reasoning = True
-                                    think_part, _, reply_buf = reply_buf.partition(
-                                        "\n\n"
-                                    )
-                                    if think_part.strip():
-                                        yield f"data: {_json.dumps({'type': 'thinking', 'text': think_part})}\n\n"
-                                else:
-                                    yield f"data: {_json.dumps({'type': 'thinking', 'text': token})}\n\n"
-                                    reply_buf = ""
-                                continue
-                            # Route <think> content as 'thinking' events, rest as 'token'
-                            while True:
-                                if not _think_mode and "<think>" in reply_buf:
-                                    pre, _, reply_buf = reply_buf.partition("<think>")
-                                    if pre:
-                                        yield f"data: {_json.dumps({'type': 'token', 'text': pre})}\n\n"
-                                    _think_mode = True
-                                elif _think_mode and "</think>" in reply_buf:
-                                    think_text, _, reply_buf = reply_buf.partition(
-                                        "</think>"
-                                    )
-                                    if think_text:
-                                        yield f"data: {_json.dumps({'type': 'thinking', 'text': think_text})}\n\n"
-                                    _think_mode = False
-                                else:
-                                    break
-                            safe, held = reply_buf, ""
-                            for _tag in ("<think>", "</think>"):
-                                for _i in range(len(_tag) - 1, 0, -1):
-                                    if reply_buf.endswith(_tag[:_i]):
-                                        held = reply_buf[-_i:]
-                                        safe = reply_buf[:-_i]
-                                        break
-                                if held:
-                                    break
-                            if safe:
-                                _etype = "thinking" if _think_mode else "token"
-                                yield f"data: {_json.dumps({'type': _etype, 'text': safe})}\n\n"
-                            reply_buf = held
-                            # Capture tool_calls from delta
-                            if hasattr(delta, "tool_calls") and delta.tool_calls:
-                                for dtc in delta.tool_calls:
-                                    idx = dtc.index
-                                    if idx not in _tc_accum:
-                                        _tc_accum[idx] = {
-                                            "id": dtc.id or "",
-                                            "name": "",
-                                            "arguments": "",
-                                        }
-                                    if dtc.function:
-                                        if dtc.function.name:
-                                            _tc_accum[idx]["name"] += dtc.function.name
-                                        if dtc.function.arguments:
-                                            _tc_accum[idx]["arguments"] += (
-                                                dtc.function.arguments
-                                            )
-                        # Convert accumulated tool calls to standard format
-                        if _tc_accum:
-                            import json as _json_mod
+                        _lm_kwargs["tool_choice"] = "auto"
 
-                            for _tc_item in _tc_accum.values():
-                                try:
-                                    args = (
-                                        _json_mod.loads(_tc_item["arguments"])
-                                        if _tc_item["arguments"]
-                                        else {}
-                                    )
-                                except Exception:
-                                    args = {}
-                                tool_calls_this_round.append(
-                                    {
-                                        "function": {
-                                            "name": _tc_item["name"],
-                                            "arguments": args,
-                                        }
-                                    }
-                                )
-                            reply_buf = held
-                if not _using_cloud:
-                    for chunk in ollama.chat(
-                        model=_LOCAL_MODEL,
-                        messages=current_messages,
-                        tools=active_tools,
-                        stream=True,
-                        options={"num_ctx": 8192, "temperature": 0.75},
-                    ):
-                        msg = (
-                            chunk.get("message", {})
-                            if isinstance(chunk, dict)
-                            else getattr(chunk, "message", {}) or {}
+                try:
+                    stream_resp = _litellm.completion(**_lm_kwargs)
+                except Exception as _ce:
+                    if "429" in str(_ce) or "rate_limit" in str(_ce).lower():
+                        _mark_rate_limited("github")
+                        _provider = "local"
+                        _using_cloud = False
+                        yield f"data: {_json.dumps({'type': 'backend', 'backend': _provider})}\n\n"
+                        # Auto-fallback: retry immediately with local Ollama
+                        stream_resp = _litellm.completion(
+                            model=f"ollama/{_LOCAL_MODEL}",
+                            messages=current_messages,
+                            stream=True,
+                            temperature=0.75,
+                            options={"num_ctx": 8192},
                         )
-                        token = (
-                            msg.get("content")
-                            if isinstance(msg, dict)
-                            else getattr(msg, "content", "")
-                        ) or ""
-                        full_text += token
+                    else:
+                        raise
 
-                        # Capture native tool calls (arrive on final chunk)
-                        tc = (
-                            msg.get("tool_calls")
-                            if isinstance(msg, dict)
-                            else getattr(msg, "tool_calls", None)
+                # ── Unified streaming loop (OpenAI format via LiteLLM for both providers) ──
+                _tc_accum: dict = {}  # index -> {id, name, arguments}
+                for chunk in stream_resp:
+                    if not chunk.choices:
+                        continue
+                    delta = chunk.choices[0].delta
+                    token = delta.content or ""
+                    full_text += token
+                    reply_buf += token
+                    # Inline reasoning model (GitHub DeepSeek-R1): treat text as
+                    # thinking until a double-newline paragraph break appears
+                    if _inline_reasoning and not _inline_past_reasoning:
+                        if "\n\n" in reply_buf:
+                            _inline_past_reasoning = True
+                            think_part, _, reply_buf = reply_buf.partition(
+                                "\n\n"
+                            )
+                            if think_part.strip():
+                                yield f"data: {_json.dumps({'type': 'thinking', 'text': think_part})}\n\n"
+                        else:
+                            yield f"data: {_json.dumps({'type': 'thinking', 'text': token})}\n\n"
+                            reply_buf = ""
+                        continue
+                    # Route <think> content as 'thinking' events, rest as 'token'
+                    while True:
+                        if not _think_mode and "<think>" in reply_buf:
+                            pre, _, reply_buf = reply_buf.partition("<think>")
+                            if pre:
+                                yield f"data: {_json.dumps({'type': 'token', 'text': pre})}\n\n"
+                            _think_mode = True
+                        elif _think_mode and "</think>" in reply_buf:
+                            think_text, _, reply_buf = reply_buf.partition(
+                                "</think>"
+                            )
+                            if think_text:
+                                yield f"data: {_json.dumps({'type': 'thinking', 'text': think_text})}\n\n"
+                            _think_mode = False
+                        else:
+                            break
+                    safe, held = reply_buf, ""
+                    for _tag in ("<think>", "</think>"):
+                        for _i in range(len(_tag) - 1, 0, -1):
+                            if reply_buf.endswith(_tag[:_i]):
+                                held = reply_buf[-_i:]
+                                safe = reply_buf[:-_i]
+                                break
+                        if held:
+                            break
+                    if safe:
+                        _etype = "thinking" if _think_mode else "token"
+                        yield f"data: {_json.dumps({'type': _etype, 'text': safe})}\n\n"
+                    reply_buf = held
+                    # Capture tool_calls from delta (works for both cloud and local via LiteLLM)
+                    if hasattr(delta, "tool_calls") and delta.tool_calls:
+                        for dtc in delta.tool_calls:
+                            idx = dtc.index
+                            if idx not in _tc_accum:
+                                _tc_accum[idx] = {
+                                    "id": dtc.id or "",
+                                    "name": "",
+                                    "arguments": "",
+                                }
+                            if dtc.function:
+                                if dtc.function.name:
+                                    _tc_accum[idx]["name"] += dtc.function.name
+                                if dtc.function.arguments:
+                                    _tc_accum[idx]["arguments"] += (
+                                        dtc.function.arguments
+                                    )
+                # Convert accumulated tool calls to standard format
+                if _tc_accum:
+                    import json as _json_mod
+
+                    for _tc_item in _tc_accum.values():
+                        try:
+                            args = (
+                                _json_mod.loads(_tc_item["arguments"])
+                                if _tc_item["arguments"]
+                                else {}
+                            )
+                        except Exception:
+                            args = {}
+                        tool_calls_this_round.append(
+                            {
+                                "function": {
+                                    "name": _tc_item["name"],
+                                    "arguments": args,
+                                }
+                            }
                         )
-                        if tc:
-                            tool_calls_this_round = tc
-
-                        # Route <think> content as 'thinking' events, rest as 'token'
-                        reply_buf += token
-                        while True:
-                            if not _think_mode and "<think>" in reply_buf:
-                                pre, _, reply_buf = reply_buf.partition("<think>")
-                                if pre:
-                                    yield f"data: {_json.dumps({'type': 'token', 'text': pre})}\n\n"
-                                _think_mode = True
-                            elif _think_mode and "</think>" in reply_buf:
-                                think_text, _, reply_buf = reply_buf.partition(
-                                    "</think>"
-                                )
-                                if think_text:
-                                    yield f"data: {_json.dumps({'type': 'thinking', 'text': think_text})}\n\n"
-                                _think_mode = False
-                            else:
-                                break
-
-                        # Hold back potential partial tag at buffer tail
-                        safe, held = reply_buf, ""
-                        for _tag in ("<think>", "</think>"):
-                            for _i in range(len(_tag) - 1, 0, -1):
-                                if reply_buf.endswith(_tag[:_i]):
-                                    held = reply_buf[-_i:]
-                                    safe = reply_buf[:-_i]
-                                    break
-                            if held:
-                                break
-                        if safe:
-                            _etype = "thinking" if _think_mode else "token"
-                            yield f"data: {_json.dumps({'type': _etype, 'text': safe})}\n\n"
-                        reply_buf = held
+                    reply_buf = held
 
             except Exception as e:
                 yield f"data: {_json.dumps({'type': 'error', 'text': str(e)})}\n\n"

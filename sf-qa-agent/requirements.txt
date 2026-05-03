@@ -11,3 +11,4 @@ pymupdf==1.25.5
 cryptography>=42.0.0
 instructor>=1.7.0
 openai>=1.0.0
+litellm

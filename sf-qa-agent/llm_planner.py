@@ -11,10 +11,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
+import litellm as _litellm
 import instructor
 import app_logger
 import config
-from openai import OpenAI as _OpenAI
 from pydantic import BaseModel as _BaseModel
 from pydantic import Field as _Field
 from pydantic import model_validator as _model_validator
@@ -647,14 +647,12 @@ def _sanitize_step_references(plan: list[dict[str, Any]]) -> list[dict[str, Any]
 
 
 def _call_instructor(system_prompt: str, user_prompt: str) -> list[dict[str, Any]]:
-    """Call Ollama via instructor for validated, auto-retried structured output."""
-    raw_client = _OpenAI(
-        base_url=f"{config.OLLAMA_BASE_URL}/v1",
-        api_key="ollama",
-    )
-    client = instructor.from_openai(raw_client, mode=instructor.Mode.JSON)
+    """Call Ollama via LiteLLM + instructor for validated, auto-retried structured output."""
+    _litellm.suppress_debug_info = True
+    _litellm.set_verbose = False
+    client = instructor.from_litellm(_litellm, mode=instructor.Mode.JSON)
     result = client.chat.completions.create(
-        model=config.OLLAMA_MODEL,
+        model=f"ollama/{config.OLLAMA_MODEL}",
         response_model=_Plan,
         messages=[
             {"role": "system", "content": system_prompt},
@@ -662,7 +660,7 @@ def _call_instructor(system_prompt: str, user_prompt: str) -> list[dict[str, Any
         ],
         max_retries=3,
         temperature=0.1,
-        extra_body={"options": {"num_ctx": 8192}},
+        options={"num_ctx": 8192},
     )
     return [step.model_dump(exclude_none=True) for step in result.steps]
 
