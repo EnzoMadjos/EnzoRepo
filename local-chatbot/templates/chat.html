@@ -9,6 +9,7 @@
   <script src="/ui/static/marked.min.js"></script>
   <script src="/ui/static/highlight.min.js"></script>
   <script src="/ui/static/atlas-face.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <style>
     :root{
       --bg:#090910; --sf:#0e0e18; --sf2:#14141f;
@@ -1163,45 +1164,70 @@
     <div class="panel" id="tab-vault">
       <div class="phdr">
         <h2>🧠 BRAIN VAULT</h2>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <span id="vault-status-badge" style="font-family:var(--fm);font-size:.6rem;color:var(--txm)">—</span>
-          <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="vaultSync()">↻ SYNC</button>
+          <button id="vault-btn-list" class="btn" style="font-size:.66rem;padding:3px 9px" onclick="vaultToggleView('list')">☰ LIST</button>
+          <button id="vault-btn-graph" class="btn sec" style="font-size:.66rem;padding:3px 9px" onclick="vaultToggleView('graph')">◉ GRAPH</button>
+          <button class="btn sec" style="font-size:.66rem;padding:3px 9px" onclick="vaultSync()">↻ SYNC</button>
         </div>
       </div>
       <div class="pcontent">
 
-        <!-- Search -->
-        <div class="card">
-          <h3>SEARCH VAULT</h3>
-          <div style="display:flex;gap:8px;margin-bottom:10px">
-            <input id="vault-search-q" type="text" placeholder="Search your notes..." style="flex:1"
-              onkeydown="if(event.key==='Enter') vaultSearch()">
-            <button class="btn" onclick="vaultSearch()">SEARCH</button>
+        <!-- ── GRAPH VIEW ── -->
+        <div id="vault-graph-view" style="display:none">
+          <div id="vault-graph-container" style="width:100%;height:480px;border-radius:8px;overflow:hidden;position:relative;background:rgba(6,6,14,.95);border:1px solid var(--br)">
+            <div id="vault-graph-hint" style="position:absolute;top:10px;left:12px;font-family:var(--fm);font-size:.58rem;color:rgba(108,182,255,.35);z-index:2;pointer-events:none">◉ loading graph…</div>
           </div>
-          <div id="vault-search-results"></div>
-        </div>
-
-        <!-- Browser -->
-        <div class="card">
-          <h3>BROWSE — <span id="vault-folder-label" style="color:var(--ac);font-weight:400">all notes</span></h3>
-          <div id="vault-folder-tabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
-          <div id="vault-note-list"></div>
-        </div>
-
-        <!-- Note viewer -->
-        <div class="card" id="vault-viewer-card" style="display:none">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h3 id="vault-viewer-title" style="margin:0;word-break:break-all"></h3>
-            <div style="display:flex;gap:6px">
-              <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="vaultInjectToChat()">+ CHAT</button>
-              <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="document.getElementById('vault-viewer-card').style.display='none'">✕</button>
+          <div class="card" id="vault-graph-viewer" style="display:none;margin-top:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <h3 id="vault-gv-title" style="margin:0;word-break:break-all"></h3>
+              <div style="display:flex;gap:6px">
+                <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="vaultInjectToChat()">+ CHAT</button>
+                <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="document.getElementById('vault-graph-viewer').style.display='none'">✕</button>
+              </div>
             </div>
+            <div id="vault-gv-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+            <div id="vault-gv-body" style="max-height:300px;overflow-y:auto;font-size:.75rem;line-height:1.65;color:var(--tx);word-break:break-word"></div>
+            <div id="vault-gv-links" style="margin-top:10px;font-size:.65rem;color:var(--txm)"></div>
           </div>
-          <div id="vault-viewer-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
-          <div id="vault-viewer-body" style="max-height:400px;overflow-y:auto;font-size:.75rem;line-height:1.65;color:var(--tx);word-break:break-word"></div>
-          <div id="vault-viewer-links" style="margin-top:10px;font-size:.65rem;color:var(--txm)"></div>
         </div>
 
+        <!-- ── LIST VIEW (default) ── -->
+        <div id="vault-list-view">
+
+          <!-- Search -->
+          <div class="card">
+            <h3>SEARCH VAULT</h3>
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <input id="vault-search-q" type="text" placeholder="Search your notes..." style="flex:1"
+                onkeydown="if(event.key==='Enter') vaultSearch()">
+              <button class="btn" onclick="vaultSearch()">SEARCH</button>
+            </div>
+            <div id="vault-search-results"></div>
+          </div>
+
+          <!-- Browser -->
+          <div class="card">
+            <h3>BROWSE — <span id="vault-folder-label" style="color:var(--ac);font-weight:400">all notes</span></h3>
+            <div id="vault-folder-tabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+            <div id="vault-note-list"></div>
+          </div>
+
+          <!-- Note viewer -->
+          <div class="card" id="vault-viewer-card" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <h3 id="vault-viewer-title" style="margin:0;word-break:break-all"></h3>
+              <div style="display:flex;gap:6px">
+                <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="vaultInjectToChat()">+ CHAT</button>
+                <button class="btn sec" style="font-size:.68rem;padding:4px 10px" onclick="document.getElementById('vault-viewer-card').style.display='none'">✕</button>
+              </div>
+            </div>
+            <div id="vault-viewer-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+            <div id="vault-viewer-body" style="max-height:400px;overflow-y:auto;font-size:.75rem;line-height:1.65;color:var(--tx);word-break:break-word"></div>
+            <div id="vault-viewer-links" style="margin-top:10px;font-size:.65rem;color:var(--txm)"></div>
+          </div>
+
+        </div><!-- /vault-list-view -->
       </div>
     </div>
 
@@ -2829,14 +2855,131 @@ function _timeAgo(d){
 
 // ══ BRAIN VAULT ══════════════════════════════════════════════════════════════
 
-let _vaultAllNotes = [];  // cached full note list
+function _authHdr() { return {'X-API-Key': apiKey}; }
+
+let _vaultAllNotes = [];
 let _vaultActiveFolder = null;
 let _vaultCurrentNote = null;
+let _vaultGraphView = false;
+let _vaultSim = null;
 
 async function vaultOpen() {
-  // Called when vault panel is opened
   await vaultLoadStatus();
   await vaultLoadNotes();
+}
+
+function vaultToggleView(mode) {
+  _vaultGraphView = mode === 'graph';
+  document.getElementById('vault-list-view').style.display  = _vaultGraphView ? 'none' : '';
+  document.getElementById('vault-graph-view').style.display = _vaultGraphView ? '' : 'none';
+  document.getElementById('vault-btn-list').className  = 'btn' + (_vaultGraphView ? ' sec' : '');
+  document.getElementById('vault-btn-graph').className = 'btn' + (_vaultGraphView ? '' : ' sec');
+  if (_vaultGraphView) vaultRenderGraph();
+}
+
+async function vaultRenderGraph() {
+  const container = document.getElementById('vault-graph-container');
+  if (!container) return;
+  container.querySelectorAll('svg').forEach(s => s.remove());
+  const hint = document.getElementById('vault-graph-hint');
+  if (hint) hint.textContent = '◉ loading graph…';
+  try {
+    const r = await fetch('/vault/graph', {headers: _authHdr()});
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (hint) hint.textContent = 'scroll to zoom · drag nodes · click to open';
+    _drawForceGraph(data, container);
+  } catch(e) {
+    if (hint) hint.textContent = 'Graph unavailable — ' + e.message;
+  }
+}
+
+function _drawForceGraph(data, container) {
+  if (typeof d3 === 'undefined') return;
+  const W = container.clientWidth || 740;
+  const H = 480;
+  const palette = ['#6cb6ff','#a78bfa','#34d399','#f59e0b','#f87171','#60a5fa','#c084fc','#2dd4bf','#fb923c'];
+  const folders = [...new Set(data.nodes.map(n => n.folder))];
+  const fc = Object.fromEntries(folders.map((f, i) => [f, palette[i % palette.length]]));
+
+  const linkCount = {};
+  data.nodes.forEach(n => linkCount[n.id] = 0);
+  data.links.forEach(l => {
+    const s = typeof l.source === 'object' ? l.source.id : l.source;
+    const t = typeof l.target === 'object' ? l.target.id : l.target;
+    linkCount[s] = (linkCount[s]||0) + 1;
+    linkCount[t] = (linkCount[t]||0) + 1;
+  });
+
+  const svg = d3.create('svg')
+    .attr('width', W).attr('height', H)
+    .style('display', 'block')
+    .call(d3.zoom().scaleExtent([0.1, 5])
+      .on('zoom', e => g.attr('transform', e.transform)));
+
+  const g = svg.append('g');
+
+  // Glow filter
+  const defs = svg.append('defs');
+  const filt = defs.append('filter').attr('id', 'vg-glow');
+  filt.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'blur');
+  const fm = filt.append('feMerge');
+  fm.append('feMergeNode').attr('in', 'blur');
+  fm.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  const sim = d3.forceSimulation(data.nodes)
+    .force('link', d3.forceLink(data.links).id(d => d.id).distance(90).strength(0.5))
+    .force('charge', d3.forceManyBody().strength(-220))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('collision', d3.forceCollide(d => 9 + (linkCount[d.id]||0)*1.8 + 4));
+  _vaultSim = sim;
+
+  const link = g.append('g').selectAll('line').data(data.links).join('line')
+    .attr('stroke', 'rgba(108,182,255,.2)').attr('stroke-width', 1.2);
+
+  const node = g.append('g').selectAll('circle').data(data.nodes).join('circle')
+    .attr('r', d => 6 + Math.min(linkCount[d.id]||0, 8)*1.8)
+    .attr('fill', d => fc[d.folder] || '#6cb6ff')
+    .attr('opacity', 0.88)
+    .attr('filter', 'url(#vg-glow)')
+    .style('cursor', 'pointer')
+    .call(d3.drag()
+      .on('start', (e,d) => { if(!e.active) sim.alphaTarget(.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on('drag',  (e,d) => { d.fx=e.x; d.fy=e.y; })
+      .on('end',   (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }))
+    .on('click',      (_,d) => vaultOpenNote(d.id))
+    .on('mouseenter', (e,d) => _vaultTip(e, d.title, true))
+    .on('mouseleave', ()    => _vaultTip(null, '', false));
+
+  const label = g.append('g').selectAll('text')
+    .data(data.nodes.filter(d => (linkCount[d.id]||0) >= 2)).join('text')
+    .text(d => d.title.length > 16 ? d.title.slice(0,15)+'…' : d.title)
+    .attr('fill', 'rgba(170,170,204,.8)').attr('font-size', '9px')
+    .attr('text-anchor', 'middle').style('pointer-events', 'none')
+    .attr('dy', d => -(9 + Math.min(linkCount[d.id]||0,8)*1.8 + 3));
+
+  sim.on('tick', () => {
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+        .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('cx',d=>d.x).attr('cy',d=>d.y);
+    label.attr('x',d=>d.x).attr('y',d=>d.y);
+  });
+
+  container.appendChild(svg.node());
+}
+
+function _vaultTip(event, title, show) {
+  let tt = document.getElementById('_vault_tt');
+  if (!show) { if(tt) tt.style.display='none'; return; }
+  if (!tt) {
+    tt = document.createElement('div'); tt.id = '_vault_tt';
+    tt.style.cssText = 'position:fixed;background:rgba(14,14,24,.96);border:1px solid rgba(108,182,255,.3);border-radius:4px;padding:4px 10px;font-size:.65rem;color:#aaaacc;pointer-events:none;z-index:9999;display:none;max-width:240px;word-break:break-word';
+    document.body.appendChild(tt);
+  }
+  tt.textContent = title;
+  tt.style.display = '';
+  tt.style.left = (event.clientX + 14) + 'px';
+  tt.style.top  = (event.clientY - 10) + 'px';
 }
 
 async function vaultLoadStatus() {
@@ -2846,10 +2989,8 @@ async function vaultLoadStatus() {
     const d = await r.json();
     const badge = document.getElementById('vault-status-badge');
     if (badge) {
-      const files = d.total_files || 0;
-      const chunks = d.total_chunks || 0;
-      const ago = d.last_sync ? _timeAgo(new Date(d.last_sync * 1000)) : 'never';
-      badge.textContent = `${files} notes · ${chunks} chunks · synced ${ago}`;
+      const ago = d.last_sync ? _timeAgo(new Date(d.last_sync*1000)) : 'never';
+      badge.textContent = `${d.total_files||0} notes · ${d.total_chunks||0} chunks · synced ${ago}`;
     }
   } catch(e) {}
 }
@@ -2877,21 +3018,18 @@ async function vaultLoadNotes() {
 function vaultRenderFolders() {
   const tabs = document.getElementById('vault-folder-tabs');
   if (!tabs) return;
-  const folders = ['(all)', ...new Set(_vaultAllNotes.map(n => n.folder).filter(f => f && f !== '.'))];
+  const folders = ['(all)', ...new Set(_vaultAllNotes.map(n=>n.folder).filter(f=>f&&f!=='.'))];
   tabs.innerHTML = folders.map(f => {
-    const active = (f === '(all)' && !_vaultActiveFolder) || f === _vaultActiveFolder;
-    return `<button class="btn ${active ? '' : 'sec'}" style="font-size:.6rem;padding:3px 10px"
-      onclick="vaultFilterFolder('${esc(f)}')">${esc(f === '(all)' ? 'ALL' : f)}</button>`;
+    const active = (f==='(all)'&&!_vaultActiveFolder)||f===_vaultActiveFolder;
+    return `<button class="btn ${active?'':'sec'}" style="font-size:.6rem;padding:3px 10px" onclick="vaultFilterFolder('${esc(f)}')">${esc(f==='(all)'?'ALL':f)}</button>`;
   }).join('');
 }
 
 function vaultFilterFolder(folder) {
-  _vaultActiveFolder = folder === '(all)' ? null : folder;
+  _vaultActiveFolder = folder==='(all)' ? null : folder;
   const lbl = document.getElementById('vault-folder-label');
   if (lbl) lbl.textContent = _vaultActiveFolder || 'all notes';
-  const filtered = _vaultActiveFolder
-    ? _vaultAllNotes.filter(n => n.folder === _vaultActiveFolder)
-    : _vaultAllNotes;
+  const filtered = _vaultActiveFolder ? _vaultAllNotes.filter(n=>n.folder===_vaultActiveFolder) : _vaultAllNotes;
   vaultRenderNoteList(filtered);
   vaultRenderFolders();
 }
@@ -2899,14 +3037,14 @@ function vaultFilterFolder(folder) {
 function vaultRenderNoteList(notes) {
   const el = document.getElementById('vault-note-list');
   if (!el) return;
-  if (!notes.length) { el.innerHTML = '<span class="hint">No notes found.</span>'; return; }
+  if (!notes.length) { el.innerHTML='<span class="hint">No notes found.</span>'; return; }
   el.innerHTML = notes.map(n =>
     `<div class="nh" style="cursor:pointer;padding:5px 8px;border-radius:4px;transition:background .15s"
       onmouseover="this.style.background='rgba(108,182,255,.07)'" onmouseout="this.style.background=''"
       onclick="vaultOpenNote('${esc(n.path)}')">
-      <div class="nh-src" style="font-size:.6rem">${esc(n.folder === '.' ? '' : n.folder + ' /')}</div>
+      <div class="nh-src" style="font-size:.6rem">${esc(n.folder==='.'?'':n.folder+'/')}</div>
       <div style="font-size:.72rem;color:var(--tx)">${esc(n.title)}</div>
-      ${n.tags.length ? `<div style="font-size:.58rem;color:var(--txm);margin-top:2px">${n.tags.map(t=>`<span style="background:rgba(108,182,255,.1);padding:1px 5px;border-radius:3px;margin-right:3px">${esc(t)}</span>`).join('')}</div>` : ''}
+      ${n.tags.length?`<div style="font-size:.58rem;color:var(--txm);margin-top:2px">${n.tags.map(t=>`<span style="background:rgba(108,182,255,.1);padding:1px 5px;border-radius:3px;margin-right:3px">${esc(t)}</span>`).join('')}</div>`:''}
     </div>`
   ).join('');
 }
@@ -2917,21 +3055,17 @@ async function vaultSearch() {
   const el = document.getElementById('vault-search-results');
   if (el) el.innerHTML = '<span class="hint">Searching...</span>';
   try {
-    const r = await fetch('/vault/search', {
-      method: 'POST',
-      headers: {..._authHdr(), 'Content-Type': 'application/json'},
-      body: JSON.stringify({query: q, top_k: 8})
-    });
+    const r = await fetch('/vault/search', {method:'POST', headers:{..._authHdr(),'Content-Type':'application/json'}, body:JSON.stringify({query:q, top_k:8})});
     const d = await r.json();
     const results = d.results || [];
     if (!el) return;
-    if (!results.length) { el.innerHTML = '<span class="hint">No matches found.</span>'; return; }
+    if (!results.length) { el.innerHTML='<span class="hint">No matches found.</span>'; return; }
     el.innerHTML = results.map(res =>
       `<div class="nh" style="cursor:pointer;padding:6px 8px;border-radius:4px;transition:background .15s"
         onmouseover="this.style.background='rgba(108,182,255,.07)'" onmouseout="this.style.background=''"
         onclick="vaultOpenNote('${esc(res.file_path)}')">
         <div class="nh-src" style="font-size:.6rem">${esc(res.file_path)} · score ${res.score}</div>
-        <div style="font-size:.72rem;color:var(--tx)">${esc(res.title)}${res.section && res.section !== '__intro__' && res.section !== '__full__' ? ' — ' + esc(res.section) : ''}</div>
+        <div style="font-size:.72rem;color:var(--tx)">${esc(res.title)}${res.section&&res.section!=='__intro__'&&res.section!=='__full__'?' — '+esc(res.section):''}</div>
         <div style="font-size:.63rem;color:var(--txm);margin-top:3px;white-space:pre-wrap;word-break:break-word">${esc(res.text.substring(0,160))}…</div>
       </div>`
     ).join('');
@@ -2942,36 +3076,33 @@ async function vaultSearch() {
 
 async function vaultOpenNote(path) {
   try {
-    const r = await fetch('/vault/note', {
-      method: 'POST',
-      headers: {..._authHdr(), 'Content-Type': 'application/json'},
-      body: JSON.stringify({path})
-    });
+    const r = await fetch('/vault/note', {method:'POST', headers:{..._authHdr(),'Content-Type':'application/json'}, body:JSON.stringify({path})});
     if (!r.ok) return;
     const note = await r.json();
     _vaultCurrentNote = note;
+    const body     = renderMd(note.body || note.content || '');
+    const tagsHtml = (note.tags||[]).map(t=>`<span style="background:rgba(108,182,255,.12);padding:2px 7px;border-radius:4px;font-size:.6rem">${esc(t)}</span>`).join('');
+    const linksHtml= note.links&&note.links.length ? '🔗 Links: '+note.links.slice(0,10).map(l=>`<span style="cursor:pointer;color:var(--ac)" onclick="vaultSearchLinked('${esc(l)}')">${esc(l)}</span>`).join(' · ') : '';
 
-    document.getElementById('vault-viewer-card').style.display = '';
-    document.getElementById('vault-viewer-title').textContent = note.title;
-
-    const tagsEl = document.getElementById('vault-viewer-tags');
-    tagsEl.innerHTML = (note.tags || []).map(t =>
-      `<span style="background:rgba(108,182,255,.12);padding:2px 7px;border-radius:4px;font-size:.6rem">${esc(t)}</span>`
-    ).join('');
-
-    const bodyEl = document.getElementById('vault-viewer-body');
-    bodyEl.innerHTML = renderMd(note.body || note.content || '');
-
-    const linksEl = document.getElementById('vault-viewer-links');
-    if (note.links && note.links.length) {
-      linksEl.innerHTML = '🔗 Links: ' + note.links.slice(0, 10).map(l =>
-        `<span style="cursor:pointer;color:var(--ac)" onclick="vaultSearchLinked('${esc(l)}')">${esc(l)}</span>`
-      ).join(' · ');
-    } else {
-      linksEl.innerHTML = '';
+    // Populate list viewer
+    const vc = document.getElementById('vault-viewer-card');
+    if (vc) {
+      vc.style.display = '';
+      document.getElementById('vault-viewer-title').textContent = note.title;
+      document.getElementById('vault-viewer-tags').innerHTML   = tagsHtml;
+      document.getElementById('vault-viewer-body').innerHTML   = body;
+      document.getElementById('vault-viewer-links').innerHTML  = linksHtml;
     }
-
-    document.getElementById('vault-viewer-card').scrollIntoView({behavior:'smooth', block:'nearest'});
+    // Populate graph viewer
+    const gv = document.getElementById('vault-graph-viewer');
+    if (gv) {
+      gv.style.display = '';
+      document.getElementById('vault-gv-title').textContent = note.title;
+      document.getElementById('vault-gv-tags').innerHTML    = tagsHtml;
+      document.getElementById('vault-gv-body').innerHTML    = body;
+      document.getElementById('vault-gv-links').innerHTML   = linksHtml;
+    }
+    if (!_vaultGraphView && vc) vc.scrollIntoView({behavior:'smooth', block:'nearest'});
   } catch(e) {}
 }
 
@@ -2984,8 +3115,8 @@ function vaultInjectToChat() {
   if (!_vaultCurrentNote) return;
   const input = document.getElementById('input');
   if (!input) return;
-  const snippet = `[Brain Vault: ${_vaultCurrentNote.title}]\n${(_vaultCurrentNote.body || '').substring(0, 800)}`;
-  input.value = (input.value ? input.value + '\n\n' : '') + snippet;
+  const snippet = `[Brain Vault: ${_vaultCurrentNote.title}]\n${(_vaultCurrentNote.body||'').substring(0,800)}`;
+  input.value = (input.value ? input.value+'\n\n' : '') + snippet;
   closePanel();
   input.focus();
 }

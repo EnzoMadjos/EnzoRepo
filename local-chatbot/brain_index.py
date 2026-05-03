@@ -470,5 +470,49 @@ def get_status() -> dict[str, Any]:
     return s
 
 
+def build_graph() -> dict[str, Any]:
+    """
+    Return {nodes, links} for a D3 force-graph visualization.
+    Nodes = vault notes. Edges = wikilinks between notes.
+    """
+    notes = list_vault_notes()
+    if not notes:
+        return {"nodes": [], "links": []}
+
+    # Build lookup: title/stem (lower) → path for wikilink resolution
+    title_to_path: dict[str, str] = {}
+    stem_to_path: dict[str, str] = {}
+    for n in notes:
+        title_to_path[n["title"].lower()] = n["path"]
+        stem_to_path[Path(n["path"]).stem.lower()] = n["path"]
+
+    node_ids = {n["path"] for n in notes}
+    nodes = [
+        {
+            "id": n["path"],
+            "title": n["title"],
+            "folder": n["folder"] if n["folder"] not in ("", ".") else "root",
+            "tags": n["tags"],
+        }
+        for n in notes
+    ]
+
+    seen: set[frozenset] = set()
+    links: list[dict[str, str]] = []
+    for n in notes:
+        note = get_vault_note(n["path"])
+        if not note:
+            continue
+        for lnk in note.get("links", []):
+            target = title_to_path.get(lnk.lower()) or stem_to_path.get(lnk.lower())
+            if target and target in node_ids and target != n["path"]:
+                key: frozenset = frozenset([n["path"], target])
+                if key not in seen:
+                    seen.add(key)
+                    links.append({"source": n["path"], "target": target})
+
+    return {"nodes": nodes, "links": links}
+
+
 # Singleton convenience alias
 vault = type("_Vault", (), {"sync": staticmethod(sync), "sync_background": staticmethod(sync_background)})()

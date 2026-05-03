@@ -249,6 +249,7 @@ from brain_index import (
     get_status as _vault_status,
     start_auto_sync as _vault_start_auto_sync,
     sync as _vault_sync,
+    build_graph as _vault_build_graph,
 )
 
 app = FastAPI(dependencies=[Depends(verify_api_key)])
@@ -1442,6 +1443,11 @@ def vault_note_route(request: _VaultNoteRequest):
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")
     return note
+
+
+@app.get("/vault/graph")
+def vault_graph_route():
+    return _vault_build_graph()
 
 
 # ---------------------------------------------------------------------------
