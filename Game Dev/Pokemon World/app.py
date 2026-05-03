@@ -30,6 +30,16 @@ app.mount("/data", StaticFiles(directory=str(BASE_DIR / "data")), name="data")
 
 @app.get("/")
 async def index():
+    flag = BASE_DIR / "data" / "gen3_data_ready.flag"
+    if not flag.exists():
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(
+            "<h2 style='font-family:monospace;padding:2rem;color:#c00'>"
+            "⚠️ Game data not generated yet.<br><br>"
+            "Run: <code>python generate_data.py</code><br>"
+            "from the Pokemon World directory, then reload.</h2>",
+            status_code=503,
+        )
     return FileResponse(str(BASE_DIR / "templates" / "index.html"))
 
 

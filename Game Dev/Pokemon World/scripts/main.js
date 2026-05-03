@@ -5,7 +5,7 @@ const config = {
   parent: 'game-container',
   backgroundColor: '#000000',
   pixelArt: true,
-  scene: [CharacterCreate, Overworld],
+  scene: [BootScene, CharacterCreate, Overworld, BattleScene],
 };
 
 const game = new Phaser.Game(config);

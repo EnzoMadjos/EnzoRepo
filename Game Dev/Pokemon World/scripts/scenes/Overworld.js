@@ -5,6 +5,7 @@ class Overworld extends Phaser.Scene {
     this.profile = data.profile
       || JSON.parse(localStorage.getItem('pw_profile') || 'null')
       || { gender: 'boy', outfit: 0, name: 'TRAINER' };
+    this._returnPos = data.returnPos || null;
   }
 
   preload() {
@@ -63,8 +64,8 @@ class Overworld extends Phaser.Scene {
     this._addMapLabels(TS);
 
     // ── Player sprite (replaces playerGfx Graphics) ──────────────────
-    this.playerTileX = 5;
-    this.playerTileY = 10;
+    this.playerTileX = this._returnPos ? this._returnPos.col : 5;
+    this.playerTileY = this._returnPos ? this._returnPos.row : 10;
     this.facing    = 'down';
     this.isMoving  = false;
 
@@ -323,15 +324,37 @@ class Overworld extends Phaser.Scene {
       targets: flash, alpha: 0.85, duration: 80, yoyo: true, repeat: 2,
       onComplete: () => {
         flash.destroy();
-        const msg = this.add.text(W/2, H/2, '⚡ A wild Pokémon appeared!', {
-          fontSize: '20px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
-          stroke: '#000000', strokeThickness: 4,
-        }).setScrollFactor(0).setDepth(201).setOrigin(0.5);
-        this.tweens.add({
-          targets: msg, y: msg.y - 60, alpha: 0, duration: 1800, ease: 'Power2',
-          onComplete: () => msg.destroy(),
-        });
+        this._startWildBattle();
       },
+    });
+  }
+
+  _startWildBattle() {
+    // Pick a random wild Pokémon from the spawn table
+    const table = SETTINGS.SPAWN_TABLES['tall_grass'] || [16];
+    const wildId = table[Math.floor(Math.random() * table.length)];
+    const species = window.GAME_DATA?.pokemonById?.get(wildId);
+    if (!species) return; // GAME_DATA not loaded yet (shouldn't happen)
+
+    const wildLevel = SETTINGS.BATTLE.WILD_LEVEL_MIN
+      + Math.floor(Math.random() * (SETTINGS.BATTLE.WILD_LEVEL_MAX - SETTINGS.BATTLE.WILD_LEVEL_MIN + 1));
+    const enemyMon = BattleEngine.buildBattleMon(species, wildLevel);
+
+    // Get player's lead Pokémon from localStorage
+    let party;
+    try { party = JSON.parse(localStorage.getItem('pw_party') || '[]'); } catch { party = []; }
+    const playerMon = party[0] || null;
+    if (!playerMon) return; // No party — skip battle
+
+    this.cameras.main.fadeOut(200);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.start('Battle', {
+        enemyPokemon:  enemyMon,
+        playerPokemon: playerMon,
+        zone:          'tall_grass',
+        returnPos:     { col: this.playerTileX, row: this.playerTileY },
+        profile:       this.profile,
+      });
     });
   }
 }
