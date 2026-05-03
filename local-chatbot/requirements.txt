@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
 ollama
+chromadb
 cryptography
 pywebview
