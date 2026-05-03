@@ -13,6 +13,8 @@ const SETTINGS = {
     2: 0x1e5128,  // tree
     3: 0x1565c0,  // water
     4: 0x4caf50,  // tall grass
+    5: 0xd4a96a,  // building wall
+    6: 0xd4a96a,  // building door (door graphic drawn on top)
   },
 
   OUTFIT_COLORS: [
