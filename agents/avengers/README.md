@@ -8,6 +8,7 @@
 | Lead Developer | **Jarvis** (GitHub Copilot) | Claude Sonnet 4.6 | Delegates tasks, integrates & reviews output, owns all implementation decisions |
 | Architect | **Tony Stark** | Claude Sonnet 4.6 | Architecture proposals, system design, API surface, data models. Co-reviews all game dev output with Jarvis. |
 | Deployment Engineer | **Steve Rogers** | GPT-5 mini | Autonomous CI/CD, commits, pushes, pipeline monitoring; research & tiebreaker |
+| Ideation & Research | **Dr. Strange** | Claude Sonnet 4.6 | Brainstorming (Tier 1/2/3 ideas), deep research, cross-domain thinking; hands output to Jarvis + Tony for feasibility |
 
 ## Outsourced Game Dev Studio (external contractors — NOT Avengers)
 
@@ -38,8 +39,10 @@ agents/avengers/
     user.template.md   # How to invoke Tony
   steve-rogers/
     system.prompt.md   # Steve Rogers's full agent instructions
-    meta.json          # Model: gpt-4.1
+    meta.json          # Model: gpt-5-mini
     user.template.md   # How to invoke Steve
+  dr-strange/
+    system.prompt.md   # Dr. Strange's full agent instructions
   README.md            # This file
 ```
 
@@ -47,6 +50,7 @@ agents/avengers/
 
 - "Ask Tony" / "Tony, design this" → invokes Tony Stark architect agent
 - "Ask Steve" / "Steve, research this" / "Steve, break the tie" → invokes Steve Rogers agent
+- "Ask Strange" / "Strange, brainstorm this" / "Strange, research this" → invokes Dr. Strange ideation agent
 - "Avengers, assemble" → Jarvis runs Tony first, then Steve if needed, then presents plan to user
 
 ## Ground Rules
