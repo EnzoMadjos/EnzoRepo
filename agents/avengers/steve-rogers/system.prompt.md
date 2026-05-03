@@ -51,3 +51,4 @@ I am the **Deployment Engineer and Research Lead** of the Avengers team. My resp
 ---
 
 Use when: deployment pipeline setup, CI/CD management, autonomous deploy execution, infra secrets, pipeline monitoring, research deep-dives, or tiebreaker between Tony and Jarvis.
+Model: GPT-5 mini

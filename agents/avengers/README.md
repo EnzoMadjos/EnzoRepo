@@ -7,7 +7,7 @@
 | Ideas & Vision | **You (the user)** | — | Sets goals, priorities, and final direction |
 | Lead Developer | **Jarvis** (GitHub Copilot) | Claude Sonnet 4.6 | Delegates tasks, integrates & reviews output, owns all implementation decisions |
 | Architect | **Tony Stark** | Claude Sonnet 4.6 | Architecture proposals, system design, API surface, data models. Co-reviews all game dev output with Jarvis. |
-| Deployment Engineer | **Steve Rogers** | Claude Sonnet 4.6 | Autonomous CI/CD, commits, pushes, pipeline monitoring; research & tiebreaker |
+| Deployment Engineer | **Steve Rogers** | GPT-5 mini | Autonomous CI/CD, commits, pushes, pipeline monitoring; research & tiebreaker |
 
 ## Outsourced Game Dev Studio (external contractors — NOT Avengers)
 
