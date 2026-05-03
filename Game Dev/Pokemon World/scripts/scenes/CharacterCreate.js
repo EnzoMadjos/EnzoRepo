@@ -3,6 +3,17 @@ class CharacterCreate extends Phaser.Scene {
     super({ key: 'CharacterCreate' });
   }
 
+  preload() {
+    const outfitNames = ['red', 'blue', 'green'];
+    ['boy', 'girl'].forEach(g => {
+      outfitNames.forEach(o => {
+        this.load.spritesheet(`trainer_${g}_${o}`,
+          `/assets/sprites/trainer/${g}_${o}.png`,
+          { frameWidth: 64, frameHeight: 64 });
+      });
+    });
+  }
+
   create() {
     const W = SETTINGS.SCREEN_W;
     const H = SETTINGS.SCREEN_H;
@@ -196,14 +207,17 @@ class CharacterCreate extends Phaser.Scene {
 
   // ─── Preview ──────────────────────────────────────────────────────
   _refreshPreview() {
-    if (this.trainerContainer) this._drawTrainer(this.trainerContainer);
+    if (this.previewSprite) { this.previewSprite.destroy(); this.previewSprite = null; }
+    const outfitNames = ['red', 'blue', 'green'];
+    const key = `trainer_${this.profile.gender}_${outfitNames[this.profile.outfit]}`;
+    this.previewSprite = this.add.sprite(710, 255, key, 0).setScale(2.5).setDepth(5);
     const gLabel = this.profile.gender === 'boy' ? '♂ BOY' : '♀ GIRL';
     const oLabel = SETTINGS.OUTFIT_COLORS[this.profile.outfit]?.name ?? '';
     this.previewInfoText?.setText(`${gLabel}  •  ${oLabel} OUTFIT`);
   }
 
   _drawTrainer(container) {
-    container.removeAll(true);
+    // Superseded by _refreshPreview() using real sprites. Kept as stub.
     const outfit = SETTINGS.OUTFIT_COLORS[this.profile.outfit];
     const isBoy = this.profile.gender === 'boy';
     const g = this.make.graphics({ add: false });

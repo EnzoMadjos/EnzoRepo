@@ -7,6 +7,19 @@ class Overworld extends Phaser.Scene {
       || { gender: 'boy', outfit: 0, name: 'TRAINER' };
   }
 
+  preload() {
+    this.load.image('overworld_ts', '/assets/tilesets/overworld.png');
+    // Load all 6 trainer variants (gender × outfit)
+    const outfitNames = ['red', 'blue', 'green'];
+    ['boy', 'girl'].forEach(g => {
+      outfitNames.forEach(o => {
+        this.load.spritesheet(`trainer_${g}_${o}`,
+          `/assets/sprites/trainer/${g}_${o}.png`,
+          { frameWidth: 64, frameHeight: 64 });
+      });
+    });
+  }
+
   create() {
     const TS = SETTINGS.TILE_SIZE;
 
@@ -39,24 +52,39 @@ class Overworld extends Phaser.Scene {
     this.mapHeight = this.ROWS * TS;
     this.collidable = new Set(['2', '3', '5']);
 
-    this.tileGfx = this.add.graphics();
-    this._drawMap();
+    // ── Phaser Tilemap (replaces fillRect-based _drawMap) ─────────────
+    const mapNums = this.mapData.map(row => [...row].map(Number));
+    const map = this.make.tilemap({ data: mapNums, tileWidth: TS, tileHeight: TS });
+    const tileset = map.addTilesetImage('overworld_ts', 'overworld_ts', TS, TS, 0, 0);
+    this.mapLayer = map.createLayer(0, tileset, 0, 0);
+    this.mapLayer.setDepth(0);
 
+    // Building labels on top of tilemap
+    this._addMapLabels(TS);
+
+    // ── Player sprite (replaces playerGfx Graphics) ──────────────────
     this.playerTileX = 5;
     this.playerTileY = 10;
     this.facing    = 'down';
-    this.walkFrame = 0;
     this.isMoving  = false;
 
-    this.playerGfx = this.add.graphics();
-    this.playerGfx.setPosition(this.playerTileX * TS + TS / 2, this.playerTileY * TS + TS / 2);
-    this.playerGfx.setDepth(20);
-    this._drawPlayer();
+    const outfitNames = ['red', 'blue', 'green'];
+    this._trainerKey = `trainer_${this.profile.gender}_${outfitNames[this.profile.outfit] || 'red'}`;
+    this._setupAnimations();
+
+    this.playerSprite = this.add.sprite(
+      this.playerTileX * TS + TS / 2,
+      this.playerTileY * TS + TS / 2,
+      this._trainerKey, 0
+    );
+    this.playerSprite.setDepth(20);
+    this.playerSprite.setScale(0.75);  // 64px → ~48px
+    this.playerSprite.play(`${this._trainerKey}_idle_down`);
 
     this._spawnNPCs();
 
     this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
-    this.cameras.main.startFollow(this.playerGfx, true, 0.12, 0.12);
+    this.cameras.main.startFollow(this.playerSprite, true, 0.12, 0.12);
     this.cameras.main.fadeIn(400);
 
     this.cursors  = this.input.keyboard.createCursorKeys();
@@ -71,189 +99,47 @@ class Overworld extends Phaser.Scene {
     this._createHUD();
   }
 
-  _drawMap() {
-    const TS = SETTINGS.TILE_SIZE;
-    const g  = this.tileGfx;
-    g.clear();
+  _setupAnimations() {
+    const k = this._trainerKey;
+    if (this.anims.exists(`${k}_walk_down`)) return;  // already created
 
-    for (let row = 0; row < this.ROWS; row++) {
-      for (let col = 0; col < this.COLS; col++) {
-        const tile = this.mapData[row][col];
-        const base = SETTINGS.TILE_COLORS[parseInt(tile)] ?? SETTINGS.TILE_COLORS[0];
-        const x = col * TS, y = row * TS;
+    // Walk animations (3 frames per direction)
+    this.anims.create({ key: `${k}_walk_down`, frames: this.anims.generateFrameNumbers(k, { start: 0, end: 2 }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: `${k}_walk_up`,   frames: this.anims.generateFrameNumbers(k, { start: 3, end: 5 }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: `${k}_walk_side`, frames: this.anims.generateFrameNumbers(k, { start: 6, end: 8 }), frameRate: 8, repeat: -1 });
 
-        g.fillStyle(base);
-        g.fillRect(x, y, TS, TS);
+    // Idle animations (single frame)
+    this.anims.create({ key: `${k}_idle_down`, frames: [{ key: k, frame: 0 }], frameRate: 1 });
+    this.anims.create({ key: `${k}_idle_up`,   frames: [{ key: k, frame: 3 }], frameRate: 1 });
+    this.anims.create({ key: `${k}_idle_side`, frames: [{ key: k, frame: 6 }], frameRate: 1 });
+  }
 
-        if (tile === '2') {
-          g.fillStyle(0x145214);
-          g.fillCircle(x + TS/2, y + TS/2 - 4, 17);
-          g.fillStyle(0x6b3a2a);
-          g.fillRect(x + TS/2 - 4, y + TS/2 + 8, 8, 14);
-        } else if (tile === '4') {
-          g.fillStyle(0x2e7d32);
-          const seed = (col * 7 + row * 3) % 4;
-          for (let b = 0; b < 4; b++) {
-            const bx = x + 6 + ((b + seed) % 4) * 11;
-            g.fillRect(bx, y + 8, 3, 22);
-            g.fillRect(bx + 4, y + 16, 3, 16);
-          }
-        } else if (tile === '3') {
-          g.fillStyle(0x5ba3e0, 0.45);
-          g.fillRect(x + 4, y + TS/3, TS - 8, 4);
-          g.fillRect(x + 10, y + TS/2 + 4, TS - 20, 4);
-        } else if (tile === '1') {
-          const px = x + 4 + ((col * 13 + row * 5) % 30);
-          const py = y + 4 + ((col * 9  + row * 11) % 30);
-          g.fillStyle(0xb8945e, 0.5);
-          g.fillCircle(px, py, 2);
-        } else if (tile === '5') {
-          g.fillStyle(0xcc9955);
-          g.fillRect(x, y, TS, TS);
-          g.lineStyle(1, 0xaa7733, 0.7);
-          for (let br = 0; br < 3; br++) {
-            g.strokeRect(x + (br % 2) * (TS/2), y + br * 16, TS/2, 16);
-          }
-          if (row === 1) {
-            g.fillStyle(0x87ceeb, 0.95);
-            g.fillRect(x + 8,  y + 10, 13, 11);
-            g.fillRect(x + 26, y + 10, 13, 11);
-            g.lineStyle(1, 0x4466cc);
-            g.strokeRect(x + 8,  y + 10, 13, 11);
-            g.strokeRect(x + 26, y + 10, 13, 11);
-          }
-        } else if (tile === '6') {
-          g.fillStyle(0xcc9955);
-          g.fillRect(x, y, TS, TS);
-          g.fillStyle(0xcc3333);
-          g.fillRect(x, y, TS, 7);
-          g.fillStyle(0x7a3b1e);
-          g.fillRect(x + TS/4, y + TS/4, TS/2, TS * 3/4);
-          g.lineStyle(2, 0x4a2010);
-          g.strokeRect(x + TS/4, y + TS/4, TS/2, TS * 3/4);
-          g.fillStyle(0xFFD700);
-          g.fillCircle(x + TS/4 + TS/2 - 7, y + TS/2 + 4, 3);
-        }
+  _playAnim(isWalking) {
+    const k = this._trainerKey;
+    const type = isWalking ? 'walk' : 'idle';
+    const dir = (this.facing === 'left' || this.facing === 'right') ? 'side' : this.facing;
+    this.playerSprite.setFlipX(this.facing === 'right');
+    this.playerSprite.play(`${k}_${type}_${dir}`, true);
+  }
 
-        g.lineStyle(1, 0x000000, 0.05);
-        g.strokeRect(x, y, TS, TS);
-      }
-    }
-
-    const TS2 = SETTINGS.TILE_SIZE;
-    this.add.text(13 * TS2 + TS2, 4, "OAK'S LAB", {
+  _addMapLabels(TS) {
+    this.add.text(13 * TS + TS, 4, "OAK'S LAB", {
       fontSize: '9px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
     }).setDepth(50).setOrigin(0.5, 0);
-    this.add.text(19 * TS2 + TS2, 4, 'POKÉMON CENTER', {
+    this.add.text(19 * TS + TS, 4, 'POKÉMON CENTER', {
       fontSize: '9px', color: '#ffaaaa', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
     }).setDepth(50).setOrigin(0.5, 0);
   }
 
+  _drawMap() {
+    // Superseded by Phaser tilemap in create(). Kept for reference only.
+  }
+
   _drawPlayer() {
-    const g      = this.playerGfx;
-    const outfit = SETTINGS.OUTFIT_COLORS[this.profile.outfit];
-    const isBoy  = this.profile.gender === 'boy';
-    const f      = this.walkFrame;
-    const s      = 0.78;
-    const sr     = v => Math.round(v * s);
-    g.clear();
-    g.fillStyle(0x000000, 0.18);
-    g.fillEllipse(0, sr(28), sr(32), sr(10));
-    if      (this.facing === 'down')  this._pDown(g, sr, outfit, isBoy, f);
-    else if (this.facing === 'up')    this._pUp  (g, sr, outfit, isBoy, f);
-    else if (this.facing === 'left')  this._pSide(g, sr, outfit, isBoy, f, -1);
-    else                              this._pSide(g, sr, outfit, isBoy, f,  1);
-  }
-
-  _pDown(g, sr, outfit, isBoy, f) {
-    const ls = f === 0 ? 0 : -7;
-    const rs = f === 0 ? 0 :  7;
-    g.fillStyle(0x2c3e50);
-    g.fillRect(sr(-13), sr(8 + ls), sr(10), sr(15));
-    g.fillRect(sr(3),   sr(8 + rs), sr(10), sr(15));
-    g.fillStyle(0x3d2b1f);
-    g.fillRect(sr(-14), sr(21 + ls), sr(12), sr(8));
-    g.fillRect(sr(2),   sr(21 + rs), sr(12), sr(8));
-    g.fillStyle(outfit.primary);
-    g.fillRect(sr(-13), sr(-3), sr(26), sr(13));
-    g.fillRect(sr(-21), sr(-3 + rs), sr(9), sr(14));
-    g.fillRect(sr(12),  sr(-3 + ls), sr(9), sr(14));
-    g.fillStyle(0xf5c6a0);
-    g.fillRect(sr(-21), sr(9 + rs), sr(9), sr(8));
-    g.fillRect(sr(12),  sr(9 + ls), sr(9), sr(8));
-    g.fillStyle(0xf5c6a0);
-    g.fillCircle(0, sr(-15), sr(13));
-    g.fillStyle(outfit.secondary);
-    g.fillRect(sr(-14), sr(-27), sr(28), sr(12));
-    g.fillRect(sr(2),   sr(-18), sr(13), sr(5));
-    g.fillStyle(0x1a1a2e);
-    g.fillCircle(sr(-5), sr(-14), sr(3));
-    g.fillCircle(sr(5),  sr(-14), sr(3));
-    g.fillStyle(0xffffff);
-    g.fillCircle(sr(-4), sr(-15), 1.5);
-    g.fillCircle(sr(6),  sr(-15), 1.5);
-    if (!isBoy) {
-      g.fillStyle(outfit.secondary);
-      g.fillRect(sr(-20), sr(-14), sr(6), sr(18));
-      g.fillRect(sr(14),  sr(-14), sr(6), sr(18));
-    }
-  }
-
-  _pUp(g, sr, outfit, isBoy, f) {
-    const ls = f === 0 ? 0 : -7;
-    const rs = f === 0 ? 0 :  7;
-    g.fillStyle(0x2c3e50);
-    g.fillRect(sr(-13), sr(8 + ls), sr(10), sr(15));
-    g.fillRect(sr(3),   sr(8 + rs), sr(10), sr(15));
-    g.fillStyle(0x3d2b1f);
-    g.fillRect(sr(-14), sr(21 + ls), sr(12), sr(8));
-    g.fillRect(sr(2),   sr(21 + rs), sr(12), sr(8));
-    g.fillStyle(outfit.primary);
-    g.fillRect(sr(-13), sr(-3), sr(26), sr(13));
-    g.fillRect(sr(-21), sr(-3 + rs), sr(9), sr(14));
-    g.fillRect(sr(12),  sr(-3 + ls), sr(9), sr(14));
-    g.fillStyle(0xf5c6a0);
-    g.fillRect(sr(-21), sr(9 + rs), sr(9), sr(8));
-    g.fillRect(sr(12),  sr(9 + ls), sr(9), sr(8));
-    g.fillStyle(0xf5c6a0);
-    g.fillCircle(0, sr(-15), sr(13));
-    g.fillStyle(outfit.secondary);
-    g.fillRect(sr(-14), sr(-27), sr(28), sr(22));
-    if (!isBoy) {
-      g.fillRect(sr(-20), sr(-14), sr(6), sr(20));
-      g.fillRect(sr(14),  sr(-14), sr(6), sr(20));
-    }
-  }
-
-  _pSide(g, sr, outfit, isBoy, f, flip) {
-    const step = f === 0 ? 0 : 7;
-    g.fillStyle(0x2c3e50);
-    g.fillRect(flip * sr(-4), sr(8 - step), sr(9), sr(15));
-    g.fillRect(flip * sr(-4), sr(8 + step), sr(9), sr(15));
-    g.fillStyle(0x3d2b1f);
-    g.fillRect(flip * sr(-5), sr(21 - step), sr(11), sr(8));
-    g.fillRect(flip * sr(-5), sr(21 + step), sr(11), sr(8));
-    g.fillStyle(outfit.primary);
-    g.fillRect(flip * sr(-10), sr(-3), sr(18), sr(13));
-    const ay = f === 0 ? 0 : -4;
-    g.fillRect(flip * sr(-18), sr(-3 + ay), sr(9), sr(14));
-    g.fillStyle(0xf5c6a0);
-    g.fillRect(flip * sr(-18), sr(9 + ay), sr(9), sr(8));
-    g.fillStyle(0xf5c6a0);
-    g.fillCircle(flip * sr(2), sr(-15), sr(13));
-    g.fillStyle(outfit.secondary);
-    g.fillRect(flip * sr(-12), sr(-27), sr(26), sr(12));
-    g.fillRect(flip * sr(2),   sr(-18), sr(13), sr(5));
-    g.fillStyle(0x1a1a2e);
-    g.fillCircle(flip * sr(9), sr(-14), sr(3));
-    g.fillStyle(0xffffff);
-    g.fillCircle(flip * sr(10), sr(-15), 1.5);
-    if (!isBoy) {
-      g.fillStyle(outfit.secondary);
-      g.fillRect(flip * sr(-18), sr(-12), sr(6), sr(18));
-    }
+    // Superseded by _playAnim(). Kept for backward compat.
+    this._playAnim(false);
   }
 
   _spawnNPCs() {
@@ -383,7 +269,7 @@ class Overworld extends Phaser.Scene {
       else if (dx ===  1) this.facing = 'right';
       else if (dy === -1) this.facing = 'up';
       else                this.facing = 'down';
-      if (!this._canMoveTo(nx, ny)) { this._drawPlayer(); return; }
+        if (!this._canMoveTo(nx, ny)) { this._playAnim(false); return; }
       this._movePlayer(nx, ny);
     }
   }
@@ -409,18 +295,16 @@ class Overworld extends Phaser.Scene {
     this.isMoving    = true;
     this.playerTileX = newCol;
     this.playerTileY = newRow;
-    this.walkFrame   = 1;
-    this._drawPlayer();
+    this._playAnim(true);
     this.tweens.add({
-      targets: this.playerGfx,
+      targets: this.playerSprite,
       x: newCol * TS + TS / 2,
       y: newRow * TS + TS / 2,
       duration: SETTINGS.PLAYER_SPEED,
       ease: 'Linear',
       onComplete: () => {
-        this.isMoving  = false;
-        this.walkFrame = 0;
-        this._drawPlayer();
+        this.isMoving = false;
+        this._playAnim(false);
         this._onLand(newCol, newRow);
       },
     });
