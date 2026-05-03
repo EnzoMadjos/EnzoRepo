@@ -47,6 +47,9 @@ Thumbs.db
 
 # IDE
 .vscode/settings.json
+
+# Copilot context-mode runtime (ephemeral DB + session stats)
+.github/context-mode/
 *.swp
 *.accdb
 *.jar
