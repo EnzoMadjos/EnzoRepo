@@ -1,4 +1,31 @@
 <style>
+  /* ── Design tokens + global UX (open-props compatible) ── */
+  :root{
+    --ease-3:cubic-bezier(.25,0,.3,1);--ease-out-3:cubic-bezier(0,0,.3,1);
+    --ease-spring-1:cubic-bezier(.5,.75,.75,1.25);
+    --shadow-1:0 1px 2px 0 rgba(0,0,0,.08);
+    --shadow-2:0 1px 6px 0 rgba(0,0,0,.09),0 1px 2px -1px rgba(0,0,0,.06);
+    --shadow-3:0 4px 16px -2px rgba(0,0,0,.12),0 2px 4px -2px rgba(0,0,0,.08);
+    --shadow-4:0 8px 24px -4px rgba(0,0,0,.14),0 4px 8px -4px rgba(0,0,0,.09);
+    --radius-2:6px;--radius-3:8px;--radius-4:12px;--radius-round:1e5px;
+    --size-2:.5rem;--size-3:.75rem;--size-4:1rem;--size-5:1.25rem;--size-6:1.5rem;
+  }
+  html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  :focus-visible{outline:2px solid rgba(0,56,168,.7);outline-offset:2px;border-radius:4px}
+  ::selection{background:rgba(0,56,168,.15)}
+  /* Micro-interactions */
+  button,.btn{transition:background .15s var(--ease-3),box-shadow .15s var(--ease-3),transform .15s var(--ease-spring-1)}
+  button:not(:disabled):hover,.btn:not(:disabled):hover{transform:translateY(-1px)}
+  button:not(:disabled):active,.btn:not(:disabled):active{transform:translateY(0)}
+  input,select,textarea{transition:border-color .15s var(--ease-3),box-shadow .15s var(--ease-3)}
+  .card,.stat-card{transition:box-shadow .18s var(--ease-3),transform .18s var(--ease-3)}
+  tbody tr{transition:background .1s var(--ease-3)}
+  tbody tr:hover{background:rgba(0,56,168,.04)!important}
+  /* Thin scrollbar */
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:var(--radius-round)}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.3)}
   body{margin:0!important;padding:0!important}
   .app-topbar{background:#CE1126;background-image:repeating-linear-gradient(-55deg,transparent,transparent 18px,rgba(0,0,0,.07) 18px,rgba(0,0,0,.07) 20px);color:#fff;padding:0 20px;height:68px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 3px 12px rgba(0,0,0,.3);gap:12px;border-top:4px solid #FCD116;border-bottom:4px solid #0038A8}
   .tb-brand{display:flex;align-items:center;gap:12px;text-decoration:none;flex-shrink:0}
@@ -8,15 +35,15 @@
   .tb-slogan{font-size:.72rem;color:#FCD116;white-space:nowrap;font-style:italic;font-weight:700;letter-spacing:.03em}
   .tb-nav{display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none}
   .tb-nav::-webkit-scrollbar{display:none}
-  .tb-nav a{color:rgba(255,255,255,.92);text-decoration:none;padding:6px 11px;border-radius:6px;font-size:.84rem;font-weight:600;white-space:nowrap;transition:background .15s}
-  .tb-nav a:hover{background:rgba(0,0,0,.18);color:#FCD116}
+  .tb-nav a{color:rgba(255,255,255,.92);text-decoration:none;padding:6px 11px;border-radius:6px;font-size:.84rem;font-weight:600;white-space:nowrap;transition:background .15s var(--ease-3),color .15s var(--ease-3),box-shadow .15s var(--ease-3)}
+  .tb-nav a:hover{background:rgba(0,0,0,.18);color:#FCD116;box-shadow:0 0 0 1px rgba(252,209,22,.25)}
   .tb-nav a.tb-active{background:rgba(0,0,0,.22);color:#FCD116;border-bottom:3px solid #FCD116}
   .tb-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
   .tb-username{font-size:.82rem;color:rgba(255,255,255,.9);font-weight:600}
   .tb-logout{background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.35);color:#fff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600}
   .tb-logout:hover{background:rgba(0,0,0,.35)}
-  .tb-feedback-btn{background:#0038A8;border:none;color:#fff;padding:6px 13px;border-radius:20px;cursor:pointer;font-size:.78rem;font-weight:700;letter-spacing:.02em;transition:opacity .15s;box-shadow:0 2px 6px rgba(0,0,0,.25)}
-  .tb-feedback-btn:hover{opacity:.88}
+  .tb-feedback-btn{background:#0038A8;border:none;color:#fff;padding:6px 13px;border-radius:20px;cursor:pointer;font-size:.78rem;font-weight:700;letter-spacing:.02em;transition:background .15s var(--ease-3),box-shadow .15s var(--ease-3),transform .15s var(--ease-spring-1);box-shadow:0 2px 8px rgba(0,56,168,.35)}
+  .tb-feedback-btn:hover{background:#002d8a;box-shadow:0 4px 14px rgba(0,56,168,.4)}
   /* Demo banner */
   .demo-banner{display:none;background:#FCD116;color:#CE1126;font-size:.8rem;font-weight:700;text-align:center;padding:6px 16px;border-bottom:3px solid #0038A8;position:sticky;top:76px;z-index:49}
   /* Feedback modal */

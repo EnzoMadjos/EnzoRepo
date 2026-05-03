@@ -20,9 +20,15 @@
       --r:6px;
       --fh:'Inter','Segoe UI',system-ui,sans-serif;
       --fm:'JetBrains Mono','Cascadia Code','Consolas',monospace;
+      /* Design tokens */
+      --ease-3:cubic-bezier(.25,0,.3,1);
+      --ease-out-3:cubic-bezier(0,0,.3,1);
+      --ease-spring-1:cubic-bezier(.5,.75,.75,1.25);
     }
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--fh);font-size:14px}
+    :focus-visible{outline:2px solid rgba(108,182,255,.55);outline-offset:2px;border-radius:4px}
+    ::selection{background:rgba(108,182,255,.22);color:var(--txb)}
     canvas{display:block}
 
     /* ── SCENE ─────────────────────────────────────────────────────── */
@@ -274,7 +280,8 @@
       gap:9px;padding:14px 16px 4px;z-index:4;scroll-behavior:smooth}
     #messages::-webkit-scrollbar{width:3px}
     #messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);border-radius:2px}
-    .msg{display:flex;flex-direction:column}
+    .msg{display:flex;flex-direction:column;animation:msgIn .22s var(--ease-out-3,ease) both}
+    @keyframes msgIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
     .msg.user{align-self:flex-end;align-items:flex-end;max-width:74%}
     .msg.atlas{align-self:flex-start;align-items:flex-start;max-width:80%}
     .lbl{font-family:var(--fm);font-size:.5rem;letter-spacing:1.5px;
