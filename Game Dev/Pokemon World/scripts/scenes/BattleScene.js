@@ -300,7 +300,7 @@ class BattleScene extends Phaser.Scene {
       const col = i % 2, row = Math.floor(i / 2);
       const tx = 20 + col * ((W - 200) / 2);
       const ty = TBY + 16 + row * 46;
-      const nameT = this.add.text(tx + 20, ty, mv.name.toUpperCase(), {
+      const nameT = this.add.text(tx + 20, ty, (mv.displayName || mv.name).toUpperCase(), {
         fontFamily: 'monospace', fontSize: '15px', color: '#1a1a1a', fontStyle: 'bold',
       }).setDepth(33);
       const ppT = this.add.text(tx + 20, ty + 22, `PP  ${mv.pp}/${mv.maxPP}`, {
@@ -354,8 +354,10 @@ class BattleScene extends Phaser.Scene {
     if (this._moveTypePanel)  { this._moveTypePanel.destroy();  this._moveTypePanel = null; }
     if (this._moveTexts)      { this._moveTexts.forEach(p => p.forEach(t => t.destroy())); this._moveTexts = null; }
     if (this._moveCancelText) { this._moveCancelText.destroy(); this._moveCancelText = null; }
+    if (this._bagCancelText)  { this._bagCancelText.destroy();  this._bagCancelText = null; }
     if (this._moveTypeLabel)  { this._moveTypeLabel.destroy();  this._moveTypeLabel = null; }
     if (this._movePowerLabel) { this._movePowerLabel.destroy(); this._movePowerLabel = null; }
+    this._bagItems = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -373,6 +375,15 @@ class BattleScene extends Phaser.Scene {
     if (jd(this._keys.left))  { this._menuCursor = Math.max(this._menuCursor - 1, 0);      moved = true; }
     if (jd(this._keys.down))  { this._menuCursor = Math.min(this._menuCursor + 2, maxIdx); moved = true; }
     if (jd(this._keys.up))    { this._menuCursor = Math.max(this._menuCursor - 2, 0);      moved = true; }
+
+    // Bag menu uses only up/down (single column)
+    if (this._state === 'BAG_MENU') {
+      if (jd(this._keys.down)) { this._menuCursor = Math.min(this._menuCursor + 1, this._menuItems.length - 1); this._updateBagCursor(); }
+      if (jd(this._keys.up))   { this._menuCursor = Math.max(this._menuCursor - 1, 0); this._updateBagCursor(); }
+      if (confirm) this._onBagItemSelected(this._menuItems[this._menuCursor]);
+      if (cancel)  this._setState('ACTION_MENU');
+      return;
+    }
 
     if (moved) {
       if (this._state === 'ACTION_MENU') this._updateActionCursor();
@@ -450,7 +461,7 @@ class BattleScene extends Phaser.Scene {
     move.pp        = Math.max(0, move.pp - 1);
     const dmg      = BattleEngine.calcDamage(pMon.level, move.power, atkStat, defStat, typeEff, stab, crit, randPct);
 
-    this._showText(`${pMon.name.toUpperCase()} used\n${move.name.toUpperCase()}!`, () => {
+    this._showText(`${pMon.name.toUpperCase()} used\n${(move.displayName || move.name).toUpperCase()}!`, () => {
       if (!BattleEngine.checkAccuracy(move.accuracy)) {
         this._showText("It missed!", cb); return;
       }
@@ -477,7 +488,7 @@ class BattleScene extends Phaser.Scene {
     move.pp        = Math.max(0, move.pp - 1);
     const dmg      = BattleEngine.calcDamage(eMon.level, move.power, atkStat, defStat, typeEff, stab, crit, randPct);
 
-    this._showText(`Wild ${eMon.name.toUpperCase()} used\n${move.name.toUpperCase()}!`, () => {
+    this._showText(`Wild ${eMon.name.toUpperCase()} used\n${(move.displayName || move.name).toUpperCase()}!`, () => {
       if (!BattleEngine.checkAccuracy(move.accuracy)) {
         this._showText("It missed!", cb); return;
       }
@@ -563,16 +574,106 @@ class BattleScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------------------
-  // Bag / Catch
+  // Bag — real item menu
   // ---------------------------------------------------------------------------
   _onBagSelected() {
     this._clearMenu();
-    this._showText('You threw a Poké Ball!', () => this._doCatchAnim());
+    const bag = JSON.parse(localStorage.getItem('pw_bag') || '[]').filter(i => i.count > 0);
+    if (bag.length === 0) {
+      this._showText("Your bag is empty!", () => this._setState('ACTION_MENU'));
+      return;
+    }
+    this._buildBagMenu(bag);
   }
 
-  _doCatchAnim() {
+  _buildBagMenu(bag) {
+    const TBY = this._tbY, W = this._tbW;
+    this._tbText.setText('Choose an item:');
+    this._menuItems = bag.map((_, i) => i);
+    this._menuCursor = 0;
+    this._state = 'BAG_MENU';
+    this._bagItems = bag;
+
+    const bg = this.add.graphics().setDepth(32);
+    bg.fillStyle(0xe8e8d0, 1);
+    bg.fillRect(0, TBY, W, this._tbH);
+    this._menuBg = bg;
+
+    this._menuTexts = bag.map((item, i) => {
+      const tx = 28, ty = TBY + 12 + i * 32;
+      const t = this.add.text(tx + 20, ty, `${item.name}  x${item.count}`, {
+        fontFamily: 'monospace', fontSize: '15px', color: '#1a1a1a', fontStyle: 'bold',
+      }).setDepth(33);
+      return t;
+    });
+
+    const cancelY = TBY + 12 + bag.length * 32;
+    this._bagCancelText = this.add.text(28 + 20, cancelY, 'CANCEL', {
+      fontFamily: 'monospace', fontSize: '15px', color: '#884444', fontStyle: 'bold',
+    }).setDepth(33);
+    this._menuItems = [...bag.map((_, i) => i), 'cancel'];
+
+    this._menuCursorText = this.add.text(0, 0, '▶', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#cc0000',
+    }).setDepth(34);
+    this._updateBagCursor();
+    this._inputEnabled = true;
+  }
+
+  _updateBagCursor() {
+    if (!this._menuCursorText) return;
+    const i = this._menuCursor;
+    const TBY = this._tbY;
+    const bag = this._bagItems || [];
+    const y = i < bag.length
+      ? TBY + 12 + i * 32
+      : TBY + 12 + bag.length * 32;
+    this._menuCursorText.setPosition(8, y);
+  }
+
+  _onBagItemSelected(idx) {
+    const bag = this._bagItems;
+    if (idx === 'cancel' || idx >= bag.length) { this._setState('ACTION_MENU'); return; }
+    const item = bag[idx];
+    this._inputEnabled = false;
+    this._clearMenu();
+    if (item.ball) {
+      // It's a Poké Ball variant
+      this._showText(`You threw a ${item.name}!`, () => {
+        this._useBagItem(item, idx);
+        this._doCatchAnim(item.ball);
+      });
+    } else if (item.hp) {
+      // Healing item
+      const mon = this._playerMon;
+      if (mon.currentHp >= mon.maxHp) {
+        this._showText(`${mon.name.toUpperCase()}'s HP is full!`, () => this._setState('ACTION_MENU'));
+        return;
+      }
+      const healed = Math.min(item.hp, mon.maxHp - mon.currentHp);
+      mon.currentHp += healed;
+      this._useBagItem(item, idx);
+      this._showText(`${mon.name.toUpperCase()} recovered\n${healed} HP!`, () => {
+        this._animHpBar(this._playerBox, mon, () => {
+          this._doEnemyAttack(() => {
+            if (mon.currentHp <= 0) { this._handleDefeat(); return; }
+            this._setState('ACTION_MENU');
+          });
+        });
+      });
+    }
+  }
+
+  _useBagItem(item, idx) {
+    const allBag = JSON.parse(localStorage.getItem('pw_bag') || '[]');
+    const match = allBag.find(b => b.id === item.id);
+    if (match) { match.count = Math.max(0, match.count - 1); }
+    localStorage.setItem('pw_bag', JSON.stringify(allBag));
+  }
+
+  _doCatchAnim(ballRate = 1) {
     const result = BattleEngine.calcCatch(
-      this._enemyMon.maxHp, this._enemyMon.currentHp, this._enemyMon.catchRate, 1
+      this._enemyMon.maxHp, this._enemyMon.currentHp, this._enemyMon.catchRate, ballRate
     );
 
     // Fade enemy out (ball absorbs it)

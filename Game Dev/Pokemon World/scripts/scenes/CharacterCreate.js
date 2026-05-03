@@ -294,7 +294,7 @@ class CharacterCreate extends Phaser.Scene {
       this.cameras.main.fadeOut(400, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         localStorage.setItem('pw_profile', JSON.stringify(this.profile));
-        this.scene.start('Overworld', { profile: this.profile });
+        this.scene.start('StarterSelect', { profile: this.profile });
       });
     });
     bg.on('pointerover', () => { if (this._ready) bg.setFillStyle(0x143a14); });

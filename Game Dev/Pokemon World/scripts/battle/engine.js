@@ -138,15 +138,27 @@
   function buildBattleMon(species, level, moveNames) {
     const bs = species.baseStats;
 
-    // Pick moves: use provided list or take last 4 level-up moves learnable at this level
-    const learnable = (species.moves || []).filter(m => m.level <= level);
+    // Pick moves: use provided list or take last 4 level-up moves learnable at this level.
+    // Pad with earliest available moves if fewer than 4 qualify (common for low-level wilds).
+    const allMovesSorted = [...(species.moves || [])].sort((a, b) => a.level - b.level);
+    let learnable = allMovesSorted.filter(m => m.level <= level);
+    if (learnable.length < 4) {
+      // Pad from the full learnset (earliest first) until we have 4
+      for (const m of allMovesSorted) {
+        if (learnable.length >= 4) break;
+        if (!learnable.find(e => e.name === m.name)) learnable.push(m);
+      }
+    }
     const defaultMoves = learnable.slice(-4).map(m => m.name);
     const chosenMoveNames = (moveNames || defaultMoves).slice(0, 4);
 
     const moves = chosenMoveNames.map(name => {
       const md = window.GAME_DATA?.moves[name] || {};
+      const displayName = name.replace(/-/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
       return {
         name,
+        displayName,
         type:        md.type        || "normal",
         power:       md.power       || 0,
         accuracy:    md.accuracy    || 100,

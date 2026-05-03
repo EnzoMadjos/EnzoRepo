@@ -24,34 +24,35 @@ class Overworld extends Phaser.Scene {
   create() {
     const TS = SETTINGS.TILE_SIZE;
 
+    // 0=grass 1=path 2=border 3=tree 4=tallgrass 5=bld-wall 6=door 7=water 8=roof
     this.mapData = [
-      '222222222222222222222222222222',
-      '200000000000055555005555500002',
-      '200044000000065555065555500002',
-      '200044000000055555005555500002',
-      '200000000000000000000000000002',
-      '200011100000440000044400000002',
-      '200011100444000000000000000002',
-      '211111100011111111111111111112',
-      '201111100011000000000111111112',
-      '201111100011000000000100000002',
-      '201111111111000222000100000002',
-      '201111100011000202000100000002',
-      '201111100011000202000111111112',
-      '211111100011111111111111000002',
-      '200000000011000000000000444002',
-      '200000000011000000000000444002',
-      '200044000011000000000000000002',
-      '200044000011000000000000000002',
-      '200000000011000000000000000002',
-      '222222222211222222222222222222',
+      '222222222222222222222222222222',  // 0  — north border
+      '200000000000000000000000000002',  // 1  — open grass
+      '204440000000000000004440000002',  // 2  — tall-grass flanks
+      '204441111111111111114440000002',  // 3  — route path enters town
+      '200000100000000010000000000002',  // 4  — path pillars
+      '200003100000000013000000000002',  // 5  — trees flank path
+      '200003100077770013000000000002',  // 6  — trees + pond
+      '200000100077770010000000000002',  // 7  — pond continues
+      '200088100077770010088000000002',  // 8  — buildings (roof)
+      '200058100000000010058000000002',  // 9  — building walls
+      '200016100000000010016000000002',  // 10 — building doors
+      '200000100000000010000000000002',  // 11 — open grass
+      '211111111111111111111111111112',  // 12 — main horizontal road
+      '200000001000000010000000000002',  // 13
+      '200003001000000013000333000002',  // 14 — trees
+      '200008881000000010000888000002',  // 15 — large lab roof
+      '200005851000000010000585000002',  // 16 — lab walls
+      '200006860000000000000686000002',  // 17 — lab doors
+      '200000001111111110000000000002',  // 18 — path to south
+      '222222222222222222222222222222',  // 19 — south border
     ];
 
     this.ROWS = this.mapData.length;
     this.COLS = this.mapData[0].length;
     this.mapWidth  = this.COLS * TS;
     this.mapHeight = this.ROWS * TS;
-    this.collidable = new Set(['2', '3', '5']);
+    this.collidable = new Set(['2', '3', '5', '7', '8']);
 
     // ── Phaser Tilemap (replaces fillRect-based _drawMap) ─────────────
     const mapNums = this.mapData.map(row => [...row].map(Number));
@@ -64,8 +65,8 @@ class Overworld extends Phaser.Scene {
     this._addMapLabels(TS);
 
     // ── Player sprite (replaces playerGfx Graphics) ──────────────────
-    this.playerTileX = this._returnPos ? this._returnPos.col : 5;
-    this.playerTileY = this._returnPos ? this._returnPos.row : 10;
+    this.playerTileX = this._returnPos ? this._returnPos.col : 8;
+    this.playerTileY = this._returnPos ? this._returnPos.row : 13;
     this.facing    = 'down';
     this.isMoving  = false;
 
@@ -83,6 +84,7 @@ class Overworld extends Phaser.Scene {
     this.playerSprite.play(`${this._trainerKey}_idle_down`);
 
     this._spawnNPCs();
+    this._startTileAnims();
 
     this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
     this.cameras.main.startFollow(this.playerSprite, true, 0.12, 0.12);
@@ -124,14 +126,58 @@ class Overworld extends Phaser.Scene {
   }
 
   _addMapLabels(TS) {
-    this.add.text(13 * TS + TS, 4, "OAK'S LAB", {
+    // Left building cluster (col 5, rows 8-10)
+    this.add.text(5 * TS + TS / 2, 8 * TS - 4, "OAK'S LAB", {
       fontSize: '9px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
-    }).setDepth(50).setOrigin(0.5, 0);
-    this.add.text(19 * TS + TS, 4, 'POKÉMON CENTER', {
+    }).setDepth(50).setOrigin(0.5, 1);
+    // Right building cluster (col 21, rows 8-10)
+    this.add.text(21 * TS + TS / 2, 8 * TS - 4, 'POKéMON CENTER', {
       fontSize: '9px', color: '#ffaaaa', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
-    }).setDepth(50).setOrigin(0.5, 0);
+    }).setDepth(50).setOrigin(0.5, 1);
+    // Large lab south (col 5-7, rows 15-17)
+    this.add.text(5 * TS + TS, 15 * TS - 4, "PROF. OAK'S LAB", {
+      fontSize: '9px', color: '#ffffaa', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setDepth(50).setOrigin(0.5, 1);
+    // Signs
+    this.add.text(TS / 2, 3 * TS + TS / 2, 'ROUTE 1 ↑', {
+      fontSize: '8px', color: '#ccffcc', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: 2,
+    }).setDepth(50).setOrigin(0, 0.5);
+  }
+
+  _startTileAnims() {
+    // Animate water tiles (shimmer) by cycling alpha on a graphics overlay
+    const TS = SETTINGS.TILE_SIZE;
+    const W  = this.mapWidth, H = this.mapHeight;
+    this._waterOverlay = this.add.graphics().setDepth(1).setAlpha(0);
+    this._waterPhase   = 0;
+
+    // Draw water shimmer overlay
+    const drawWater = () => {
+      const g = this._waterOverlay;
+      g.clear();
+      g.fillStyle(0xaaddff, 0.18);
+      for (let row = 0; row < this.ROWS; row++) {
+        for (let col = 0; col < this.COLS; col++) {
+          if (this._getTile(col, row) === '7') {
+            const offset = Math.sin(this._waterPhase + col * 0.7 + row * 0.5) * 0.5 + 0.5;
+            g.fillStyle(0x88ccff, 0.12 * offset + 0.06);
+            g.fillRect(col * TS, row * TS, TS, TS);
+          }
+        }
+      }
+    };
+
+    this.time.addEvent({
+      delay: 80, loop: true,
+      callback: () => {
+        this._waterPhase += 0.18;
+        drawWater();
+      },
+    });
   }
 
   _drawMap() {
@@ -148,16 +194,16 @@ class Overworld extends Phaser.Scene {
     this.npcs = [];
     const defs = [
       {
-        col: 7, row: 5, name: 'PROF. OAK', outfit: 2, gender: 'boy',
+        col: 9, row: 11, name: 'PROF. OAK', outfit: 2, gender: 'boy',
         dialogue: [
           'Ah, welcome to Pallet Town!',
           'I am Professor Oak. I study Pokémon for a living.',
-          'My Lab is just to the north — follow the path.',
+          'My Lab is just to the south — follow the path.',
           "When you're ready, come visit. I have a starter Pokémon for you!",
         ],
       },
       {
-        col: 16, row: 5, name: 'GARY', outfit: 1, gender: 'boy',
+        col: 18, row: 13, name: 'RIVAL', outfit: 1, gender: 'boy',
         dialogue: [
           "Out of my way! I'm in a hurry.",
           "I'm heading to Gramps' Lab to grab my starter first.",
@@ -314,7 +360,7 @@ class Overworld extends Phaser.Scene {
   _onLand(col, row) {
     const tile = this._getTile(col, row);
     if (tile === '4' && Math.random() < 0.30) this._showEncounterFlash();
-    if (tile === '6') this.dialogue.show('SIGN', ['The door is locked for now.', '(Building interiors coming in Phase 3!)']);
+    if (tile === '6') this.dialogue.show('BUILDING', ['The door is locked for now.', '(Building interiors coming in Phase 4!)']);
   }
 
   _showEncounterFlash() {

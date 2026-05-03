@@ -37,7 +37,7 @@ const SETTINGS = {
     WILD_LEVEL_MIN: 3,
     WILD_LEVEL_MAX: 7,
     STARTER_POKEMON_ID: 1,    // Bulbasaur — seeded in localStorage by BootScene
-    STARTER_LEVEL: 5,
+    STARTER_LEVEL: 10,
   },
 
   // Spawn tables — map zone key → array of Pokémon IDs

@@ -68,20 +68,29 @@ class BootScene extends Phaser.Scene {
       pokemonById,
     };
 
-    // --- Seed starter party into localStorage if not present ---
-    const PARTY_KEY = "pw_party";
-    if (!localStorage.getItem(PARTY_KEY)) {
-      const starterId = SETTINGS.BATTLE.STARTER_POKEMON_ID;
-      const starterLvl = SETTINGS.BATTLE.STARTER_LEVEL;
-      const species = pokemonById.get(starterId);
+    // --- Seed starter party + bag into localStorage (version-gated) ---
+    const PARTY_KEY   = "pw_party";
+    const BAG_KEY     = "pw_bag";
+    const SAVE_VER    = "v1.2";  // bump this to force reset on all clients
+    const savedVer    = localStorage.getItem("pw_save_ver");
 
-      if (species) {
-        const starter = BattleEngine.buildBattleMon(species, starterLvl);
-        // Add EXP tracking fields
-        starter.exp = BattleEngine.expForLevel(starterLvl);
-        starter.expToNext = BattleEngine.expForLevel(starterLvl + 1);
-        localStorage.setItem(PARTY_KEY, JSON.stringify([starter]));
-      }
+    if (savedVer !== SAVE_VER) {
+      // Wipe old data so new starter + bag get seeded clean
+      localStorage.removeItem(PARTY_KEY);
+      localStorage.removeItem(BAG_KEY);
+      localStorage.setItem("pw_save_ver", SAVE_VER);
+    }
+
+    // Starter party is seeded by StarterSelect scene — no auto-seed here.
+
+    if (!localStorage.getItem(BAG_KEY)) {
+      const startBag = [
+        { id: 'potion',       name: 'Potion',       count: 3, hp: 20  },
+        { id: 'super_potion', name: 'Super Potion',  count: 1, hp: 50  },
+        { id: 'pokeball',     name: 'Poké Ball',     count: 5, ball: 1 },
+        { id: 'great_ball',   name: 'Great Ball',    count: 1, ball: 1.5 },
+      ];
+      localStorage.setItem(BAG_KEY, JSON.stringify(startBag));
     }
 
     this.scene.start("CharacterCreate");
