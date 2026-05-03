@@ -57,3 +57,11 @@ Thumbs.db
 **/graphify-out/manifest.json
 **/graphify-out/cost.json
 **/graphify-out/converted/
+graphify-out/
+
+# Obsidian internals
+brain/.obsidian/
+brain/.index/
+
+# scratch / generated artifacts
+null
