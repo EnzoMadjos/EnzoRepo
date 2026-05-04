@@ -45,7 +45,7 @@
         "--rm",
         "-i",
         "-v",
-        "/home/enzo/ai-lab/.vscode/mcp-data/memory:/data",
+        "{{WORKSPACE}}/.vscode/mcp-data/memory:/data",
         "mcp/memory"
       ],
       "autoApprove": ["create_entities", "create_relations", "add_observations", "delete_entities", "delete_observations", "delete_relations", "open_nodes", "read_graph", "search_nodes"]
@@ -93,13 +93,13 @@
         "--rm",
         "-i",
         "-v",
-        "/home/enzo/ai-lab:/workspace",
+        "{{WORKSPACE}}:/workspace",
         "mcp/git"
       ],
       "autoApprove": ["git_status", "git_diff", "git_log", "git_show", "git_branch", "git_add", "git_commit", "git_push"]
     },
     "salesforce": {
-      "command": "/home/enzo/.local/bin/uvx",
+      "command": "{{UVX}}",
       "args": [
         "--from",
         "mcp-salesforce-connector",
@@ -114,7 +114,7 @@
       "autoApprove": ["run_soql_query", "run_sosl_search", "get_object_fields", "list_sobjects", "get_record"]
     },
     "brain": {
-      "command": "/home/enzo/.local/bin/uvx",
+      "command": "{{UVX}}",
       "args": [
         "--from",
         "zettelkasten-mcp @ git+https://github.com/entanglr/zettelkasten-mcp.git",
@@ -122,9 +122,9 @@
         "-m",
         "zettelkasten_mcp.main",
         "--notes-dir",
-        "/home/enzo/ai-lab/brain",
+        "{{WORKSPACE}}/brain",
         "--database-path",
-        "/home/enzo/ai-lab/brain/.index/brain.db"
+        "{{WORKSPACE}}/brain/.index/brain.db"
       ],
       "autoApprove": [
         "zk_get_note",
@@ -140,6 +140,22 @@
         "zk_create_link",
         "zk_remove_link",
         "zk_rebuild_index"
+      ]
+    },
+    "context-mode": {
+      "command": "{{CONTEXT_MODE}}",
+      "autoApprove": [
+        "ctx_execute",
+        "ctx_execute_file",
+        "ctx_batch_execute",
+        "ctx_index",
+        "ctx_search",
+        "ctx_fetch_and_index",
+        "ctx_stats",
+        "ctx_doctor",
+        "ctx_upgrade",
+        "ctx_purge",
+        "ctx_insight"
       ]
     }
   }

@@ -1,3 +1,35 @@
+# New Machine Setup (Linux)
+
+Clone and run one command — setup.sh handles everything:
+
+```bash
+git clone https://github.com/EnzoMadjos/EnzoRepo.git ai-lab
+cd ai-lab
+bash setup.sh
+```
+
+What `setup.sh` does automatically:
+1. Installs **graphifyy** (knowledge graph CLI) via pip
+2. Installs **uv/uvx** (Python tool runner, needed for Salesforce + Brain MCPs)
+3. Installs **context-mode** globally via npm (context-window MCP server)
+4. Pulls all **MCP Docker images**: `mcp/memory`, `mcp/sequentialthinking`, `mcp/context7`, `mcp/playwright`, `mcp/fetch`, `mcp/git`, `ghcr.io/github/github-mcp-server`
+5. Generates **`.vscode/mcp.json`** from `.vscode/mcp.json.template` with correct paths for this machine
+6. Ensures **`.vscode/settings.json`** has `task.allowAutomaticTasks: on` (so MCP Docker tasks auto-start on folder open)
+7. Installs **Jarvis Copilot instructions** to all VS Code prompts folders found on the machine
+
+After setup:
+- Open the `ai-lab` folder in VS Code
+- The two auto-tasks fire on folder open: Docker image pre-warm + Context7 SSE server start
+- Enter your GitHub PAT when the GitHub MCP server prompts (first use only — VS Code remembers it)
+- Salesforce MCP prompts for instance URL / client ID / secret on first use
+
+Prerequisites (must be installed before running setup.sh):
+- Git, Python 3.10+, Node.js + npm, Docker
+
+---
+
+# Deployment workflow (skeleton)
+
 Deployment workflow (skeleton)
 
 This repository includes a deployment workflow skeleton at `.github/workflows/deploy.yml`.
