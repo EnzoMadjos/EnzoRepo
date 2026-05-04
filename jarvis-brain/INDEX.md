@@ -33,7 +33,12 @@ https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/salesfor
 https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/salesforce-agents/sf-ux-flow-designer.md
 ```
 
-## Step 4 — Load Memory Context
+## Step 4 — Load Salesforce Knowledge Base
+```
+https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/brain/salesforce-knowledge.md
+```
+
+## Step 5 — Load Memory Context
 ```
 https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/memories/workspace.md
 https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/memories/projects.md
@@ -53,8 +58,9 @@ Please fetch and read the following files to load my Jarvis AI assistant context
 3. https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/agents/steve-rogers.md
 4. https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/agents/dr-strange.md
 5. https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/salesforce-agents/council-of-salesforce.md
-6. https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/memories/workspace.md
-7. https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/memories/projects.md
+6. https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/brain/salesforce-knowledge.md
+7. https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/memories/workspace.md
+8. https://raw.githubusercontent.com/EnzoMadjos/EnzoRepo/main/jarvis-brain/memories/projects.md
 
 After reading all of them, confirm by saying "Jarvis online, boss." and summarize the team structure.
 ```
