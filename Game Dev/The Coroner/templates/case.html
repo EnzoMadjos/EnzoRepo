@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Case #{{ case_id }} — The Coroner: Inquest</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+  <script src="/static/js/portrait.js"></script>
+  <script src="/static/js/board.js"></script>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header class="site-header">
+  <a class="logo" href="/"><span>The Coroner</span></a>
+  <span class="breadcrumb text-sm">/ Case #{{ case_id }}</span>
+  <a href="/cases" class="btn btn-sm" style="margin-left:auto;margin-right:0.75rem">ALL CASES</a>
+  <span id="case-status-badge" class="stamp stamp-open">OPEN</span>
+</header>
+
+<!-- ── Case layout ──────────────────────────────────────────────────────── -->
+<div class="case-layout">
+
+  <!-- Sidebar -->
+  <aside class="case-sidebar">
+    <!-- Victim file -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Victim</div>
+      <div style="display:flex;gap:0.5rem;align-items:center">
+        <div id="victim-portrait" style="width:40px;height:40px;flex-shrink:0"></div>
+        <div>
+          <div id="victim-name" class="text-sm" style="color:var(--ink)">—</div>
+          <div id="victim-occ" class="text-sm text-dim">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation tabs -->
+    <div class="sidebar-section" style="padding-bottom:0.25rem">
+      <div class="sidebar-section-title">Investigation</div>
+      <a class="sidebar-link active" data-tab="overview" onclick="switchTab('overview')">Overview</a>
+      <a class="sidebar-link" data-tab="witnesses" onclick="switchTab('witnesses')">Witnesses</a>
+      <a class="sidebar-link" data-tab="evidence" onclick="switchTab('evidence')">Evidence</a>
+      <a class="sidebar-link" data-tab="board" onclick="switchTab('board')">Case Board</a>
+      <a class="sidebar-link" data-tab="consult" onclick="switchTab('consult')">Consult</a>
+    </div>
+
+    <!-- File report CTA -->
+    <div class="sidebar-section">
+      <button class="btn btn-primary" style="width:100%;text-align:center" onclick="switchTab('report')">
+        FILE REPORT
+      </button>
+      <div id="report-filed-note" class="text-sm text-dim mt1 hidden">Report already filed.</div>
+    </div>
+  </aside>
+
+  <!-- Main content area -->
+  <main class="case-main">
+
+    <!-- ── OVERVIEW ──────────────────────────────────────────────────── -->
+    <div id="tab-overview" class="tab-panel active">
+      <div class="panel-title">Case Overview</div>
+      <div class="grid2" style="margin-bottom:1rem">
+        <div class="panel">
+          <div class="panel-title">Victim</div>
+          <div id="ov-victim-name" class="text-sm" style="margin-bottom:0.5rem">—</div>
+          <div class="text-sm text-dim" id="ov-victim-age">Age: —</div>
+          <div class="text-sm text-dim" id="ov-victim-occ">Occupation: —</div>
+          <div class="panel-title mt2">Known traits</div>
+          <ul id="ov-victim-traits" class="text-sm text-dim" style="padding-left:1rem"></ul>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Scene Summary</div>
+          <div class="text-sm text-dim" id="ov-setting">—</div>
+          <div class="panel-title mt2">Causal Timeline</div>
+          <ol id="ov-timeline" class="text-sm text-dim" style="padding-left:1.2rem"></ol>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Witnesses (<span id="ov-witness-count">0</span>)</div>
+        <div id="ov-witnesses" style="display:flex;flex-wrap:wrap;gap:0.5rem"></div>
+      </div>
+    </div>
+
+    <!-- ── WITNESSES ──────────────────────────────────────────────────── -->
+    <div id="tab-witnesses" class="tab-panel">
+      <div class="grid2" style="height:100%;gap:1rem">
+        <!-- Witness list -->
+        <div>
+          <div class="panel-title">Witnesses</div>
+          <div id="witness-list" class="flex-col gap1"></div>
+        </div>
+        <!-- Interview panel -->
+        <div id="interview-panel" class="flex-col gap1">
+          <div class="panel-title">Interview — <span id="interview-who">select a witness</span></div>
+          <div class="chat-log" id="chat-log">
+            <div class="text-dim text-sm" style="margin:auto">Select a witness to begin questioning.</div>
+          </div>
+          <div class="flex gap1 mt1">
+            <input type="text" id="chat-input" placeholder="Ask a question..." disabled
+              onkeydown="if(event.key==='Enter')sendQuestion()">
+            <button class="btn btn-sm btn-primary" id="chat-send-btn" onclick="sendQuestion()" disabled>ASK</button>
+          </div>
+          <button class="btn btn-sm btn-danger" id="chat-reset-btn" onclick="resetInterview()" style="display:none">
+            RESET INTERVIEW
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── EVIDENCE ───────────────────────────────────────────────────── -->
+    <div id="tab-evidence" class="tab-panel">
+      <div class="panel-title">Evidence Locker</div>
+      <div id="evidence-list" class="flex-col gap1 mb2"></div>
+      <!-- Evidence detail modal is rendered inline below list when expanded -->
+      <div id="evidence-detail" class="panel hidden" style="margin-top:1rem">
+        <div class="panel-title">Examination — <span id="ev-detail-name"></span></div>
+        <div id="ev-examine-text" class="text-sm mb2"></div>
+        <div class="text-sm text-dim mb1" id="ev-mislead"></div>
+        <label>Your annotation</label>
+        <textarea id="ev-annotation" rows="3" maxlength="500" oninput="debouncedAnnotate()"></textarea>
+        <div class="text-right text-sm text-dim mt1"><span id="ev-ann-count">0</span>/500</div>
+      </div>
+    </div>
+
+    <!-- ── CASE BOARD ─────────────────────────────────────────────────── -->
+    <div id="tab-board" class="tab-panel">
+      <div class="panel-title">Case Board</div>
+      <div class="board-toolbar">
+        <button class="tool-btn active" id="tool-pen"    onclick="setTool('pen')">✏ PEN</button>
+        <button class="tool-btn"        id="tool-eraser" onclick="setTool('eraser')">⌫ ERASER</button>
+        <button class="tool-btn"        id="tool-note"   onclick="setTool('note')">📌 NOTE</button>
+        <div style="flex:1"></div>
+        <div class="color-swatch active" style="background:#c8b89a" onclick="setBoardColor('#c8b89a',this)"></div>
+        <div class="color-swatch" style="background:#b03030" onclick="setBoardColor('#b03030',this)"></div>
+        <div class="color-swatch" style="background:#4a9a4a" onclick="setBoardColor('#4a9a4a',this)"></div>
+        <div class="color-swatch" style="background:#4a7ab0" onclick="setBoardColor('#4a7ab0',this)"></div>
+        <div class="color-swatch" style="background:#a07020" onclick="setBoardColor('#a07020',this)"></div>
+        <button class="tool-btn" onclick="board && board.clear()">CLEAR</button>
+        <button class="tool-btn" onclick="board && board.forceSave()">SAVE</button>
+      </div>
+      <canvas id="board-canvas" width="900" height="500"></canvas>
+    </div>
+
+    <!-- ── CONSULT ────────────────────────────────────────────────────── -->
+    <div id="tab-consult" class="tab-panel">
+      <div class="panel-title">Specialist Consult</div>
+      <div style="display:flex;margin-bottom:-1px">
+        <button class="specialist-tab active" id="stab-pathologist"
+          onclick="switchSpecialist('pathologist')">Dr. Harlow — Pathologist</button>
+        <button class="specialist-tab"        id="stab-toxicologist"
+          onclick="switchSpecialist('toxicologist')">Dr. Avery — Toxicologist</button>
+      </div>
+      <div class="panel" style="border-top:none">
+        <div id="consult-history" class="flex-col gap1 mb2" style="max-height:300px;overflow-y:auto"></div>
+        <div class="flex gap1">
+          <input type="text" id="consult-input" placeholder="Ask the specialist..."
+            onkeydown="if(event.key==='Enter')sendConsult()">
+          <button class="btn btn-sm btn-primary" onclick="sendConsult()">SEND</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REPORT ─────────────────────────────────────────────────────── -->
+    <div id="tab-report" class="tab-panel">
+      <div class="panel-title">File Inquest Report</div>
+      <div id="report-form-wrap" class="panel" style="max-width:700px">
+        <div class="text-sm text-dim mb2">
+          Complete your findings. This report cannot be amended once filed.
+        </div>
+        <div class="flex-col gap2">
+          <div>
+            <label>Suspected perpetrator</label>
+            <input type="text" id="r-suspect" placeholder="Full name of the killer" maxlength="128">
+          </div>
+          <div>
+            <label>Cause of death</label>
+            <input type="text" id="r-cod" placeholder="e.g. suffocation, blunt force trauma" maxlength="256">
+          </div>
+          <div>
+            <label>Method</label>
+            <input type="text" id="r-method" placeholder="How was the act carried out?" maxlength="256">
+          </div>
+          <div>
+            <label>Motive</label>
+            <input type="text" id="r-motive" placeholder="Why did the perpetrator act?" maxlength="256">
+          </div>
+          <div>
+            <label>Evidence cited <span class="text-dim">(click to toggle)</span></label>
+            <div id="evidence-cite-list" class="flex-col gap1 mt1"></div>
+          </div>
+          <button class="btn btn-primary" onclick="fileReport()" id="report-submit-btn">FILE REPORT</button>
+        </div>
+      </div>
+
+      <!-- Result debrief (shown after filing) -->
+      <div id="report-result" class="hidden" style="max-width:800px">
+        <div class="verdict-banner">
+          <div class="verdict-text" id="verdict-text"></div>
+          <div class="score-ring mt1" id="score-text"></div>
+        </div>
+
+        <div class="panel mb2">
+          <div class="panel-title">Field Debrief</div>
+          <div class="field-row" style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-dim)">
+            <div>Field</div><div>Your answer</div><div>Actual</div><div></div>
+          </div>
+          <div id="debrief-fields"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Evidence Analysis</div>
+          <div id="debrief-evidence"></div>
+        </div>
+
+        <div class="mt2">
+          <a href="/" class="btn">NEW INQUEST</a>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const CASE_ID = {{ case_id }};
+  let caseData   = null;
+  let board      = null;
+  let activeWitnessId = null;
+  let activeSpecialist = 'pathologist';
+  let citedEvidenceIds = new Set();
+  let currentEvidenceId = null;
+  let _annotateTimer = null;
+  let _interviewSrc  = null;
+
+  // ── Boot ──────────────────────────────────────────────────────────────
+  async function boot() {
+    try {
+      const r = await fetch(`/api/case/${CASE_ID}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      caseData = await r.json();
+    } catch (e) {
+      showToast('Failed to load case: ' + e.message);
+      return;
+    }
+
+    renderOverview();
+    renderWitnessList();
+    renderEvidenceList();
+    renderEvidenceCiteList();
+
+    // Init board lazily when tab shown
+    // Check if already closed
+    if (caseData.is_closed) {
+      document.getElementById('case-status-badge').textContent = 'CLOSED';
+      document.getElementById('case-status-badge').className = 'stamp stamp-closed';
+      document.getElementById('report-filed-note').classList.remove('hidden');
+      // Load existing report
+      loadExistingReport();
+    }
+  }
+
+  // ── Tab switching ─────────────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sidebar-link').forEach(l => {
+      l.classList.toggle('active', l.dataset.tab === name);
+    });
+    const panel = document.getElementById('tab-' + name);
+    if (panel) panel.classList.add('active');
+
+    if (name === 'board' && !board) {
+      board = new Board(document.getElementById('board-canvas'), CASE_ID);
+    }
+    if (name === 'consult') loadConsultHistory();
+  }
+
+  // ── Overview ──────────────────────────────────────────────────────────
+  function renderOverview() {
+    const v = caseData.victim;
+
+    // Header victim
+    document.getElementById('victim-name').textContent = v.name;
+    document.getElementById('victim-occ').textContent  = v.occupation;
+    document.getElementById('victim-portrait').innerHTML =
+      Portrait.generate(String(v.portrait_seed));
+
+    // Overview panel
+    document.getElementById('ov-victim-name').textContent = v.name;
+    document.getElementById('ov-victim-age').textContent  = 'Age: ' + v.age;
+    document.getElementById('ov-victim-occ').textContent  = 'Occupation: ' + v.occupation;
+
+    const traitUl = document.getElementById('ov-victim-traits');
+    (v.traits || []).forEach(t => {
+      const li = document.createElement('li'); li.textContent = t; traitUl.appendChild(li);
+    });
+
+    // Setting / timeline (API returns these as top-level fields)
+    // Prettify setting slug: 'public_venue' → 'Public Venue'
+    const settingRaw = caseData.setting || '';
+    document.getElementById('ov-setting').textContent =
+      settingRaw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || '—';
+    const tlOl = document.getElementById('ov-timeline');
+    (caseData.timeline || []).forEach(step => {
+      const li = document.createElement('li');
+      // Timeline items may be objects {time, event, known_by} or plain strings
+      if (step && typeof step === 'object') {
+        li.textContent = step.time ? `[${step.time}] ${step.event}` : step.event;
+      } else {
+        li.textContent = step;
+      }
+      tlOl.appendChild(li);
+    });
+
+    // Witness chips
+    document.getElementById('ov-witness-count').textContent = caseData.witnesses.length;
+    const owDiv = document.getElementById('ov-witnesses');
+    caseData.witnesses.forEach(w => {
+      const chip = document.createElement('div');
+      chip.style.cssText = 'display:flex;align-items:center;gap:0.5rem;border:1px solid var(--border);padding:0.3rem 0.5rem;cursor:pointer';
+      chip.innerHTML = `<span style="width:24px;height:24px">${Portrait.generate(String(w.portrait_seed))}</span><span class="text-sm">${w.name}</span>`;
+      chip.onclick = () => { switchTab('witnesses'); selectWitness(w.id); };
+      owDiv.appendChild(chip);
+    });
+  }
+
+  // ── Witness list & interview ───────────────────────────────────────────
+  function renderWitnessList() {
+    const list = document.getElementById('witness-list');
+    list.innerHTML = '';
+    caseData.witnesses.forEach(w => {
+      const card = document.createElement('div');
+      card.className = 'witness-card';
+      card.id = 'wcard-' + w.id;
+      card.innerHTML = `
+        <div class="witness-portrait">${Portrait.generate(String(w.portrait_seed))}</div>
+        <div class="witness-info">
+          <div class="name">${w.name}</div>
+          <div class="role">${w.occupation}</div>
+          <div class="text-sm text-dim">${w.relationship_to_victim}</div>
+        </div>`;
+      card.onclick = () => selectWitness(w.id);
+      list.appendChild(card);
+    });
+  }
+
+  async function selectWitness(wId) {
+    if (_interviewSrc) { _interviewSrc.close(); _interviewSrc = null; }
+    activeWitnessId = wId;
+
+    document.querySelectorAll('.witness-card').forEach(c => c.classList.remove('active'));
+    const card = document.getElementById('wcard-' + wId);
+    if (card) card.classList.add('active');
+
+    const w = caseData.witnesses.find(x => x.id === wId);
+    document.getElementById('interview-who').textContent = w ? w.name : '?';
+    document.getElementById('chat-input').disabled = false;
+    document.getElementById('chat-send-btn').disabled = false;
+    document.getElementById('chat-reset-btn').style.display = 'block';
+
+    // Load history
+    const log = document.getElementById('chat-log');
+    log.innerHTML = '';
+    try {
+      const r = await fetch(`/api/witness/${wId}/history?case_id=${CASE_ID}`);
+      const msgs = await r.json();
+      msgs.forEach(m => appendChatMsg(m.role, m.content));
+    } catch {}
+
+    if (!log.children.length) {
+      log.innerHTML = '<div class="text-dim text-sm" style="margin:auto">Begin your questioning.</div>';
+    }
+    log.scrollTop = log.scrollHeight;
+    // Auto-focus the question input
+    document.getElementById('chat-input').focus();
+  }
+
+  function appendChatMsg(role, content) {
+    const log = document.getElementById('chat-log');
+    // Remove placeholder
+    if (log.querySelector('.text-dim')) {
+      const p = log.querySelector('.text-dim');
+      if (p && p.style.margin === 'auto') p.remove();
+    }
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-msg ' + role;
+    wrap.innerHTML = `<div class="chat-role">${role === 'user' ? 'Coroner' : (activeWitnessId ? (caseData.witnesses.find(w=>w.id===activeWitnessId)||{}).name||'Witness' : 'Witness')}</div>
+      <div class="chat-bubble">${escHtml(content)}</div>`;
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+    return wrap;
+  }
+
+  async function sendQuestion() {
+    const input = document.getElementById('chat-input');
+    const q = input.value.trim();
+    if (!q || !activeWitnessId) return;
+    input.value = '';
+    input.disabled = true;
+    document.getElementById('chat-send-btn').disabled = true;
+
+    appendChatMsg('user', q);
+
+    // SSE stream assistant reply
+    const log = document.getElementById('chat-log');
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-msg assistant';
+    const w = caseData.witnesses.find(x => x.id === activeWitnessId);
+    wrap.innerHTML = `<div class="chat-role">${w ? w.name : 'Witness'}</div>
+      <div class="chat-bubble typing-cursor" id="streaming-bubble"></div>`;
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+
+    const bubble = document.getElementById('streaming-bubble');
+    let fullText = '';
+
+    try {
+      const response = await fetch(`/api/witness/${activeWitnessId}/interview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ case_id: CASE_ID, message: q }),
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const msg = JSON.parse(line.slice(6));
+            if (msg.type === 'token') {
+              fullText += msg.text;
+              // Strip meta-commentary suffix client-side too (after --- or "In this response")
+              const cleanText = stripOOC(fullText);
+              bubble.textContent = cleanText;
+              bubble.id = 'streaming-bubble';
+              log.scrollTop = log.scrollHeight;
+            } else if (msg.type === 'done') {
+              bubble.classList.remove('typing-cursor');
+              bubble.removeAttribute('id');
+              bubble.textContent = stripOOC(fullText);
+            }
+          } catch {}
+        }
+      }
+    } catch (e) {
+      bubble.classList.remove('typing-cursor');
+      bubble.textContent = '[Connection error]';
+    }
+
+    input.disabled = false;
+    document.getElementById('chat-send-btn').disabled = false;
+    input.focus();
+  }
+
+  async function resetInterview() {
+    if (!activeWitnessId) return;
+    await fetch(`/api/witness/${activeWitnessId}/history?case_id=${CASE_ID}`, { method: 'DELETE' });
+    const log = document.getElementById('chat-log');
+    log.innerHTML = '<div class="text-dim text-sm" style="margin:auto">Interview reset.</div>';
+    showToast('Interview history cleared.');
+  }
+
+  function stripOOC(text) {
+    // Remove anything after "---" separator or "In this response" meta-commentary
+    const sepIdx = text.indexOf('\n---');
+    if (sepIdx !== -1) return text.slice(0, sepIdx).trim();
+    const metaIdx = text.indexOf('\nIn this response');
+    if (metaIdx !== -1) return text.slice(0, metaIdx).trim();
+    return text;
+  }
+
+  // ── Evidence ──────────────────────────────────────────────────────────
+  function renderEvidenceList() {
+    const list = document.getElementById('evidence-list');
+    list.innerHTML = '';
+    caseData.evidence.forEach(ev => {
+      const item = document.createElement('div');
+      item.className = 'evidence-item' + (ev.is_examined ? ' examined' : '');
+      item.id = 'evrow-' + ev.id;
+      item.innerHTML = `
+        <span class="evidence-icon">${ev.is_examined ? '🔍' : '○'}</span>
+        <span class="evidence-name">${escHtml(ev.item)}</span>
+        <span class="evidence-loc text-dim text-sm">${escHtml(ev.location)}</span>
+        <span class="text-sm text-dim">${ev.is_examined ? 'EXAMINED' : ''}</span>`;
+      item.onclick = () => examineEvidence(ev.id);
+      list.appendChild(item);
+    });
+  }
+
+  async function examineEvidence(evId) {
+    currentEvidenceId = evId;
+    const ev = caseData.evidence.find(e => e.id === evId);
+
+    // Examine if not yet examined
+    if (!ev.is_examined) {
+      try {
+        const r = await fetch(`/api/evidence/${evId}/examine`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ case_id: CASE_ID }),
+        });
+        const data = await r.json();
+        ev.is_examined = true;
+        ev.examine_text = data.examine_text;
+        ev.misleading_reading = data.misleading_reading;
+        // Update row
+        const row = document.getElementById('evrow-' + evId);
+        if (row) {
+          row.classList.add('examined');
+          row.querySelector('.evidence-icon').textContent = '🔍';
+          row.querySelector('.text-sm.text-dim').textContent = 'EXAMINED';
+        }
+      } catch (e) {
+        showToast('Failed to examine evidence.');
+        return;
+      }
+    }
+
+    // Highlight active row, clear previous highlight
+    document.querySelectorAll('.evidence-item.active-ev').forEach(r => r.classList.remove('active-ev'));
+    const activeRow = document.getElementById('evrow-' + evId);
+    if (activeRow) activeRow.classList.add('active-ev');
+
+    // Show detail panel
+    document.getElementById('evidence-detail').classList.remove('hidden');
+    document.getElementById('ev-detail-name').textContent = ev.item;
+    document.getElementById('ev-examine-text').textContent = ev.examine_text || '';
+    document.getElementById('ev-mislead').textContent = ev.misleading_reading
+      ? 'Initial reading: ' + ev.misleading_reading : '';
+    const ann = document.getElementById('ev-annotation');
+    ann.value = ev.player_annotation || '';
+    document.getElementById('ev-ann-count').textContent = ann.value.length;
+  }
+
+  function debouncedAnnotate() {
+    const ann = document.getElementById('ev-annotation');
+    document.getElementById('ev-ann-count').textContent = ann.value.length;
+    if (_annotateTimer) clearTimeout(_annotateTimer);
+    _annotateTimer = setTimeout(() => saveAnnotation(), 1200);
+  }
+
+  async function saveAnnotation() {
+    if (!currentEvidenceId) return;
+    const ann = document.getElementById('ev-annotation').value;
+    try {
+      await fetch(`/api/evidence/${currentEvidenceId}/annotate`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ case_id: CASE_ID, annotation: ann }),
+      });
+      const ev = caseData.evidence.find(e => e.id === currentEvidenceId);
+      if (ev) ev.player_annotation = ann;
+    } catch {}
+  }
+
+  // ── Consult ───────────────────────────────────────────────────────────
+  function switchSpecialist(sp) {
+    activeSpecialist = sp;
+    document.querySelectorAll('.specialist-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('stab-' + sp).classList.add('active');
+    loadConsultHistory();
+  }
+
+  async function loadConsultHistory() {
+    try {
+      const r = await fetch(`/api/consult/${CASE_ID}`);
+      const logs = await r.json();
+      const hist = document.getElementById('consult-history');
+      hist.innerHTML = '';
+      logs.filter(l => l.specialist === activeSpecialist).forEach(l => {
+        appendConsultEntry(l.question, l.response);
+      });
+    } catch {}
+  }
+
+  function appendConsultEntry(q, a) {
+    const hist = document.getElementById('consult-history');
+    const entry = document.createElement('div');
+    entry.innerHTML = `
+      <div class="text-sm" style="color:var(--ink-dim);margin-bottom:0.2rem">Q: ${escHtml(q)}</div>
+      <div class="text-sm" style="border-left:2px solid var(--border);padding-left:0.5rem">${escHtml(a)}</div>`;
+    hist.appendChild(entry);
+    hist.scrollTop = hist.scrollHeight;
+  }
+
+  async function sendConsult() {
+    const input = document.getElementById('consult-input');
+    const q = input.value.trim();
+    if (!q) return;
+    input.value = '';
+    input.disabled = true;
+
+    const hist = document.getElementById('consult-history');
+    const entry = document.createElement('div');
+    entry.innerHTML = `<div class="text-sm" style="color:var(--ink-dim);margin-bottom:0.2rem">Q: ${escHtml(q)}</div>
+      <div class="text-sm typing-cursor" id="consult-bubble" style="border-left:2px solid var(--border);padding-left:0.5rem"></div>`;
+    hist.appendChild(entry);
+
+    let fullText = '';
+    try {
+      const response = await fetch(`/api/consult/${CASE_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specialist: activeSpecialist, question: q }),
+      });
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const msg = JSON.parse(line.slice(6));
+            if (msg.type === 'token') {
+              fullText += msg.text;
+              document.getElementById('consult-bubble').textContent = stripOOC(fullText);
+              hist.scrollTop = hist.scrollHeight;
+            } else if (msg.type === 'done') {
+              const b = document.getElementById('consult-bubble');
+              if (b) { b.classList.remove('typing-cursor'); b.removeAttribute('id'); }
+            }
+          } catch {}
+        }
+      }
+    } catch {
+      const b = document.getElementById('consult-bubble');
+      if (b) { b.classList.remove('typing-cursor'); b.textContent = '[Error]'; }
+    }
+
+    input.disabled = false;
+    input.focus();
+  }
+
+  // ── Report ────────────────────────────────────────────────────────────
+  function renderEvidenceCiteList() {
+    const list = document.getElementById('evidence-cite-list');
+    list.innerHTML = '';
+    (caseData.evidence || []).forEach(ev => {
+      const row = document.createElement('div');
+      row.className = 'evidence-item';
+      row.id = 'cite-' + ev.id;
+      row.style.cursor = 'pointer';
+      row.innerHTML = `<span class="evidence-icon" id="cite-icon-${ev.id}">○</span>
+        <span class="evidence-name text-sm">${escHtml(ev.item)}</span>
+        <span class="evidence-loc text-dim text-sm">${escHtml(ev.location)}</span>`;
+      row.onclick = () => toggleCite(ev.id);
+      list.appendChild(row);
+    });
+  }
+
+  function toggleCite(evId) {
+    if (citedEvidenceIds.has(evId)) {
+      citedEvidenceIds.delete(evId);
+      document.getElementById('cite-' + evId).classList.remove('cited');
+      document.getElementById('cite-icon-' + evId).textContent = '○';
+    } else {
+      citedEvidenceIds.add(evId);
+      document.getElementById('cite-' + evId).classList.add('cited');
+      document.getElementById('cite-icon-' + evId).textContent = '✓';
+    }
+  }
+
+  async function fileReport() {
+    // Guard: already closed
+    if (caseData && caseData.is_closed) {
+      showToast('Report already filed for this case.');
+      return;
+    }
+    const suspect = document.getElementById('r-suspect').value.trim();
+    const cod     = document.getElementById('r-cod').value.trim();
+    const method  = document.getElementById('r-method').value.trim();
+    const motive  = document.getElementById('r-motive').value.trim();
+
+    if (!suspect || !cod || !method || !motive) {
+      showToast('All fields are required.'); return;
+    }
+
+    const btn = document.getElementById('report-submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'PROCESSING...';
+
+    try {
+      const r = await fetch(`/api/report/${CASE_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          case_id: CASE_ID,
+          suspect_name: suspect,
+          cause_of_death: cod,
+          method, motive,
+          evidence_cited: [...citedEvidenceIds],
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json();
+        showToast(err.detail || 'Filing failed.');
+        btn.disabled = false;
+        btn.textContent = 'FILE REPORT';
+        return;
+      }
+      const data = await r.json();
+      showResult(data.result);
+
+      // Update status badge
+      document.getElementById('case-status-badge').textContent = 'CLOSED';
+      document.getElementById('case-status-badge').className = 'stamp stamp-closed';
+      document.getElementById('report-filed-note').classList.remove('hidden');
+    } catch (e) {
+      showToast('Error: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = 'FILE REPORT';
+    }
+  }
+
+  async function loadExistingReport() {
+    try {
+      const r = await fetch(`/api/report/${CASE_ID}`);
+      if (!r.ok) return;
+      const data = await r.json();
+      showResult(data.result);
+      switchTab('report');
+    } catch {}
+  }
+
+  function showResult(result) {
+    document.getElementById('report-form-wrap').classList.add('hidden');
+    const resDiv = document.getElementById('report-result');
+    resDiv.classList.remove('hidden');
+
+    // Verdict banner
+    const vt = document.getElementById('verdict-text');
+    vt.textContent = result.verdict;
+    vt.className = 'verdict-text ' + {
+      'CORRECT VERDICT': 'verdict-correct',
+      'PARTIAL':         'verdict-partial',
+      'WRONG':           'verdict-wrong',
+    }[result.verdict] || '';
+
+    document.getElementById('score-text').textContent = `Score: ${result.score} / 100`;
+
+    // Field debrief
+    const fields = document.getElementById('debrief-fields');
+    fields.innerHTML = '';
+    const FIELD_LABELS = {
+      perpetrator:   'Perpetrator',
+      cause_of_death:'Cause of Death',
+      method:        'Method',
+      motive:        'Motive',
+    };
+    for (const [key, label] of Object.entries(FIELD_LABELS)) {
+      const f = result[key];
+      if (!f) continue;
+      const row = document.createElement('div');
+      row.className = 'field-row';
+      row.innerHTML = `
+        <div class="field-label">${label}</div>
+        <div class="field-value">${escHtml(f.yours)}</div>
+        <div class="field-actual">${escHtml(f.actual)}</div>
+        <div class="check-icon ${f.correct ? 'check-ok' : 'check-no'}">${f.correct ? '✓' : '✗'}</div>`;
+      fields.appendChild(row);
+    }
+
+    // Evidence debrief
+    const evDiv = document.getElementById('debrief-evidence');
+    evDiv.innerHTML = '';
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;gap:0.75rem;padding:0.3rem 0;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-dim);border-bottom:1px solid var(--ink-faint)';
+    header.innerHTML = '<span style="flex:1">Evidence</span><span style="flex:2">True Implication</span><span>Status</span>';
+    evDiv.appendChild(header);
+
+    for (const ev of result.evidence) {
+      const row = document.createElement('div');
+      row.className = 'evidence-row';
+      let badge = '';
+      if (ev.is_key_evidence && ev.player_cited) badge = '<span class="ev-badge ev-cited">CITED ✓</span>';
+      else if (ev.is_key_evidence && !ev.player_cited) badge = '<span class="ev-badge ev-miss">MISSED</span>';
+      else if (!ev.is_key_evidence && ev.player_cited) badge = '<span class="ev-badge ev-neutral">CITED (N/A)</span>';
+      else badge = '<span class="ev-badge ev-neutral">—</span>';
+
+      row.innerHTML = `<span class="ev-name">${escHtml(ev.item)}</span>
+        <span class="ev-implication">${escHtml(ev.true_implication)}</span>
+        ${badge}`;
+      evDiv.appendChild(row);
+    }
+  }
+
+  // ── Utility ───────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function showToast(msg, ms = 3000) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), ms);
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────
+  boot();
+</script>
+</body>
+</html>
+

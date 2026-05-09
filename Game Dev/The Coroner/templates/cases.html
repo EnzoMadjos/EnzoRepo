@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Inquests — The Coroner</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="logo" href="/"><span>The Coroner</span></a>
+  <span class="breadcrumb text-sm">/ All Inquests</span>
+</header>
+
+<div style="max-width:800px;margin:2rem auto;padding:0 1rem">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.5rem">
+    <div class="panel-title" style="font-size:1.1rem">Case Archive</div>
+    <a href="/" class="btn btn-primary btn-sm">+ NEW INQUEST</a>
+  </div>
+
+  {% if cases %}
+  <div style="display:flex;flex-direction:column;gap:0.75rem">
+    {% for c in cases %}
+    <a href="/case/{{ c.id }}" style="text-decoration:none;color:inherit">
+      <div class="panel" style="display:flex;align-items:center;gap:1rem;cursor:pointer;transition:border-color 0.15s"
+           onmouseover="this.style.borderColor='var(--ink-dim)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:48px;text-align:center;font-size:1.2rem;color:var(--ink-dim)">#{{ c.id }}</div>
+        <div style="flex:1">
+          <div style="font-size:var(--fs);color:var(--ink)">{{ c.title }}</div>
+          <div class="text-sm text-dim">Victim: {{ c.victim }}</div>
+        </div>
+        {% if c.is_closed %}
+          <div style="display:flex;align-items:center;gap:0.75rem">
+            {% if c.score is not none %}
+            <div class="text-sm" style="color:var(--ink-dim)">{{ c.score }}/100</div>
+            {% endif %}
+            {% if c.verdict %}
+            <span class="stamp {% if c.verdict == 'CORRECT VERDICT' %}stamp-correct{% elif c.verdict == 'PARTIAL' %}stamp-open{% else %}stamp-closed{% endif %}"
+                  style="font-size:10px;padding:2px 6px">
+              {{ c.verdict }}
+            </span>
+            {% endif %}
+          </div>
+        {% else %}
+          <span class="stamp stamp-open" style="font-size:10px;padding:2px 6px">OPEN</span>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="panel text-dim text-sm" style="text-align:center;padding:2rem">
+    No cases on file. <a href="/" style="color:var(--ink)">Begin your first inquest.</a>
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>

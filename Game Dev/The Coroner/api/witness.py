@@ -1,0 +1,217 @@
+"""
+Witness interview API — SSE streaming via phi4-mini.
+Each interview turn sends ONLY that witness's knowledge slice + rolling 6-turn history.
+Never leaks full case JSON or killer identity to the model context.
+
+POST /api/witness/{witness_id}/interview   — send a message, stream response
+GET  /api/witness/{witness_id}/history     — full interview history for this witness
+DELETE /api/witness/{witness_id}/history   — reset interview (fresh start)
+"""
+from __future__ import annotations
+
+import json
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from database import get_db
+from llm.ollama_client import get_ollama_client
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/api/witness", tags=["witness"])
+
+HISTORY_WINDOW = 6  # last N turns (user+assistant pairs) kept in context
+
+
+class MessageRequest(BaseModel):
+    message: str
+    case_id: int
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _get_witness_or_404(db: Session, witness_id: int, case_id: int):
+    from models import Witness
+    w = db.query(Witness).filter(
+        Witness.id == witness_id,
+        Witness.case_id == case_id,
+    ).first()
+    if not w:
+        raise HTTPException(status_code=404, detail="Witness not found in this case")
+    return w
+
+
+def _load_history(db: Session, case_id: int, witness_id: int) -> list[dict]:
+    """Load last HISTORY_WINDOW*2 messages (pairs) as OpenAI-style dicts."""
+    from models import InterviewMessage
+    rows = (
+        db.query(InterviewMessage)
+        .filter(
+            InterviewMessage.case_id == case_id,
+            InterviewMessage.witness_id == witness_id,
+        )
+        .order_by(InterviewMessage.created_at.asc())
+        .all()
+    )
+    # Keep only last HISTORY_WINDOW turns (each turn = user + assistant)
+    messages = [{"role": r.role, "content": r.content} for r in rows]
+    max_messages = HISTORY_WINDOW * 2
+    return messages[-max_messages:] if len(messages) > max_messages else messages
+
+
+def _save_message(db: Session, case_id: int, witness_id: int, role: str, content: str) -> None:
+    from models import InterviewMessage
+    db.add(InterviewMessage(
+        case_id=case_id,
+        witness_id=witness_id,
+        role=role,
+        content=content,
+    ))
+    db.commit()
+
+
+def _build_system_prompt(witness, case) -> str:
+    """
+    Build the full system prompt for this witness interview.
+    Uses the cached voice_system_prompt from DB (generated during voice pass).
+    Injects knowledge slice so the model knows what to reveal/conceal.
+    """
+    voice_prompt = witness.voice_system_prompt or ""
+
+    true_knowledge = json.loads(witness.true_knowledge or "[]")
+    concealed_knowledge = json.loads(witness.concealed_knowledge or "[]")
+
+    # Get victim name from case world skeleton
+    skeleton = json.loads(case.world_skeleton or "{}")
+    victim_name = skeleton.get("core", {}).get("victim", {}).get("name", "the victim")
+    case_title = skeleton.get("core", {}).get("case_title", "this case")
+
+    knowledge_str = "\n".join(f"  - {k}" for k in true_knowledge) if true_knowledge else "  - (nothing specific)"
+    concealed_str = "\n".join(f"  - {k}" for k in concealed_knowledge) if concealed_knowledge else "  - (nothing specific)"
+
+    return f"""{voice_prompt}
+
+--- CORONER'S INQUIRY CONTEXT ---
+You are being questioned by the coroner regarding {case_title}.
+The victim is {victim_name}.
+
+FACTS YOU WILL REVEAL when asked the right questions:
+{knowledge_str}
+
+FACTS YOU WILL CONCEAL (only admit under extreme pressure or if directly contradicted by evidence):
+{concealed_str}
+
+YOUR LIE (you will state this convincingly if the topic comes up): {witness.their_lie or "None"}
+
+RULES:
+- Stay fully in character. You are {witness.name}, not an AI.
+- Answer questions naturally — don't volunteer your concealed knowledge.
+- If asked something you don't know, say so honestly.
+- If asked about your lie, deliver it convincingly and defensively if pressed.
+- Keep responses concise (2-4 sentences). This is a formal inquiry, not a conversation.
+- Never break character or acknowledge you are an AI.
+- NEVER add meta-commentary, narration, analysis, or out-of-character notes after your response.
+- Your response ends when the character finishes speaking. Nothing after that."""
+
+
+# ── POST /api/witness/{witness_id}/interview ──────────────────────────────────
+
+@router.post("/{witness_id}/interview")
+async def interview_witness(
+    witness_id: int,
+    body: MessageRequest,
+    db: Session = Depends(get_db),
+):
+    """Stream a witness response via phi4-mini SSE."""
+    from models import Case
+
+    case = db.query(Case).filter(
+        Case.id == body.case_id,
+        Case.is_active == True,
+        Case.is_closed == False,
+    ).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found or already closed")
+
+    witness = _get_witness_or_404(db, witness_id, body.case_id)
+
+    # Build messages for phi4-mini
+    system_prompt = _build_system_prompt(witness, case)
+    history = _load_history(db, body.case_id, witness_id)
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": body.message.strip()})
+
+    # Save user message before streaming
+    _save_message(db, body.case_id, witness_id, "user", body.message.strip())
+
+    # Capture needed values NOW (before session expires after commit)
+    witness_name = witness.name
+    _case_id = body.case_id
+    _witness_id = witness_id
+
+    async def token_stream():
+        client = get_ollama_client()
+        full_response = []
+
+        yield f"data: {json.dumps({'type': 'start', 'witness': witness_name})}\n\n"
+
+        try:
+            async for token in client.chat_stream(messages, temperature=0.85):
+                full_response.append(token)
+                yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
+        except Exception as e:
+            logger.error(f"Stream error for witness {_witness_id}: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'text': 'The witness fell silent.'})}\n\n"
+            return
+
+        # Save complete assistant response (new session — generator runs after request scope)
+        assistant_reply = "".join(full_response)
+        from database import get_db as _get_db
+        stream_db = next(_get_db())
+        try:
+            _save_message(stream_db, _case_id, _witness_id, "assistant", assistant_reply)
+        finally:
+            stream_db.close()
+
+        yield f"data: {json.dumps({'type': 'done', 'witness_id': _witness_id})}\n\n"
+
+    return StreamingResponse(
+        token_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ── GET /api/witness/{witness_id}/history ─────────────────────────────────────
+
+@router.get("/{witness_id}/history")
+async def get_history(witness_id: int, case_id: int, db: Session = Depends(get_db)):
+    from models import InterviewMessage
+    rows = (
+        db.query(InterviewMessage)
+        .filter(
+            InterviewMessage.case_id == case_id,
+            InterviewMessage.witness_id == witness_id,
+        )
+        .order_by(InterviewMessage.created_at.asc())
+        .all()
+    )
+    return [{"role": r.role, "content": r.content, "at": r.created_at.isoformat()} for r in rows]
+
+
+# ── DELETE /api/witness/{witness_id}/history ──────────────────────────────────
+
+@router.delete("/{witness_id}/history")
+async def reset_history(witness_id: int, case_id: int, db: Session = Depends(get_db)):
+    from models import InterviewMessage
+    db.query(InterviewMessage).filter(
+        InterviewMessage.case_id == case_id,
+        InterviewMessage.witness_id == witness_id,
+    ).delete()
+    db.commit()
+    return {"deleted": True}

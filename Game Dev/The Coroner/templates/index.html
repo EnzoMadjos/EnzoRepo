@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Coroner: Inquest</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+
+<div class="lobby">
+  <div class="lobby-logo">
+    <div class="title">THE CORONER</div>
+    <div class="subtitle">— INQUEST —</div>
+  </div>
+
+  <hr class="lobby-divider">
+
+  <!-- Idle state -->
+  <div id="lobby-idle" class="lobby-actions">
+    <p class="text-dim text-sm" style="text-align:center;max-width:280px">
+      A new case is generated for each inquest. Every witness, every clue — procedurally constructed.
+    </p>
+    <button class="btn btn-primary" onclick="startGeneration()">BEGIN INQUEST</button>
+    <a href="/cases" class="text-dim text-sm" style="margin-top:0.5rem;text-align:center">View case archive →</a>
+  </div>
+
+  <!-- Generation in progress -->
+  <div id="lobby-generating" class="lobby-actions hidden">
+    <div class="generate-progress">
+      <div class="uppercase text-dim text-sm mb1">Assembling case file...</div>
+      <div class="progress-track">
+        <div class="progress-fill" id="gen-progress-fill"></div>
+      </div>
+      <div class="generate-stage" id="gen-stage-label">Initialising...</div>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div id="lobby-error" class="lobby-actions hidden">
+    <p class="text-dim text-sm" style="color:#b03030" id="lobby-error-msg">Generation failed.</p>
+    <button class="btn btn-sm mt1" onclick="resetLobby()">TRY AGAIN</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const STAGE_LABELS = {
+    pending:              'Opening case file...',
+    generating_core:      'Establishing victim & motive...',
+    generating_witnesses: 'Building witness profiles...',
+    validating:           'Cross-referencing evidence...',
+    voice_pass:           'Briefing witnesses...',
+    done:                 'Case ready. Entering crime scene...',
+    failed:               'Generation failed.',
+  };
+
+  let _eventSource = null;
+
+  function showToast(msg, ms = 3000) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), ms);
+  }
+
+  function resetLobby() {
+    if (_eventSource) { _eventSource.close(); _eventSource = null; }
+    document.getElementById('lobby-idle').classList.remove('hidden');
+    document.getElementById('lobby-generating').classList.add('hidden');
+    document.getElementById('lobby-error').classList.add('hidden');
+  }
+
+  async function startGeneration() {
+    document.getElementById('lobby-idle').classList.add('hidden');
+    document.getElementById('lobby-generating').classList.remove('hidden');
+    document.getElementById('lobby-error').classList.add('hidden');
+
+    let jobId;
+    try {
+      const r = await fetch('/api/case/generate', { method: 'POST' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      jobId = data.job_id;
+    } catch (e) {
+      showError('Could not start generation: ' + e.message);
+      return;
+    }
+
+    // SSE progress stream
+    _eventSource = new EventSource(`/api/case/generate/${jobId}/stream`);
+
+    _eventSource.onmessage = function (e) {
+      const msg = JSON.parse(e.data);
+
+      if (msg.status === 'failed') {
+        showError(msg.error || 'Case generation failed.');
+        _eventSource.close();
+        return;
+      }
+
+      // Update progress bar (server sends 'pct' key)
+      const pct = msg.pct || msg.progress_pct || 0;
+      document.getElementById('gen-progress-fill').style.width = pct + '%';
+      document.getElementById('gen-stage-label').textContent =
+        STAGE_LABELS[msg.status] || msg.label || msg.status;
+
+      if (msg.status === 'done' && msg.case_id) {
+        _eventSource.close();
+        setTimeout(() => {
+          window.location.href = `/case/${msg.case_id}`;
+        }, 600);
+      }
+    };
+
+    _eventSource.onerror = function () {
+      showError('Connection lost during case generation.');
+      _eventSource.close();
+    };
+  }
+
+  function showError(msg) {
+    document.getElementById('lobby-generating').classList.add('hidden');
+    document.getElementById('lobby-error').classList.remove('hidden');
+    document.getElementById('lobby-error-msg').textContent = msg;
+  }
+</script>
+</body>
+</html>
