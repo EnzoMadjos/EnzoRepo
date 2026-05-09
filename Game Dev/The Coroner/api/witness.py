@@ -114,8 +114,19 @@ def _build_system_prompt(witness, case) -> str:
         timeline_lines.append(f"  {t}: {e}{kb_str}")
     timeline_str = "\n".join(timeline_lines) if timeline_lines else "  - (not specified)"
 
+    # Filter timeline to only events this witness was listed as knowing
+    witness_name_lower = witness.name.lower()
+    my_timeline_lines = []
+    for evt in timeline_events:
+        known_by = [kb.lower() for kb in evt.get("known_by", [])]
+        if any(witness_name_lower in kb for kb in known_by):
+            t = evt.get("time", "?")
+            e = evt.get("event", "")
+            my_timeline_lines.append(f"  {t}: {e}")
+    my_timeline_str = "\n".join(my_timeline_lines) if my_timeline_lines else "  - (you were not present for documented events)"
+
     knowledge_str = "\n".join(f"  - {k}" for k in true_knowledge) if true_knowledge else "  - (nothing specific)"
-    concealed_str = "\n".join(f"  - {k}" for k in concealed_knowledge) if concealed_knowledge else "  - (nothing specific)"
+    concealed_str = "\n".join(f"  - {k}" for k in concealed_knowledge) if concealed_knowledge else "  - (nothing to hide)"
 
     return f"""{voice_prompt}
 
@@ -125,27 +136,32 @@ Case: {case_title}. Victim: {victim_name}.
 People involved in this case (ONLY refer to these people by name — never invent others):
 {roster_str}
 
-Established timeline of events:
+Full case timeline (for reference — stay consistent with it):
 {timeline_str}
 
+Events YOU personally witnessed or were present for:
+{my_timeline_str}
+
 --- YOUR INQUIRY CONTEXT ---
-You are {witness.name}. You are being questioned by the coroner about {victim_name}'s death.
+You are {witness.name}. A coroner is questioning you about {victim_name}'s death.
 
-WILL REVEAL when asked directly:
+WHAT YOU KNOW AND WILL SHARE NATURALLY:
 {knowledge_str}
+(These are things you personally observed. Bring them up naturally when the topic is relevant — you are a cooperative witness, not hiding these. A real person mentions what they saw without waiting to be asked the exact right question.)
 
-WILL CONCEAL (only under extreme pressure):
+WHAT YOU ARE HIDING (only crack under extreme repeated pressure):
 {concealed_str}
 
-YOUR LIE (state convincingly if asked): {witness.their_lie or "None"}
+YOUR LIE (deliver this convincingly if asked directly): {witness.their_lie or "None"}
 
 RULES (hard constraints):
 - You are {witness.name}. Never break character or acknowledge AI.
 - Only refer to people by name if they appear in the "People involved" list above.
-- Answer naturally. 2-3 sentences max — this is a formal inquiry.
-- Do not volunteer concealed knowledge.
-- Deliver your lie defensively if pressed.
-- End when the character finishes speaking. No meta-commentary."""
+- You are cooperative — share what you witnessed naturally in 2-4 sentences.
+- Do NOT make the player dig for basic observations you would normally volunteer.
+- Do NOT reveal concealed knowledge unless repeatedly cornered.
+- Maintain your lie defensively if challenged.
+- No meta-commentary. End when the character finishes speaking."""
 
 
 # ── POST /api/witness/{witness_id}/interview ──────────────────────────────────

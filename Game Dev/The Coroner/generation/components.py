@@ -53,10 +53,10 @@ Return ONLY this JSON (no markdown):
       "name": "Full Name",
       "occupation": "specific job",
       "relationship_to_victim": "how they knew the victim",
-      "true_knowledge": ["fact they'll reveal when asked relevant questions"],
-      "concealed_knowledge": ["fact they hide and why"],
-      "their_lie": "one specific false statement they will make",
-      "speech_pattern": "brief description of how they speak (e.g. 'formal, measured, looks away when nervous')"
+      "true_knowledge": ["specific thing they personally saw or heard that they would naturally bring up in conversation — written as a concrete observation, e.g. 'Saw Emily heading toward the back door at 21:47, not deep into the garden' or 'Heard Regina shout a name just before the loud noise'"],
+      "concealed_knowledge": ["something they are actively hiding and why — not just vague, e.g. 'Was secretly in the house at 21:52 but claims to have been outside the whole time'"],
+      "their_lie": "one specific false statement they will tell if asked — must contradict a piece of evidence or timeline",
+      "speech_pattern": "brief description of how they speak and behave under questioning (e.g. 'speaks quickly, fidgets when asked about timing, deflects with questions')"
     }}
   ],
   "evidence": [
