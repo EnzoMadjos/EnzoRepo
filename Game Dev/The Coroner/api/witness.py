@@ -78,26 +78,58 @@ def _build_system_prompt(witness, case) -> str:
     """
     Build the full system prompt for this witness interview.
     Uses the cached voice_system_prompt from DB (generated during voice pass).
-    Injects knowledge slice so the model knows what to reveal/conceal.
+    Injects the full witness roster + timeline so the LLM never invents people.
     """
     voice_prompt = witness.voice_system_prompt or ""
 
     true_knowledge = json.loads(witness.true_knowledge or "[]")
     concealed_knowledge = json.loads(witness.concealed_knowledge or "[]")
 
-    # Get victim name from case world skeleton
+    # Pull full world context from skeleton
     skeleton = json.loads(case.world_skeleton or "{}")
-    victim_name = skeleton.get("core", {}).get("victim", {}).get("name", "the victim")
-    case_title = skeleton.get("core", {}).get("case_title", "this case")
+    core = skeleton.get("core", {})
+    components = skeleton.get("components", {})
+
+    victim_name = core.get("victim", {}).get("name", "the victim")
+    case_title = core.get("case_title", "this case")
+
+    # Full witness roster — anchors names so LLM never invents characters
+    all_witnesses = components.get("witnesses", [])
+    roster_lines = []
+    for w in all_witnesses:
+        n = w.get("name", "?")
+        occ = w.get("occupation", "")
+        rel = w.get("relationship_to_victim", "")
+        roster_lines.append(f"  - {n} ({occ}) — {rel}")
+    roster_str = "\n".join(roster_lines) if roster_lines else "  - (none listed)"
+
+    # Timeline — so the witness is consistent about events
+    timeline_events = core.get("causal_timeline", [])
+    timeline_lines = []
+    for evt in timeline_events:
+        t = evt.get("time", "?")
+        e = evt.get("event", "")
+        known_by = evt.get("known_by", [])
+        kb_str = f" [known by: {', '.join(known_by)}]" if known_by else ""
+        timeline_lines.append(f"  {t}: {e}{kb_str}")
+    timeline_str = "\n".join(timeline_lines) if timeline_lines else "  - (not specified)"
 
     knowledge_str = "\n".join(f"  - {k}" for k in true_knowledge) if true_knowledge else "  - (nothing specific)"
     concealed_str = "\n".join(f"  - {k}" for k in concealed_knowledge) if concealed_knowledge else "  - (nothing specific)"
 
     return f"""{voice_prompt}
 
---- INQUIRY CONTEXT ---
+--- CASE WORLD FACTS (immutable — never contradict these) ---
 Case: {case_title}. Victim: {victim_name}.
-You are being questioned by the coroner.
+
+People involved in this case (ONLY refer to these people by name — never invent others):
+{roster_str}
+
+Established timeline of events:
+{timeline_str}
+
+--- YOUR INQUIRY CONTEXT ---
+You are {witness.name}. You are being questioned by the coroner about {victim_name}'s death.
 
 WILL REVEAL when asked directly:
 {knowledge_str}
@@ -105,12 +137,13 @@ WILL REVEAL when asked directly:
 WILL CONCEAL (only under extreme pressure):
 {concealed_str}
 
-YOUR LIE (state convincingly): {witness.their_lie or "None"}
+YOUR LIE (state convincingly if asked): {witness.their_lie or "None"}
 
 RULES (hard constraints):
 - You are {witness.name}. Never break character or acknowledge AI.
+- Only refer to people by name if they appear in the "People involved" list above.
 - Answer naturally. 2-3 sentences max — this is a formal inquiry.
-- Don't volunteer concealed knowledge.
+- Do not volunteer concealed knowledge.
 - Deliver your lie defensively if pressed.
 - End when the character finishes speaking. No meta-commentary."""
 
@@ -159,7 +192,7 @@ async def interview_witness(
         yield f"data: {json.dumps({'type': 'start', 'witness': witness_name})}\n\n"
 
         try:
-            async for token in client.chat_stream(messages, temperature=0.85, max_tokens=200):
+            async for token in client.chat_stream(messages, temperature=0.55, max_tokens=200):
                 full_response.append(token)
                 yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
         except DailyLimitExhausted:
