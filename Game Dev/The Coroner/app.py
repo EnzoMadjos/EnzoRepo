@@ -103,6 +103,15 @@ app.include_router(consult_router.router)
 app.include_router(report_router.router)
 
 
+# ── Status endpoints ───────────────────────────────────────────────────────
+
+@app.get("/api/model-status")
+async def model_status():
+    """Return current daily quota exhaustion state for all model chains."""
+    from llm.model_router import get_router
+    return get_router().status()
+
+
 # ── Root route ─────────────────────────────────────────────────────────────
 
 @app.get("/")

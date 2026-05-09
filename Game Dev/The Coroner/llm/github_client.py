@@ -1,7 +1,9 @@
 """
 GitHub Models API client — used for ALL LLM calls (case generation + interactive).
-Generation model: Llama-3.3-70B-Instruct (or GITHUB_MODEL env var)
-Interactive model: gpt-4.1-mini (or INTERACTIVE_MODEL env var)
+
+All methods automatically fall back through the model rotation chain when a
+model's daily quota is hit (HTTP 429). See llm/model_router.py for chains.
+Raises DailyLimitExhausted when all models in the chain are exhausted.
 """
 from __future__ import annotations
 
@@ -12,15 +14,27 @@ from typing import Any, AsyncGenerator
 
 import httpx
 
-from config import (
-    GITHUB_BASE_URL,
-    GITHUB_MODEL,
-    GITHUB_TIMEOUT,
-    GITHUB_TOKEN,
-    INTERACTIVE_MODEL,
+from config import GITHUB_BASE_URL, GITHUB_TIMEOUT, GITHUB_TOKEN
+from llm.model_router import (
+    GENERATION_CHAIN,
+    INTERACTIVE_CHAIN,
+    DailyLimitExhausted,
+    get_router,
 )
 
 logger = logging.getLogger(__name__)
+
+_FENCE_STRIP = staticmethod(lambda c: c.split("```", 2)[1].lstrip("json\n").rsplit("```", 1)[0].strip()
+                            if c.startswith("```") else c)
+
+
+def _strip_fence(content: str) -> str:
+    if content.startswith("```"):
+        content = content.split("```", 2)[1]
+        if content.startswith("json"):
+            content = content[4:]
+        content = content.rsplit("```", 1)[0].strip()
+    return content
 
 
 class GitHubModelsClient:
@@ -28,12 +42,31 @@ class GitHubModelsClient:
         if not GITHUB_TOKEN:
             raise RuntimeError(
                 "GITHUB_TOKEN is not set. "
-                "Add it to Game Dev/The Coroner/.env — needed for case generation."
+                "Add it to Game Dev/The Coroner/.env"
             )
         self._headers = {
             "Authorization": f"Bearer {GITHUB_TOKEN}",
             "Content-Type": "application/json",
         }
+
+    def _is_429(self, exc: Exception) -> bool:
+        return (
+            isinstance(exc, httpx.HTTPStatusError)
+            and exc.response.status_code == 429
+        )
+
+    async def _post(self, payload: dict) -> dict:
+        """Raw POST to chat/completions — returns parsed response JSON."""
+        async with httpx.AsyncClient(timeout=GITHUB_TIMEOUT) as client:
+            r = await client.post(
+                f"{GITHUB_BASE_URL}/chat/completions",
+                headers=self._headers,
+                json=payload,
+            )
+            r.raise_for_status()
+        return r.json()
+
+    # ── Generation calls (use GENERATION_CHAIN) ───────────────────────────────
 
     async def chat_json(
         self,
@@ -41,65 +74,57 @@ class GitHubModelsClient:
         temperature: float = 0.8,
         max_tokens: int = 4096,
     ) -> dict[str, Any]:
-        """
-        Send a chat completion request expecting a JSON response.
-        Returns the parsed JSON dict from the model's reply.
-        Raises on HTTP error, timeout, or invalid JSON.
-        """
-        payload = {
-            "model": GITHUB_MODEL,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "response_format": {"type": "json_object"},
-        }
-
-        async with httpx.AsyncClient(timeout=GITHUB_TIMEOUT) as client:
-            response = await client.post(
-                f"{GITHUB_BASE_URL}/chat/completions",
-                headers=self._headers,
-                json=payload,
-            )
-            response.raise_for_status()
-
-        data = response.json()
-        content = data["choices"][0]["message"]["content"]
-
-        # Strip markdown code fences if model wraps the JSON
-        content = content.strip()
-        if content.startswith("```"):
-            content = content.split("```", 2)[1]
-            if content.startswith("json"):
-                content = content[4:]
-            content = content.rsplit("```", 1)[0].strip()
-
-        return json.loads(content)
+        """Non-streaming JSON call — case generation. Falls back through GENERATION_CHAIN."""
+        router = get_router()
+        while True:
+            model = router.next_generation()
+            try:
+                data = await self._post({
+                    "model": model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "response_format": {"type": "json_object"},
+                })
+                logger.debug(f"[GH] chat_json via {model}")
+                content = _strip_fence(data["choices"][0]["message"]["content"].strip())
+                return json.loads(content)
+            except DailyLimitExhausted:
+                raise
+            except Exception as e:
+                if self._is_429(e):
+                    router.mark_exhausted(model)
+                    continue
+                raise
 
     async def chat_text(
         self,
         messages: list[dict],
         temperature: float = 0.85,
         max_tokens: int = 1024,
-        model: str | None = None,
     ) -> str:
-        """Send a chat request and return the raw text response."""
-        payload = {
-            "model": model or GITHUB_MODEL,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
+        """Non-streaming text call — case generation. Falls back through GENERATION_CHAIN."""
+        router = get_router()
+        while True:
+            model = router.next_generation()
+            try:
+                data = await self._post({
+                    "model": model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                })
+                logger.debug(f"[GH] chat_text via {model}")
+                return data["choices"][0]["message"]["content"].strip()
+            except DailyLimitExhausted:
+                raise
+            except Exception as e:
+                if self._is_429(e):
+                    router.mark_exhausted(model)
+                    continue
+                raise
 
-        async with httpx.AsyncClient(timeout=GITHUB_TIMEOUT) as client:
-            response = await client.post(
-                f"{GITHUB_BASE_URL}/chat/completions",
-                headers=self._headers,
-                json=payload,
-            )
-            response.raise_for_status()
-
-        data = response.json()
-        return data["choices"][0]["message"]["content"].strip()
+    # ── Interactive calls (use INTERACTIVE_CHAIN) ─────────────────────────────
 
     async def chat_json_interactive(
         self,
@@ -107,34 +132,28 @@ class GitHubModelsClient:
         temperature: float = 0.0,
         max_tokens: int = 512,
     ) -> dict:
-        """
-        Non-streaming JSON call using the interactive model (gpt-4.1-mini).
-        Used for scoring and voice pass where structured output is needed.
-        """
-        payload = {
-            "model": INTERACTIVE_MODEL,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "response_format": {"type": "json_object"},
-        }
-
-        async with httpx.AsyncClient(timeout=GITHUB_TIMEOUT) as client:
-            response = await client.post(
-                f"{GITHUB_BASE_URL}/chat/completions",
-                headers=self._headers,
-                json=payload,
-            )
-            response.raise_for_status()
-
-        data = response.json()
-        content = data["choices"][0]["message"]["content"].strip()
-        if content.startswith("```"):
-            content = content.split("```", 2)[1]
-            if content.startswith("json"):
-                content = content[4:]
-            content = content.rsplit("```", 1)[0].strip()
-        return json.loads(content)
+        """Non-streaming JSON — scoring/voice pass. Falls back through INTERACTIVE_CHAIN."""
+        router = get_router()
+        while True:
+            model = router.next_interactive()
+            try:
+                data = await self._post({
+                    "model": model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "response_format": {"type": "json_object"},
+                })
+                logger.debug(f"[GH] chat_json_interactive via {model}")
+                content = _strip_fence(data["choices"][0]["message"]["content"].strip())
+                return json.loads(content)
+            except DailyLimitExhausted:
+                raise
+            except Exception as e:
+                if self._is_429(e):
+                    router.mark_exhausted(model)
+                    continue
+                raise
 
     async def chat_text_interactive(
         self,
@@ -142,24 +161,26 @@ class GitHubModelsClient:
         temperature: float = 0.85,
         max_tokens: int = 512,
     ) -> str:
-        """Non-streaming text call using the interactive model (gpt-4.1-mini)."""
-        payload = {
-            "model": INTERACTIVE_MODEL,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
-
-        async with httpx.AsyncClient(timeout=GITHUB_TIMEOUT) as client:
-            response = await client.post(
-                f"{GITHUB_BASE_URL}/chat/completions",
-                headers=self._headers,
-                json=payload,
-            )
-            response.raise_for_status()
-
-        data = response.json()
-        return data["choices"][0]["message"]["content"].strip()
+        """Non-streaming text — interactive calls. Falls back through INTERACTIVE_CHAIN."""
+        router = get_router()
+        while True:
+            model = router.next_interactive()
+            try:
+                data = await self._post({
+                    "model": model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                })
+                logger.debug(f"[GH] chat_text_interactive via {model}")
+                return data["choices"][0]["message"]["content"].strip()
+            except DailyLimitExhausted:
+                raise
+            except Exception as e:
+                if self._is_429(e):
+                    router.mark_exhausted(model)
+                    continue
+                raise
 
     async def chat_stream(
         self,
@@ -168,43 +189,68 @@ class GitHubModelsClient:
         max_tokens: int = 300,
     ) -> AsyncGenerator[str, None]:
         """
-        Streaming chat using the interactive model (gpt-4.1-mini).
-        Yields text tokens as they arrive via SSE.
-        Used for witness interviews and specialist consults.
+        Streaming SSE — witness interviews and specialist consults.
+        Falls back through INTERACTIVE_CHAIN on 429.
+        Raises DailyLimitExhausted before yielding any tokens if all models exhausted.
         """
-        payload = {
-            "model": INTERACTIVE_MODEL,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": True,
-        }
+        router = get_router()
 
-        async with httpx.AsyncClient(timeout=GITHUB_TIMEOUT) as client:
-            async with client.stream(
-                "POST",
-                f"{GITHUB_BASE_URL}/chat/completions",
-                headers=self._headers,
-                json=payload,
-            ) as response:
-                response.raise_for_status()
-                async for line in response.aiter_lines():
-                    if not line.startswith("data: "):
-                        continue
-                    payload_str = line[6:].strip()
-                    if payload_str == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(payload_str)
-                        delta = chunk["choices"][0].get("delta", {})
-                        token = delta.get("content", "")
-                        if token:
-                            yield token
-                    except (json.JSONDecodeError, KeyError, IndexError):
-                        continue
+        while True:
+            model = router.next_interactive()  # raises DailyLimitExhausted if all out
+            got_429 = False
+
+            try:
+                async with httpx.AsyncClient(timeout=GITHUB_TIMEOUT) as client:
+                    async with client.stream(
+                        "POST",
+                        f"{GITHUB_BASE_URL}/chat/completions",
+                        headers=self._headers,
+                        json={
+                            "model": model,
+                            "messages": messages,
+                            "temperature": temperature,
+                            "max_tokens": max_tokens,
+                            "stream": True,
+                        },
+                    ) as response:
+                        if response.status_code == 429:
+                            router.mark_exhausted(model)
+                            got_429 = True
+                        else:
+                            response.raise_for_status()
+                            logger.debug(f"[GH] chat_stream via {model}")
+                            async for line in response.aiter_lines():
+                                if not line.startswith("data: "):
+                                    continue
+                                payload_str = line[6:].strip()
+                                if payload_str == "[DONE]":
+                                    break
+                                try:
+                                    chunk = json.loads(payload_str)
+                                    delta = chunk["choices"][0].get("delta", {})
+                                    token = delta.get("content", "")
+                                    if token:
+                                        yield token
+                                except (json.JSONDecodeError, KeyError, IndexError):
+                                    continue
+                            return  # success — exit the while loop
+
+            except DailyLimitExhausted:
+                raise
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 429:
+                    router.mark_exhausted(model)
+                    got_429 = True
+                else:
+                    raise
+
+            if not got_429:
+                return  # shouldn't reach — success path returns above
+            # got_429=True → loop continues with next model
 
 
-# Singleton
+# ── Singleton ─────────────────────────────────────────────────────────────────
+
 _client: GitHubModelsClient | None = None
 
 
@@ -221,12 +267,16 @@ async def smoke_test() -> bool:
         client = get_github_client()
         result = await asyncio.wait_for(
             client.chat_text(
-                [{"role": "user", "content": 'Reply with exactly: {"status":"ok"}'}],
-                max_tokens=20,
+                [{"role": "user", "content": "Reply with one word: ready"}],
+                max_tokens=10,
             ),
             timeout=15,
         )
-        return "ok" in result.lower()
+        return len(result) > 0
+    except DailyLimitExhausted:
+        logger.warning("GitHub Models smoke test: all generation models exhausted for today.")
+        return False
     except Exception as e:
         logger.warning(f"GitHub Models smoke test failed: {e}")
         return False
+

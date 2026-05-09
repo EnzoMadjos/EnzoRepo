@@ -15,7 +15,7 @@ from typing import AsyncGenerator
 
 from sqlalchemy.orm import Session
 
-from config import MAX_GENERATION_RETRIES, OLLAMA_TIMEOUT
+from config import GITHUB_TIMEOUT, MAX_GENERATION_RETRIES
 from database import get_db
 from generation.components import generate_components
 from generation.core import generate_core_case
@@ -23,6 +23,7 @@ from generation.entropy import EntropySeed, record_session, sample_entropy
 from generation.schemas import ComponentsSchema, CoreCaseSchema
 from generation.validator import validate_case
 from generation.voice_pass import generate_voice_prompts
+from llm.model_router import DailyLimitExhausted
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +225,7 @@ async def _pipeline(db: Session, job_id: int, session_token: str) -> None:
             _update_job(db, job_id, status="voice_pass", progress_pct=86)
             voice_prompts = await asyncio.wait_for(
                 generate_voice_prompts(core, components),
-                timeout=OLLAMA_TIMEOUT * len(components.witnesses),
+                timeout=GITHUB_TIMEOUT * len(components.witnesses),
             )
             _update_job(db, job_id, progress_pct=95)
 
@@ -254,6 +255,12 @@ async def _pipeline(db: Session, job_id: int, session_token: str) -> None:
         except asyncio.TimeoutError:
             last_error = f"Attempt {attempt}: LLM call timed out"
             logger.warning(last_error)
+        except DailyLimitExhausted as e:
+            # Not retryable — all models exhausted for the day
+            err = f"DAILY_LIMIT_EXHAUSTED: {e}"
+            logger.warning(f"Job {job_id}: {err}")
+            _update_job(db, job_id, status="failed", progress_pct=0, error_detail=err[:1000])
+            return
         except Exception as e:
             last_error = f"Attempt {attempt}: {type(e).__name__}: {str(e)[:300]}"
             logger.warning(last_error)

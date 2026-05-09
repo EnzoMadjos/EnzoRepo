@@ -41,6 +41,17 @@
     <p class="text-dim text-sm" style="color:#b03030" id="lobby-error-msg">Generation failed.</p>
     <button class="btn btn-sm mt1" onclick="resetLobby()">TRY AGAIN</button>
   </div>
+
+  <!-- Daily limit state -->
+  <div id="lobby-closed" class="lobby-actions hidden" style="text-align:center">
+    <div style="font-size:2rem;margin-bottom:0.5rem;">&#9760;</div>
+    <div class="uppercase" style="font-size:1.1rem;letter-spacing:0.12em;color:#c8a96e;margin-bottom:0.5rem">THE MORGUE IS CLOSED</div>
+    <p class="text-dim text-sm" style="max-width:280px;margin:0 auto 1rem">
+      All AI model quotas have been exhausted for today.<br>
+      The morgue reopens at <strong>UTC midnight</strong>.
+    </p>
+    <a href="/cases" class="text-dim text-sm">Review open case files →</a>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -95,7 +106,11 @@
       const msg = JSON.parse(e.data);
 
       if (msg.status === 'failed') {
-        showError(msg.error || 'Case generation failed.');
+        if ((msg.error || '').includes('DAILY_LIMIT')) {
+          showDailyLimit();
+        } else {
+          showError(msg.error || 'Case generation failed.');
+        }
         _eventSource.close();
         return;
       }
@@ -124,6 +139,12 @@
     document.getElementById('lobby-generating').classList.add('hidden');
     document.getElementById('lobby-error').classList.remove('hidden');
     document.getElementById('lobby-error-msg').textContent = msg;
+  }
+
+  function showDailyLimit() {
+    document.getElementById('lobby-generating').classList.add('hidden');
+    document.getElementById('lobby-idle').classList.add('hidden');
+    document.getElementById('lobby-closed').classList.remove('hidden');
   }
 </script>
 </body>

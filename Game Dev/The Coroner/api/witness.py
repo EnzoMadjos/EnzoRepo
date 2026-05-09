@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from llm.github_client import get_github_client
+from llm.model_router import DailyLimitExhausted
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/witness", tags=["witness"])
@@ -161,6 +162,9 @@ async def interview_witness(
             async for token in client.chat_stream(messages, temperature=0.85, max_tokens=200):
                 full_response.append(token)
                 yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
+        except DailyLimitExhausted:
+            yield f"data: {json.dumps({'type': 'daily_limit', 'text': 'The morgue is closed for today. All AI model quotas are exhausted. Come back tomorrow.'})}\n\n"
+            return
         except Exception as e:
             logger.error(f"Stream error for witness {_witness_id}: {e}")
             yield f"data: {json.dumps({'type': 'error', 'text': 'The witness fell silent.'})}\n\n"
