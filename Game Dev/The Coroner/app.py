@@ -29,30 +29,18 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database initialised (WAL mode, all tables created).")
 
-    # Warm-up checks run with tight timeout so they never block startup.
-    # Ollama cold-loads the model into VRAM; this can take 20-30s — we fire it
-    # as a background task so the server is ready for requests immediately.
+    # Warm-up check — GitHub Models API only (Ollama no longer used).
     async def _warmup():
         import asyncio as _asyncio
-        try:
-            from llm.ollama_client import smoke_test as ollama_check
-            ok = await _asyncio.wait_for(ollama_check(), timeout=45)
-            if ok:
-                logger.info(f"Ollama ({config.OLLAMA_MODEL}) — ready.")
-            else:
-                logger.warning(f"Ollama ({config.OLLAMA_MODEL}) — warm-up failed. Interviews may be slow on first call.")
-        except Exception as e:
-            logger.warning(f"Ollama warm-up: {e}")
-
         try:
             from llm.github_client import smoke_test as github_check
             ok = await _asyncio.wait_for(github_check(), timeout=15)
             if ok:
-                logger.info(f"GitHub Models API ({config.GITHUB_MODEL}) — ready.")
+                logger.info(f"GitHub Models API ({config.GITHUB_MODEL} / {config.INTERACTIVE_MODEL}) — ready.")
             else:
-                logger.warning("GitHub Models API not responding. Case generation may fail.")
+                logger.warning("GitHub Models API not responding. Calls may fail.")
         except Exception as e:
-            logger.warning(f"GitHub Models API: {e}")
+            logger.warning(f"GitHub Models API warm-up: {e}")
 
     import asyncio
     asyncio.create_task(_warmup())

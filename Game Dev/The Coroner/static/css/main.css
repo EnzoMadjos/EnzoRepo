@@ -21,10 +21,10 @@
   --stamp-ok: #2a6040;
   --stamp-err:#7a2020;
   --font:     'Courier New', Courier, monospace;
-  --fs:       13px;
-  --fs-sm:    11px;
-  --fs-lg:    16px;
-  --fs-xl:    22px;
+  --fs:       15px;
+  --fs-sm:    13px;
+  --fs-lg:    18px;
+  --fs-xl:    24px;
 }
 
 html, body {
@@ -32,7 +32,7 @@ html, body {
   color: var(--ink);
   font-family: var(--font);
   font-size: var(--fs);
-  line-height: 1.6;
+  line-height: 1.7;
   min-height: 100vh;
 }
 
@@ -81,7 +81,7 @@ button { font-family: var(--font); cursor: pointer; }
 .panel {
   background: var(--paper);
   border: 1px solid var(--border);
-  padding: 1rem;
+  padding: 1.2rem;
 }
 .panel-title {
   font-size: var(--fs-sm);
@@ -89,8 +89,8 @@ button { font-family: var(--font); cursor: pointer; }
   letter-spacing: 0.2em;
   color: var(--ink-dim);
   border-bottom: 1px solid var(--border);
-  padding-bottom: 0.4rem;
-  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.9rem;
 }
 
 /* ── Stamp badge ──────────────────────────────────────────────────────── */
@@ -360,6 +360,86 @@ label {
   max-height: 90vh;
   overflow-y: auto;
 }
+
+/* ── Inquest intro modal ──────────────────────────────────────────────── */
+#inquest-intro {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+#inquest-intro.hidden { display: none !important; }
+.inquest-intro-box {
+  background: var(--paper);
+  border: 2px solid var(--border);
+  padding: 2rem 2.5rem;
+  max-width: 680px;
+  width: 94%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.inquest-intro-box h1 {
+  font-size: var(--fs-xl);
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: var(--ink);
+  margin-bottom: 0.25rem;
+}
+.inquest-intro-box .intro-subtitle {
+  font-size: var(--fs-sm);
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+}
+.inquest-intro-box p {
+  line-height: 1.8;
+  margin-bottom: 1rem;
+  color: var(--ink);
+}
+.inquest-intro-box .intro-section {
+  margin-bottom: 1.25rem;
+}
+.inquest-intro-box .intro-section-title {
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--ink-dim);
+  margin-bottom: 0.5rem;
+}
+.inquest-intro-box ul {
+  padding-left: 1.2rem;
+  list-style: square;
+  line-height: 1.9;
+  color: var(--ink);
+}
+.inquest-intro-box ul li { margin-bottom: 0.25rem; }
+.inquest-intro-box .intro-start-btn {
+  display: block;
+  width: 100%;
+  margin-top: 1.75rem;
+  padding: 0.85rem;
+  font-size: var(--fs-lg);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  background: var(--paper2);
+  color: var(--ink);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: border-color 0.15s, color 0.15s;
+}
+.inquest-intro-box .intro-start-btn:hover {
+  border-color: var(--ink);
+  color: #fff;
+}
+
+/* ── Modal title / close (evidence examine modal) ─────────────────────── */
 .modal-title {
   font-size: var(--fs-lg);
   text-transform: uppercase;

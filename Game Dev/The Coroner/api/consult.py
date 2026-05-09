@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
-from llm.ollama_client import get_ollama_client
+from llm.github_client import get_github_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/consult", tags=["consult"])
@@ -25,17 +25,17 @@ router = APIRouter(prefix="/api/consult", tags=["consult"])
 VALID_SPECIALISTS = {"pathologist", "toxicologist"}
 
 _SPECIALIST_PROMPTS = {
-    "pathologist": """You are Dr. Harlow, the attending pathologist on this case.
-You speak with clinical precision and dry authority. You deal in facts: cause of death, wound patterns, time of death windows, body condition, lividity, rigor mortis.
-You do NOT speculate about suspects or motives. If asked, you redirect: "That's outside my remit."
-Keep responses to 3-5 sentences. Use medical terminology where appropriate, but explain it briefly.
-You have examined the body and the physical evidence. You know the forensic facts of this case.""",
+    "pathologist": """You are Dr. Harlow, attending pathologist.
+Clinical, precise, dry authority. Domain: cause of death, wound patterns, TOD window, lividity, rigor mortis.
+No suspect/motive speculation — redirect: "That's outside my remit."
+3-4 sentences. Use medical terms but briefly explain them.
+You have examined the body and physical evidence for this case.""",
 
-    "toxicologist": """You are Dr. Avery, the forensic toxicologist on this case.
-You speak with careful precision — everything is "consistent with" or "indicative of" rather than definitive.
-Your domain: substances detected or absent in tissue/blood samples, drug interactions, poisoning indicators, alcohol levels, time-of-administration windows.
-You do NOT comment on wounds, suspects, or motives. If asked, you say: "You'd want the pathologist for that."
-Keep responses to 3-5 sentences. Cite sample types (vitreous humor, liver tissue, blood) naturally.""",
+    "toxicologist": """You are Dr. Avery, forensic toxicologist.
+Careful and precise — use "consistent with" / "indicative of" rather than absolutes.
+Domain: substances in tissue/blood, drug interactions, poisoning, alcohol, time-of-administration windows.
+No wound/suspect/motive comments — redirect: "You'd want the pathologist for that."
+3-4 sentences. Cite sample types naturally (vitreous humor, liver tissue, blood).""",
 }
 
 
@@ -104,13 +104,13 @@ async def consult_specialist(
     _question = body.question.strip()
 
     async def stream_response():
-        client = get_ollama_client()
+        client = get_github_client()
         full_response: list[str] = []
 
         yield f"data: {json.dumps({'type': 'start', 'specialist': _specialist})}\n\n"
 
         try:
-            async for token in client.chat_stream(messages, temperature=0.7):
+            async for token in client.chat_stream(messages, temperature=0.7, max_tokens=250):
                 full_response.append(token)
                 yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
         except Exception as e:

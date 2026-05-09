@@ -1,21 +1,20 @@
 """
-Phase 4 — Witness voice pass via Ollama phi4-mini.
+Phase 4 — Witness voice pass via gpt-4.1-mini (GitHub Models).
 Generates a system prompt for each witness used in interview SSE calls.
-Runs sequentially (Ollama processes one at a time).
 """
 from __future__ import annotations
 
 import logging
 
 from generation.schemas import ComponentsSchema, CoreCaseSchema, VoicePromptSchema
-from llm.ollama_client import get_ollama_client
+from llm.github_client import get_github_client
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM = """You are a character writer for a forensic mystery game.
-Given a witness profile, write a system prompt that will be used to roleplay this character during player interrogation.
-The character must stay in character, only reveal true_knowledge when directly asked the right questions,
-never reveal concealed_knowledge unless cornered, and always deliver their_lie convincingly.
+_SYSTEM = """Character writer for forensic mystery game.
+Write a roleplay system prompt for a witness being questioned by the coroner.
+Character stays in-character, reveals true_knowledge only when directly asked,
+conceals concealed_knowledge unless cornered, and delivers their_lie convincingly.
 Respond with valid JSON only."""
 
 
@@ -71,11 +70,10 @@ async def generate_voice_prompts(
     core: CoreCaseSchema, components: ComponentsSchema
 ) -> dict[str, str]:
     """
-    Generate voice system prompts for all witnesses.
+    Generate voice system prompts for all witnesses via gpt-4.1-mini.
     Returns dict: witness_name -> system_prompt string.
-    Runs sequentially — Ollama processes one request at a time.
     """
-    client = get_ollama_client()
+    client = get_github_client()
     victim_name = core.victim.name
     killer_name = core.killer.witness_name
     results: dict[str, str] = {}
@@ -97,7 +95,7 @@ async def generate_voice_prompts(
         )
 
         try:
-            raw = await client.chat_json(messages, temperature=0.75, num_ctx=4096)
+            raw = await client.chat_json_interactive(messages, temperature=0.75, max_tokens=500)
             voice = VoicePromptSchema.model_validate(raw)
             results[witness.name] = voice.system_prompt
             logger.info(f"  Voice ready for {witness.name}: {voice.speech_style[:60]}")

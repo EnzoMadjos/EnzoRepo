@@ -18,12 +18,12 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
-from llm.ollama_client import get_ollama_client
+from llm.github_client import get_github_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/witness", tags=["witness"])
 
-HISTORY_WINDOW = 6  # last N turns (user+assistant pairs) kept in context
+HISTORY_WINDOW = 4  # last N turns (user+assistant pairs) kept in context — trimmed for token efficiency
 
 
 class MessageRequest(BaseModel):
@@ -94,27 +94,24 @@ def _build_system_prompt(witness, case) -> str:
 
     return f"""{voice_prompt}
 
---- CORONER'S INQUIRY CONTEXT ---
-You are being questioned by the coroner regarding {case_title}.
-The victim is {victim_name}.
+--- INQUIRY CONTEXT ---
+Case: {case_title}. Victim: {victim_name}.
+You are being questioned by the coroner.
 
-FACTS YOU WILL REVEAL when asked the right questions:
+WILL REVEAL when asked directly:
 {knowledge_str}
 
-FACTS YOU WILL CONCEAL (only admit under extreme pressure or if directly contradicted by evidence):
+WILL CONCEAL (only under extreme pressure):
 {concealed_str}
 
-YOUR LIE (you will state this convincingly if the topic comes up): {witness.their_lie or "None"}
+YOUR LIE (state convincingly): {witness.their_lie or "None"}
 
-RULES:
-- Stay fully in character. You are {witness.name}, not an AI.
-- Answer questions naturally — don't volunteer your concealed knowledge.
-- If asked something you don't know, say so honestly.
-- If asked about your lie, deliver it convincingly and defensively if pressed.
-- Keep responses concise (2-4 sentences). This is a formal inquiry, not a conversation.
-- Never break character or acknowledge you are an AI.
-- NEVER add meta-commentary, narration, analysis, or out-of-character notes after your response.
-- Your response ends when the character finishes speaking. Nothing after that."""
+RULES (hard constraints):
+- You are {witness.name}. Never break character or acknowledge AI.
+- Answer naturally. 2-3 sentences max — this is a formal inquiry.
+- Don't volunteer concealed knowledge.
+- Deliver your lie defensively if pressed.
+- End when the character finishes speaking. No meta-commentary."""
 
 
 # ── POST /api/witness/{witness_id}/interview ──────────────────────────────────
@@ -155,13 +152,13 @@ async def interview_witness(
     _witness_id = witness_id
 
     async def token_stream():
-        client = get_ollama_client()
+        client = get_github_client()
         full_response = []
 
         yield f"data: {json.dumps({'type': 'start', 'witness': witness_name})}\n\n"
 
         try:
-            async for token in client.chat_stream(messages, temperature=0.85):
+            async for token in client.chat_stream(messages, temperature=0.85, max_tokens=200):
                 full_response.append(token)
                 yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
         except Exception as e:

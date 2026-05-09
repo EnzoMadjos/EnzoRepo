@@ -222,6 +222,59 @@
   </main>
 </div>
 
+<!-- ── Inquest Intro Modal ───────────────────────────────────────────── -->
+<div id="inquest-intro" class="hidden">
+  <div class="inquest-intro-box">
+    <h1>The Coroner: Inquest</h1>
+    <div class="intro-subtitle">Case #{{ case_id }} — Briefing</div>
+
+    <div class="intro-section">
+      <p>
+        A body has been found. As the presiding Coroner, it falls to you to determine
+        the cause and manner of death — and to name the person responsible.
+        Evidence has been collected. Witnesses have been brought in for questioning.
+        The truth is in the record. Find it.
+      </p>
+    </div>
+
+    <div class="intro-section">
+      <div class="intro-section-title">Your Investigation Tools</div>
+      <ul>
+        <li><strong>Overview</strong> — Read the case summary: victim profile, setting, and known timeline of events.</li>
+        <li><strong>Witnesses</strong> — Interview each witness. Ask direct questions. They may lie, deflect, or reveal critical facts. Push harder if something doesn't add up.</li>
+        <li><strong>Evidence</strong> — Examine all collected physical evidence. Click any item to view its forensic details and add annotations. Cite evidence you'll use in your report.</li>
+        <li><strong>Consult</strong> — Call in Dr. Harlow (pathologist) or Dr. Avery (toxicologist) for specialist opinions on wounds, substances, and time of death.</li>
+        <li><strong>Board</strong> — Use the free-draw investigation board to map connections, note suspects, and organize your theory visually. All pins save automatically.</li>
+        <li><strong>Report</strong> — When ready, file your official Coroner's Report. Name the killer, cause of death, method, motive, and cite your supporting evidence. You get one submission per case.</li>
+      </ul>
+    </div>
+
+    <div class="intro-section">
+      <div class="intro-section-title">How You Are Scored</div>
+      <ul>
+        <li>Correct perpetrator: <strong>40 pts</strong></li>
+        <li>Correct cause of death: <strong>20 pts</strong></li>
+        <li>Correct method: <strong>15 pts</strong></li>
+        <li>Correct motive: <strong>10 pts</strong></li>
+        <li>Key evidence cited: <strong>up to 15 pts</strong></li>
+      </ul>
+    </div>
+
+    <div class="intro-section">
+      <div class="intro-section-title">Remember</div>
+      <p style="margin-bottom:0">
+        Witnesses can lie. Evidence can mislead. Your job is to weigh what you find
+        and reach the most defensible verdict. Cases remain open until you file your report.
+        There is no time limit — but there is only one submission.
+      </p>
+    </div>
+
+    <button class="intro-start-btn" onclick="dismissIntro()">
+      BEGIN INVESTIGATION →
+    </button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -813,8 +866,23 @@
     setTimeout(() => t.classList.remove('show'), ms);
   }
 
+  // ── Inquest intro modal ───────────────────────────────────────────────
+  function showIntroIfNeeded() {
+    const key = 'coroner_intro_seen_' + CASE_ID;
+    if (!localStorage.getItem(key)) {
+      document.getElementById('inquest-intro').classList.remove('hidden');
+    }
+  }
+
+  function dismissIntro() {
+    const key = 'coroner_intro_seen_' + CASE_ID;
+    localStorage.setItem(key, '1');
+    document.getElementById('inquest-intro').classList.add('hidden');
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────
   boot();
+  showIntroIfNeeded();
 </script>
 </body>
 </html>

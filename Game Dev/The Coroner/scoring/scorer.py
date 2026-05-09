@@ -37,8 +37,6 @@ import json
 import logging
 from typing import TYPE_CHECKING
 
-import httpx
-
 import config
 
 if TYPE_CHECKING:
@@ -48,37 +46,28 @@ logger = logging.getLogger(__name__)
 
 # ── Prompt templates ───────────────────────────────────────────────────────
 
-_FIELD_SCORE_SYSTEM = """You are a scoring judge for a forensic mystery game.
-You will be given a ground truth answer and a player's answer for a field.
-Return ONLY valid JSON with exactly this shape: {"correct": true/false, "reason": "one sentence"}
-Rules:
-- For names: match if the player's answer clearly refers to the same person (partial names, titles, and common variants are acceptable).
-- For other fields: match if the player's answer captures the essential meaning (synonyms and paraphrasing are acceptable).
-- Do NOT add any text outside the JSON object."""
+_FIELD_SCORE_SYSTEM = """Scoring judge for a forensic mystery game.
+Given a ground truth and player answer, return ONLY: {"correct": true/false, "reason": "one sentence"}
+Name match: accept partial names, titles, common variants.
+Other fields: accept synonyms and paraphrases if the core meaning matches."""
 
-_EVIDENCE_RELEVANCE_SYSTEM = """You are a scoring judge for a forensic mystery game.
-You will be given a piece of evidence's true implication, the killer's name, and the murder method.
-Return ONLY valid JSON: {"is_key_evidence": true/false}
-is_key_evidence = true if this evidence's true implication directly connects to the killer or the method of murder."""
+_EVIDENCE_RELEVANCE_SYSTEM = """Scoring judge for a forensic mystery game.
+Return ONLY: {"is_key_evidence": true/false}
+is_key_evidence=true if the evidence implication directly connects to the killer OR murder method."""
 
 
-async def _llm_json(system: str, user: str, timeout: int = 20) -> dict:
-    """Call phi4-mini, return parsed JSON. Raises on failure."""
-    payload = {
-        "model": config.OLLAMA_MODEL,
-        "messages": [
+async def _llm_json(system: str, user: str, timeout: int = 30) -> dict:
+    """Call gpt-4.1-mini (GitHub Models), return parsed JSON. Raises on failure."""
+    from llm.github_client import get_github_client
+    client = get_github_client()
+    return await client.chat_json_interactive(
+        messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        "stream": False,
-        "format": "json",
-        "options": {"temperature": 0.0, "num_ctx": 512},
-    }
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        r = await client.post(f"{config.OLLAMA_BASE_URL}/api/chat", json=payload)
-        r.raise_for_status()
-        raw = r.json()["message"]["content"]
-        return json.loads(raw)
+        temperature=0.0,
+        max_tokens=150,
+    )
 
 
 def _keyword_match(text: str, keywords: list[str]) -> bool:
