@@ -27,7 +27,7 @@
     <div class="sidebar-section">
       <div class="sidebar-section-title">Victim</div>
       <div style="display:flex;gap:0.5rem;align-items:center">
-        <div id="victim-portrait" style="width:40px;height:40px;flex-shrink:0"></div>
+        <div id="victim-portrait" style="width:56px;height:56px;flex-shrink:0"></div>
         <div>
           <div id="victim-name" class="text-sm" style="color:var(--ink)">—</div>
           <div id="victim-occ" class="text-sm text-dim">—</div>
@@ -373,7 +373,7 @@
     caseData.witnesses.forEach(w => {
       const chip = document.createElement('div');
       chip.style.cssText = 'display:flex;align-items:center;gap:0.5rem;border:1px solid var(--border);padding:0.3rem 0.5rem;cursor:pointer';
-      chip.innerHTML = `<span style="width:24px;height:24px">${Portrait.generate(String(w.portrait_seed))}</span><span class="text-sm">${w.name}</span>`;
+      chip.innerHTML = `<span style="width:40px;height:40px;display:inline-block">${Portrait.generate(String(w.portrait_seed))}</span><span class="text-sm">${w.name}</span>`;
       chip.onclick = () => { switchTab('witnesses'); selectWitness(w.id); };
       owDiv.appendChild(chip);
     });

@@ -186,7 +186,7 @@ label {
 }
 .witness-card:hover { border-color: var(--ink-dim); }
 .witness-card.active { border-color: var(--ink); background: var(--paper2); }
-.witness-portrait { width: 48px; height: 48px; flex-shrink: 0; }
+.witness-portrait { width: 64px; height: 64px; flex-shrink: 0; }
 .witness-info .name { font-size: var(--fs); color: var(--ink); }
 .witness-info .role { font-size: var(--fs-sm); color: var(--ink-dim); }
 
