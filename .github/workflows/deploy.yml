@@ -35,65 +35,9 @@ jobs:
           push: true
           tags: ghcr.io/enzomadjos/enzo-repo:latest
 
-  deploy:
-    name: Deploy via SSH
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Connect to Tailscale
-        uses: tailscale/github-action@v2
-        with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          hostname: github-actions-runner
-
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-
-      - name: Copy docker-compose.yml to remote host
-        run: |
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            projects/pitogo-app/docker-compose.yml \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/enzo-app/docker-compose.yml
-
-      - name: Deploy via SSH (docker compose pull and up)
-        run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'bash -l' << 'ENDSSH'
-          set -e
-          cd ~/enzo-app
-
-          # Ensure .env exists (won't overwrite if already present)
-          touch .env
-
-          docker compose pull
-          docker compose up -d --remove-orphans
-
-          echo "Waiting for health check..."
-          sleep 15
-
-          STATUS=$(docker inspect --format='{{.State.Health.Status}}' enzo-app 2>/dev/null || echo "no-healthcheck")
-          echo "Container health: $STATUS"
-
-          if [ "$STATUS" = "unhealthy" ]; then
-            echo "DEPLOY FAILED: container is unhealthy"
-            docker logs enzo-app --tail 50
-            exit 1
-          fi
-
-          echo "DEPLOY SUCCESS: enzo-app is running"
-          docker ps --filter name=enzo-app --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-          ENDSSH
-
   prune-old-images:
     name: Prune old GHCR images (keep latest 3)
-    needs: deploy
+    needs: build-and-push
     runs-on: ubuntu-latest
     if: success()
     steps:
@@ -106,19 +50,3 @@ jobs:
           min-versions-to-keep: 1
           delete-only-untagged-versions: true
           token: ${{ secrets.GHCR_TOKEN }}
-
-  notify:
-    name: Notify team on result
-    needs: [deploy, prune-old-images]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Report deploy result
-        run: |
-          if [ "${{ needs.deploy.result }}" = "success" ]; then
-            echo "✅ Deploy succeeded. enzo-app is live. Old GHCR images pruned."
-          else
-            echo "❌ Deploy failed. Steve Rogers: check deploy logs and escalate if needed."
-            exit 1
-          fi
-
