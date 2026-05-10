@@ -133,3 +133,57 @@ rtk gain --history    # Per-command savings history
 rtk discover          # Find missed rtk opportunities
 rtk proxy <cmd>       # Run raw (no filtering) but track usage
 ```
+
+<!-- GSD Configuration — managed by get-shit-done installer -->
+# Instructions for GSD
+
+- Use the get-shit-done skill when the user asks for GSD or uses a `gsd-*` command.
+- Treat `/gsd-...` or `gsd-...` as command invocations and load the matching file from `.github/skills/gsd-*`.
+- When a command says to spawn a subagent, prefer a matching custom agent from `.github/agents`.
+- After completing any `gsd-*` command (or any deliverable it triggers: feature, bug fix, tests, docs, etc.), ALWAYS: (1) offer the user the next step by prompting via `ask_user`; repeat this feedback loop until the user explicitly indicates they are done.
+
+## Autonomous GSD Dispatch (always active)
+
+Jarvis reads every message and autonomously fires the right GSD command — the user never types `gsd-*` manually.
+
+| What the user says | Jarvis fires |
+|---|---|
+| "let's start building X" / "build this new project" / "new project" | `gsd-new-project` |
+| "let's plan phase N" / "plan the next phase" / "what's the plan" | `gsd-plan-phase` |
+| "let's talk about phase N first" / "discuss before we build" | `gsd-discuss-phase` |
+| "build it" / "execute" / "let's go" / "start coding" | `gsd-execute-phase` |
+| "test this" / "verify it works" / "does this work" | `gsd-verify-work` |
+| "ship it" / "create a PR" / "push this" | `gsd-ship` |
+| "where are we" / "what's next" / "resume" / "pick up where we left off" | `gsd-progress` |
+| "quick fix" / "small change" / "just do X" | `gsd-fast` |
+| "debug this" / "something's broken" / "find the bug" | `gsd-debug` |
+| "review the code" / "check for issues" | `gsd-code-review` |
+| "add tests" / "write tests for this" | `gsd-add-tests` |
+
+Rules:
+- Do NOT wait for the user to type `/gsd-*`. Detect intent → load skill → execute.
+- For ambiguous requests, pick the most likely GSD command and proceed — surface the choice to the user only if genuinely unclear between two commands.
+- Always check `.planning/STATE.md` at session start (if it exists) to know current phase position.
+
+## Autonomous Skill Creation (always active)
+
+Jarvis autonomously creates and saves new skills when a reusable process is identified.
+
+Trigger conditions — create a new skill when:
+- I repeat the same multi-step process more than once across sessions
+- I discover a workflow pattern that would benefit the team long-term (Avengers or game dev studio)
+- I solve a non-trivial problem in a generalizable way (debugging pattern, deploy pattern, integration pattern)
+- A task required research + synthesis that future sessions would need again
+
+How to create a skill:
+1. Write the skill as a `.md` file in `.github/skills/<skill-name>/SKILL.md`
+2. Follow the same structure as existing GSD skills: purpose, trigger phrases, step-by-step process
+3. Add a one-line entry to the skill list in `.github/copilot-instructions.md` so it's discoverable
+4. Notify the user briefly: "Saved new skill: `<skill-name>` — [one line description]"
+
+Rules:
+- Skills must be genuinely reusable — not one-off task notes
+- Skill names use kebab-case, lowercase
+- Never overwrite existing skills — version or extend them
+- Skill creation is silent and non-blocking — do it after the main task completes
+<!-- /GSD Configuration -->
