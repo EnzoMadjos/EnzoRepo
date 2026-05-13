@@ -1,28 +1,18 @@
-# Salesforce Knowledge
+# Salesforce Knowledge — Index
+> This file is a pointer. Full KB is at `brain/salesforce/SALESFORCE_KB.md`
 
-tags: [salesforce, index, knowledge]
+## Master Reference
+- **brain/salesforce/SALESFORCE_KB.md** — Single compiled reference (auto-loaded by Copilot)
 
-## Loaded knowledge domains (Memory MCP graph)
+## Topic Articles (`brain/salesforce/articles/`)
+- `apex.md` — Triggers, governor limits, security, fflib, async, testing, SOQL
+- `lwc.md` — Component structure, lifecycle, wire service, LDS, communication, Jest
+- `flow.md` — Flow types, bulkification rules, invocable Apex, decision guide, limits
+- `revenue-cloud-cml.md` — RCA/RLM data model (263 objects), CML syntax, Business APIs
+- `devops.md` — SFDX commands, scratch orgs, CI/CD, GitHub Actions, sfdx-hardis
+- `integration.md` — REST API, Bulk API, Platform Events, CDC, callouts, Named Credentials
 
-All Salesforce knowledge is also loaded in the Memory MCP knowledge graph (`Salesforce-Knowledge-Base`). Use `mcp_memory_search_nodes` to query specific topics.
-
-## Topics
-
-- [[fflib Architecture]] — Service/Domain/Selector/UoW layers
-- [[Trigger Framework]] — One trigger per object, handler dispatch
-- [[Governor Limits]] — Bulkification, limits reference
-- [[Apex Testing Standards]] — 90%+ coverage, mocking, test data factory
-- [[Apex Security Patterns]] — CRUD/FLS, with sharing, SOQL injection prevention
-- [[SOQL Best Practices]] — Selectors only, no SOQL in loops
-- [[NebulaLogger]] — Structured logging for Apex/Flow/LWC
-- [[LWC Patterns]] — Component architecture, wire service, events
-- [[Salesforce Flow Patterns]] — Flow types, invocable Apex, bulkification
-- [[Salesforce DevOps Patterns]] — sfdx-hardis, CI/CD, scratch orgs
-- [[Salesforce Integration Patterns]] — REST/SOAP/Platform Events/CDC/Salesforce Functions
-- [[Salesforce Well-Architected]] — 5 pillars: Security, Reliability, Performance, Scalability, Sustainability
-
-## Key repos reference
-
+## Key Repos
 | Repo | Purpose |
 |---|---|
 | apex-enterprise-patterns/fflib-apex-common | Gold standard architecture |
@@ -33,8 +23,6 @@ All Salesforce knowledge is also loaded in the Memory MCP knowledge graph (`Sale
 | apex-enterprise-patterns/fflib-apex-mocks | Mocking framework |
 | amoss/NebulaLogger | Structured logging |
 | sfdx-hardis | DevOps + CI/CD Swiss knife |
-
-## Related
-
-- [[SF QA Agent]]
-- [[Projects Index]]
+| bgaldino/rlm-base-dev | Revenue Cloud data model + skills |
+| Avinava/sf-documentation-knowledge | Scraped SF Help docs API v67.0 |
+| starch-uk/agent-docs | CML v1.0.0 full reference |

@@ -106,6 +106,13 @@ The Avengers (Jarvis, Tony, Steve) handle ALL development — general app dev, P
 - For Apex/LWC/Flow work: follow same Avengers flow — Tony proposes architecture, Jarvis builds, Steve advises when needed.
 - Trigger phrases (Salesforce or general): "ask tony", "ask steve", "ask strange", "avengers assemble", "salesforce", "apex", "lwc", "flow", "deploy to org", "debug log", "permission", "audit", "schema", "object", "field".
 
+## Salesforce Knowledge Base (always active)
+- Master reference: `brain/salesforce/SALESFORCE_KB.md` — covers Apex, LWC, Flow, Revenue Cloud Advanced (RLM/CML), DevOps (SFDX), Integration Patterns, Governor Limits, Security
+- Topic files: `brain/salesforce/articles/` (apex.md, lwc.md, flow.md, revenue-cloud-cml.md, devops.md, integration.md)
+- When any Salesforce question is asked, read `brain/salesforce/SALESFORCE_KB.md` first before answering
+- For deep dives on a topic, read the specific article file in `brain/salesforce/articles/`
+- Sources: Salesforce Help API v67.0 (Summer '26), Avinava/sf-documentation-knowledge, bgaldino/rlm-base-dev, starch-uk/agent-docs CML v1.0.0, trailheadapps
+
 ---
 
 # RTK — Token-Optimized CLI
