@@ -127,6 +127,13 @@ class ProductService:
     def delete(product_id: int) -> None:
         conn = get_connection()
         try:
+            # Delete in FK dependency order
+            conn.execute(
+                "DELETE FROM bids WHERE bid_session_id IN "
+                "(SELECT id FROM bid_sessions WHERE product_id=?)", (product_id,)
+            )
+            conn.execute("DELETE FROM bid_sessions WHERE product_id=?", (product_id,))
+            conn.execute("DELETE FROM orders WHERE product_id=?", (product_id,))
             conn.execute("DELETE FROM variants WHERE product_id=?", (product_id,))
             conn.execute("DELETE FROM products WHERE id=?", (product_id,))
             conn.commit()
