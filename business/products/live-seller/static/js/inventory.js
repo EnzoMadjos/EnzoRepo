@@ -92,9 +92,9 @@ function addVariantRow() {
   const row = document.createElement('div');
   row.className = 'variant-row';
   row.innerHTML = `
-    <input type="text" placeholder="Label" class="v-label">
-    <input type="number" placeholder="Stock" class="v-stock" value="0" min="0">
-    <input type="number" placeholder="+/- Price" class="v-price" value="0">
+    <input type="text" placeholder="e.g. Blue / L" class="v-label" style="flex:2">
+    <input type="number" placeholder="0" class="v-stock" value="0" min="0" style="flex:1">
+    <input type="number" placeholder="0" class="v-price" value="0" style="flex:1">
   `;
   document.getElementById('variants-input').appendChild(row);
 }

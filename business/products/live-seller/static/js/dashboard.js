@@ -99,6 +99,7 @@ async function confirmStartSession() {
   const platform = document.getElementById('session-platform').value;
   closeModal('modal-start-session');
   const res = await api('POST', '/api/sessions/start', { title, platform });
+  if (!res) return;
   activeSessionId = res.session_id;
 }
 
@@ -133,7 +134,7 @@ async function updateStats() {
 }
 
 function renderStats(s) {
-  if (!s || !s.active === false) return;
+  if (!s || s.active === false) return;
   document.getElementById('stat-orders').textContent  = s.total_orders || 0;
   document.getElementById('stat-revenue').textContent = `₱${(s.total_revenue || 0).toLocaleString()}`;
   document.getElementById('stat-buyers').textContent  = s.unique_buyers || 0;

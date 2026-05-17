@@ -77,11 +77,11 @@ async def lifespan(app: FastAPI):
     comment_queue: asyncio.Queue[str] = asyncio.Queue()
 
     async def flush_callback(batch):
-        parsed = await brain.parse_batch(batch)
-        await dispatcher.dispatch(parsed)
-        # Broadcast raw comments to dashboard feed
+        # Broadcast raw comments first so they appear on feed immediately
         for c in batch:
             await manager.broadcast("comment", {"text": c.text, "ts": c.received_at_ms})
+        parsed = await brain.parse_batch(batch)
+        await dispatcher.dispatch(parsed)
 
     collector = BatchCollector(flush_callback=flush_callback)
     app.state.batch_collector = collector

@@ -56,9 +56,13 @@ def toggle_product(product_id: int):
     return {"ok": True}
 
 
+class StockUpdate(BaseModel):
+    delta: int
+
+
 @router.patch("/products/variants/{variant_id}/stock")
-def update_stock(variant_id: int, delta: int):
-    ProductService.update_stock(variant_id, delta)
+def update_stock(variant_id: int, body: StockUpdate):
+    ProductService.update_stock(variant_id, body.delta)
     return {"ok": True}
 
 
