@@ -40,7 +40,10 @@ async function loadHistory() {
       <div style="font-size:11px;color:var(--text2);margin-bottom:8px">
         Started: ${fmt(s.started_at)} &nbsp;|&nbsp; Ended: ${fmt(s.ended_at)}
       </div>
-      <button class="btn btn-sm btn-gray" onclick="viewOrders(${s.id}, '${(s.title || 'Session').replace(/'/g, "&#39;")}')">View Orders</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-gray" onclick="viewOrders(${s.id}, '${(s.title || 'Session').replace(/'/g, "&#39;")}')">View Orders</button>
+        <a class="btn btn-sm btn-gray" href="/api/sessions/${s.id}/export.csv" download>⬇ Export CSV</a>
+      </div>
     </div>
   `).join('');
 }

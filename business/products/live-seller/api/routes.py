@@ -4,8 +4,12 @@ REST API routers — products, sessions, orders, bids, manual comment paste.
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
+import csv
+import io
+import time
 
 from services.product_service import ProductService, SessionService
 from services.order_service import OrderService, BuyerService
@@ -138,6 +142,41 @@ def session_stats(request: Request):
 @router.get("/sessions/{session_id}/orders")
 def session_orders(session_id: int):
     return OrderService.list_by_session(session_id)
+
+
+@router.get("/sessions/{session_id}/export.csv")
+def export_session_csv(session_id: int):
+    session = SessionService.get(session_id)
+    if not session:
+        raise HTTPException(404, "Session not found")
+    orders = OrderService.list_by_session(session_id)
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["Order ID", "Buyer", "Handle", "Product", "Variant", "Qty", "Unit Price", "Total", "Status", "Time"])
+    for o in orders:
+        unit = round(o["total_price"] / o["qty"], 2) if o["qty"] else 0
+        writer.writerow([
+            o["id"],
+            o.get("buyer_name") or "",
+            o.get("buyer_handle") or "",
+            o.get("product_name") or "",
+            o.get("variant_label") or "",
+            o["qty"],
+            unit,
+            o["total_price"],
+            o["status"],
+            time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(o["extracted_at"])) if o.get("extracted_at") else "",
+        ])
+
+    buf.seek(0)
+    title_slug = (session["title"] or f"session-{session_id}").replace(" ", "_")
+    filename = f"{title_slug}_{session_id}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ------------------------------------------------------------------ #

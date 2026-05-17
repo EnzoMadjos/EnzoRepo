@@ -47,8 +47,11 @@ async def lifespan(app: FastAPI):
     printer = PrinterService()
     bid_svc = BidService()
 
-    # App state
-    app.state.active_session_id = None
+    # App state — recover active session if app was restarted mid-live
+    recovered = SessionService.get_active()
+    app.state.active_session_id = recovered["id"] if recovered else None
+    if recovered:
+        log.info("♻️  Recovered active session #%d: %s", recovered["id"], recovered.get("title", ""))
     app.state.printer_service = printer
     app.state.bid_service = bid_svc
 
