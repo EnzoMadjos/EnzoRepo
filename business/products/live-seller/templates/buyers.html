@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Buyers — Mine Tracker</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body style="overflow:auto">
+
+  <header class="header">
+    <div class="header-left">
+      <a href="/" class="btn btn-ghost" style="padding:5px 10px">← Live</a>
+      <span class="app-title">👥 Buyers</span>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Handle</th>
+          <th>Status</th>
+          <th>Total Mines</th>
+          <th>Last Seen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="buyers-tbody">
+        <tr><td colspan="6" style="color:var(--text2);text-align:center;padding:32px">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="/static/js/buyers.js"></script>
+</body>
+</html>

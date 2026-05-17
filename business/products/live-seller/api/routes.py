@@ -1,285 +1,184 @@
-"""
-REST API routers — products, sessions, orders, bids, manual comment paste.
-"""
-from __future__ import annotations
+import csv
+import io
+import time
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
-import csv
-import io
-import time
 
-from services.product_service import ProductService, SessionService
-from services.order_service import OrderService, BuyerService
-from services.bid_service import BidService
-from api.ws import manager
-
+from services.mine_service import MineService
+from services.printer_service import print_mine
+from services.tiktok_service import create_tiktok_task
+from config import settings
 
 router = APIRouter()
 
 
-# ------------------------------------------------------------------ #
-# Products
-# ------------------------------------------------------------------ #
+# ── TikTok ────────────────────────────────────────────────────────────────
 
-class ProductCreate(BaseModel):
-    name: str
-    base_price: float
-    description: str = ""
+class ConnectRequest(BaseModel):
+    username: str
 
 
-class ProductUpdate(BaseModel):
-    name: str
-    base_price: float
-    description: str = ""
+@router.post("/connect")
+async def connect_tiktok(req: ConnectRequest, request: Request):
+    app = request.app
+    if app.state.tiktok_task and not app.state.tiktok_task.done():
+        raise HTTPException(400, "Already connected to a live stream")
+    result = await create_tiktok_task(req.username, app.state.manager)
+    if result is None:
+        raise HTTPException(503, "TikTokLive library not available — check requirements")
+    task, client = result
+    app.state.tiktok_task = task
+    app.state.tiktok_client = client
+    return {"status": "connecting", "username": req.username.lstrip("@")}
 
 
-class VariantCreate(BaseModel):
-    label: str
-    price_modifier: float = 0.0
-    stock: int = 0
-    sku: str = ""
+@router.post("/disconnect")
+async def disconnect_tiktok(request: Request):
+    app = request.app
+    if app.state.tiktok_client:
+        try:
+            await app.state.tiktok_client.disconnect()
+        except Exception:
+            pass
+    if app.state.tiktok_task:
+        app.state.tiktok_task.cancel()
+    app.state.tiktok_task = None
+    app.state.tiktok_client = None
+    return {"status": "disconnected"}
 
 
-@router.get("/products")
-def list_products():
-    return ProductService.list_all()
+@router.get("/status")
+def get_status(request: Request):
+    app = request.app
+    task = app.state.tiktok_task
+    tiktok_connected = task is not None and not task.done()
+    return {
+        "tiktok_connected": tiktok_connected,
+        "session": app.state.active_session,
+    }
 
 
-@router.post("/products")
-def create_product(body: ProductCreate):
-    pid = ProductService.create(body.name, body.base_price, body.description)
-    return {"id": pid}
+# ── Sessions ──────────────────────────────────────────────────────────────
+
+class SessionStartRequest(BaseModel):
+    tiktok_user: str
 
 
-@router.post("/products/{product_id}/variants")
-def add_variant(product_id: int, body: VariantCreate):
-    vid = ProductService.add_variant(product_id, body.label, body.price_modifier, body.stock, body.sku)
-    return {"id": vid}
+@router.post("/sessions/start")
+def start_session(req: SessionStartRequest, request: Request):
+    if request.app.state.active_session:
+        raise HTTPException(400, "Session already active — end it first")
+    session = MineService.start_session(req.tiktok_user)
+    request.app.state.active_session = session
+    return session
 
 
-@router.patch("/products/{product_id}/toggle")
-def toggle_product(product_id: int):
-    ProductService.toggle_active(product_id)
-    return {"ok": True}
-
-
-@router.delete("/products/{product_id}")
-def delete_product(product_id: int):
-    ProductService.delete(product_id)
-    return {"ok": True}
-
-
-@router.patch("/products/{product_id}")
-def update_product(product_id: int, body: ProductUpdate):
-    ProductService.update(product_id, body.name, body.base_price, body.description)
-    return {"ok": True}
-
-
-@router.delete("/products/variants/{variant_id}")
-def delete_variant(variant_id: int):
-    ProductService.delete_variant(variant_id)
-    return {"ok": True}
-
-
-class StockUpdate(BaseModel):
-    delta: int
-
-
-@router.patch("/products/variants/{variant_id}/stock")
-def update_stock(variant_id: int, body: StockUpdate):
-    ProductService.update_stock(variant_id, body.delta)
-    return {"ok": True}
-
-
-# ------------------------------------------------------------------ #
-# Sessions
-# ------------------------------------------------------------------ #
-
-class SessionStart(BaseModel):
-    title: str = ""
-    platform: str = "manual"
+@router.post("/sessions/end")
+def end_session(request: Request):
+    session = request.app.state.active_session
+    if not session:
+        raise HTTPException(400, "No active session")
+    MineService.end_session(session["id"])
+    request.app.state.active_session = None
+    return {"status": "ended", "session_id": session["id"]}
 
 
 @router.get("/sessions")
 def list_sessions():
-    return SessionService.list_all()
+    return MineService.list_all_sessions()
 
 
-@router.post("/sessions/start")
-async def start_session(body: SessionStart, request: Request):
-    app_state = request.app.state
-    if app_state.active_session_id:
-        raise HTTPException(400, "A session is already active")
-    sid = SessionService.start(body.title, body.platform)
-    app_state.active_session_id = sid
-    await manager.broadcast("session_started", SessionService.get_stats(sid))
-    return {"session_id": sid}
-
-
-@router.post("/sessions/end")
-async def end_session(request: Request):
-    app_state = request.app.state
-    sid = app_state.active_session_id
-    if not sid:
-        raise HTTPException(400, "No active session")
-    SessionService.end(sid)
-    app_state.active_session_id = None
-    await manager.broadcast("session_ended", {"session_id": sid})
-    return {"ok": True}
-
-
-@router.get("/sessions/stats")
-def session_stats(request: Request):
-    sid = request.app.state.active_session_id
-    if not sid:
-        return {"active": False}
-    return SessionService.get_stats(sid)
-
-
-@router.get("/sessions/{session_id}/orders")
-def session_orders(session_id: int):
-    return OrderService.list_by_session(session_id)
+@router.get("/sessions/{session_id}/mines")
+def session_mines(session_id: int):
+    return MineService.list_session_mines(session_id)
 
 
 @router.get("/sessions/{session_id}/export.csv")
 def export_session_csv(session_id: int):
-    session = SessionService.get(session_id)
-    if not session:
-        raise HTTPException(404, "Session not found")
-    orders = OrderService.list_by_session(session_id)
-
+    mines = MineService.list_session_mines(session_id)
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["Order ID", "Buyer", "Handle", "Product", "Variant", "Qty", "Unit Price", "Total", "Status", "Time"])
-    for o in orders:
-        unit = round(o["total_price"] / o["qty"], 2) if o["qty"] else 0
+    writer.writerow(["#", "Name", "Handle", "Price (PHP)", "Buyer Status", "Mine # in Session", "Time", "Printed"])
+    for i, m in enumerate(reversed(mines), 1):
+        ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(m["mined_at"]))
         writer.writerow([
-            o["id"],
-            o.get("buyer_name") or "",
-            o.get("buyer_handle") or "",
-            o.get("product_name") or "",
-            o.get("variant_label") or "",
-            o["qty"],
-            unit,
-            o["total_price"],
-            o["status"],
-            time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(o["extracted_at"])) if o.get("extracted_at") else "",
+            i,
+            m["display_name"],
+            f"@{m['handle']}",
+            f"{m['price']:.2f}",
+            m["status"],
+            m["session_mine_count"],
+            ts,
+            "Yes" if m["printed"] else "No",
         ])
-
     buf.seek(0)
-    title_slug = (session["title"] or f"session-{session_id}").replace(" ", "_")
-    filename = f"{title_slug}_{session_id}.csv"
     return StreamingResponse(
         iter([buf.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'attachment; filename="session_{session_id}.csv"'},
     )
 
 
-# ------------------------------------------------------------------ #
-# Orders — manual confirm / cancel
-# ------------------------------------------------------------------ #
+# ── Mines ─────────────────────────────────────────────────────────────────
 
-@router.post("/orders/{order_id}/confirm")
-async def confirm_order(order_id: int, request: Request):
-    ok = OrderService.confirm(order_id)
-    if not ok:
-        raise HTTPException(400, "Cannot confirm order (insufficient stock or not found)")
-    order = OrderService.get(order_id)
-    # Update session totals
-    if request.app.state.active_session_id:
-        SessionService.update_totals(request.app.state.active_session_id)
-    # Enqueue print
-    buyer = BuyerService.get(order["buyer_id"])
-    await request.app.state.printer_service.enqueue_order(order, buyer)
-    BuyerService.update_stats(order["buyer_id"], order["total_price"])
-    await manager.broadcast("order_confirmed", order)
-    return {"ok": True}
+class MineRequest(BaseModel):
+    tiktok_uid: str
+    display_name: str
+    handle: str
+    price: float
+    raw_comment: str = ""
 
 
-@router.post("/orders/{order_id}/cancel")
-async def cancel_order(order_id: int):
-    OrderService.cancel(order_id)
-    await manager.broadcast("order_cancelled", {"order_id": order_id})
-    return {"ok": True}
+@router.post("/mines")
+def create_mine(req: MineRequest, request: Request):
+    if req.price <= 0:
+        raise HTTPException(422, "Price must be greater than 0")
+    session = request.app.state.active_session
+    if not session:
+        raise HTTPException(400, "No active session — start a session first")
 
+    buyer = MineService.upsert_buyer(req.tiktok_uid, req.display_name, req.handle)
+    mine = MineService.create_mine(session["id"], buyer["id"], req.price, req.raw_comment)
 
-# ------------------------------------------------------------------ #
-# Manual comment paste (fallback if clipboard listener is disabled)
-# ------------------------------------------------------------------ #
+    limit = settings.new_buyer_mine_limit
+    flagged = buyer["status"] == "new" and mine["session_mine_count"] >= limit
 
-class PasteComments(BaseModel):
-    text: str
-
-
-@router.post("/comments/paste")
-async def paste_comments(body: PasteComments, request: Request):
-    if not request.app.state.active_session_id:
-        raise HTTPException(400, "Start a session first")
-    await request.app.state.batch_collector.ingest(body.text)
-    return {"ok": True, "chars": len(body.text)}
-
-
-# ------------------------------------------------------------------ #
-# Bidding
-# ------------------------------------------------------------------ #
-
-class BidOpen(BaseModel):
-    product_id: int
-    variant_id: Optional[int] = None
-    starting_price: float
-    min_increment: float
-    countdown_seconds: int
-    title: str = ""
-
-
-@router.post("/bids/open")
-async def open_bid(body: BidOpen, request: Request):
-    sid = request.app.state.active_session_id
-    if not sid:
-        raise HTTPException(400, "Start a session first")
-    bid_id = request.app.state.bid_service.open_bid(
-        sid, body.product_id, body.variant_id,
-        body.starting_price, body.min_increment,
-        body.countdown_seconds, body.title,
+    printed = print_mine(
+        req.display_name, req.handle, req.price, mine["mined_at"],
+        settings.printer_usb_vid, settings.printer_usb_pid,
     )
-    await manager.broadcast("bid_opened", {
-        "bid_session_id": bid_id, "title": body.title,
-        "starting_price": body.starting_price,
-        "countdown_seconds": body.countdown_seconds,
-    })
-    return {"bid_session_id": bid_id}
+    if printed:
+        MineService.mark_printed(mine["id"])
+        mine["printed"] = 1
+
+    return {**mine, "flagged": flagged, "print_ok": printed}
 
 
-@router.post("/bids/{bid_session_id}/close")
-async def close_bid(bid_session_id: int, request: Request):
-    result = request.app.state.bid_service.close_bid_manual(bid_session_id)
-    if not result:
-        raise HTTPException(404, "Bid session not found or already closed")
-    await manager.broadcast("bid_closed", result)
-    return result
+@router.post("/mines/{mine_id}/reprint")
+def reprint_mine(mine_id: int):
+    mine = MineService.get_mine(mine_id)
+    if not mine:
+        raise HTTPException(404, "Mine not found")
+    printed = print_mine(
+        mine["display_name"], mine["handle"], mine["price"], mine["mined_at"],
+        settings.printer_usb_vid, settings.printer_usb_pid,
+    )
+    if printed:
+        MineService.mark_printed(mine_id)
+    return {"print_ok": printed}
 
 
-@router.get("/bids/active")
-def active_bids(request: Request):
-    sid = request.app.state.active_session_id
-    if not sid:
-        return []
-    return request.app.state.bid_service.get_active_bids(sid)
-
-
-@router.get("/bids/{bid_session_id}/leaderboard")
-def bid_leaderboard(bid_session_id: int, request: Request):
-    return request.app.state.bid_service.get_leaderboard(bid_session_id)
-
-
-# ------------------------------------------------------------------ #
-# Buyers
-# ------------------------------------------------------------------ #
+# ── Buyers ────────────────────────────────────────────────────────────────
 
 @router.get("/buyers")
 def list_buyers():
-    return BuyerService.list_all()
+    return MineService.list_all_buyers()
+
+
+@router.post("/buyers/{buyer_id}/promote")
+def promote_buyer(buyer_id: int):
+    MineService.promote_buyer(buyer_id)
+    return {"status": "promoted", "buyer_id": buyer_id}
