@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inventory — Mine Tracker</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-left">
+      <a href="/" class="btn btn-ghost btn-sm">← Back</a>
+      <span class="app-title">📦 Inventory</span>
+    </div>
+    <div class="header-right">
+      <a href="/miners" class="btn btn-ghost btn-sm">👥 Miners</a>
+    </div>
+  </header>
+
+  <!-- Add / Edit form -->
+  <div class="form-bar">
+    <input id="f-name"  type="text"   class="input" placeholder="Product name" style="flex:1;min-width:160px">
+    <input id="f-price" type="number" class="input" placeholder="Price (PHP)" min="0.01" step="0.01" style="width:140px">
+    <input id="f-stock" type="number" class="input" placeholder="Stock" min="0" step="1" style="width:90px">
+    <button class="btn btn-primary" onclick="submitProduct()">Add Product</button>
+    <button class="btn btn-ghost hidden" id="btn-cancel-edit" onclick="cancelEdit()">Cancel</button>
+    <input type="hidden" id="f-edit-id">
+  </div>
+
+  <div class="page-body">
+    <table class="data-table" id="product-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Price (PHP)</th>
+          <th>Stock</th>
+          <th>Status</th>
+          <th style="width:160px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="product-body">
+        <tr><td colspan="5" style="color:var(--text2);text-align:center;padding:24px">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="/static/js/inventory.js"></script>
+</body>
+</html>

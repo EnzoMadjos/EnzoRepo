@@ -36,6 +36,15 @@ def init_db() -> None:
                 total_mines     INTEGER DEFAULT 0
             );
 
+            CREATE TABLE IF NOT EXISTS products (
+                id          INTEGER PRIMARY KEY,
+                name        TEXT    NOT NULL,
+                price       REAL    NOT NULL,
+                stock       INTEGER NOT NULL DEFAULT 0,
+                active      INTEGER NOT NULL DEFAULT 1,
+                created_at  INTEGER DEFAULT (unixepoch())
+            );
+
             CREATE TABLE IF NOT EXISTS mines (
                 id                  INTEGER PRIMARY KEY,
                 session_id          INTEGER NOT NULL REFERENCES sessions(id),
@@ -44,9 +53,21 @@ def init_db() -> None:
                 mined_at            INTEGER DEFAULT (unixepoch()),
                 printed             INTEGER DEFAULT 0,
                 session_mine_count  INTEGER NOT NULL DEFAULT 1,
-                raw_comment         TEXT    DEFAULT ''
+                raw_comment         TEXT    DEFAULT '',
+                product_id          INTEGER REFERENCES products(id),
+                product_name        TEXT    DEFAULT ''
             );
 
-            CREATE INDEX IF NOT EXISTS idx_mines_session ON mines(session_id);
-            CREATE INDEX IF NOT EXISTS idx_mines_buyer   ON mines(buyer_id);
+            CREATE INDEX IF NOT EXISTS idx_mines_session  ON mines(session_id);
+            CREATE INDEX IF NOT EXISTS idx_mines_buyer    ON mines(buyer_id);
+            CREATE INDEX IF NOT EXISTS idx_products_active ON products(active);
         """)
+        # Migrate existing DBs — add product columns to mines if they don't exist yet
+        for stmt in [
+            "ALTER TABLE mines ADD COLUMN product_id INTEGER REFERENCES products(id)",
+            "ALTER TABLE mines ADD COLUMN product_name TEXT DEFAULT ''",
+        ]:
+            try:
+                conn.execute(stmt)
+            except Exception:
+                pass

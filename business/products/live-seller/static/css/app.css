@@ -95,10 +95,9 @@ body {
 .input:focus { border-color: var(--primary); }
 .input[readonly] { color: var(--text2); cursor: default; }
 
-/* ── Main layout ─────────────────────────────────────────────────────── */
+/* ── Main layout — single full-width panel ───────────────────────────── */
 .main-layout {
-  display: grid;
-  grid-template-columns: 1fr 340px;
+  display: flex;
   flex: 1;
   min-height: 0;
 }
@@ -106,7 +105,7 @@ body {
 .panel {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border);
+  flex: 1;
   min-height: 0;
 }
 .panel-log { border-right: none; }
@@ -131,8 +130,10 @@ body {
   font-weight: 600;
 }
 
-/* ── Comment feed ────────────────────────────────────────────────────── */
-.feed-list, .mine-list {
+/* ── Comment feed — REMOVED ──────────────────────────────────────────── */
+
+/* ── Mine log ────────────────────────────────────────────────────────── */
+.mine-list {
   flex: 1;
   overflow-y: auto;
   padding: 8px;
@@ -141,40 +142,6 @@ body {
   gap: 4px;
 }
 
-.comment-row {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 7px 10px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto;
-  gap: 2px 10px;
-  align-items: center;
-}
-.comment-mine { border-color: rgba(251,191,36,0.5); background: rgba(251,191,36,0.04); }
-
-.comment-meta    { grid-column: 1; display: flex; gap: 6px; align-items: baseline; }
-.comment-name    { font-size: 13px; font-weight: 600; }
-.comment-handle  { font-size: 11px; color: var(--text2); }
-.comment-text    { grid-column: 1; font-size: 12px; color: var(--text2); word-break: break-word; }
-
-.btn-mine {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  align-self: center;
-  padding: 5px 12px;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-}
-.btn-mine:hover { opacity: 0.8; }
-
-/* ── Mine log ────────────────────────────────────────────────────────── */
 .mine-row {
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -299,6 +266,9 @@ body {
 .data-table th { color: var(--text2); font-weight: 500; }
 .data-table tbody tr:hover td { background: var(--bg2); }
 .row-new td { background: rgba(251,191,36,0.02); }
+.row-inactive td { opacity: 0.5; }
+
+.action-cell { display: flex; gap: 6px; align-items: center; }
 
 .status-pill {
   padding: 2px 8px;
@@ -306,5 +276,42 @@ body {
   font-size: 11px;
   font-weight: 600;
 }
-.pill-new    { background: rgba(251,191,36,0.2);  color: var(--yellow); }
-.pill-repeat { background: rgba(74,222,128,0.15); color: var(--green);  }
+.pill-new      { background: rgba(251,191,36,0.2);  color: var(--yellow); }
+.pill-repeat   { background: rgba(74,222,128,0.15); color: var(--green);  }
+.pill-active   { background: rgba(74,222,128,0.15); color: var(--green);  }
+.pill-inactive { background: rgba(248,113,113,0.15); color: var(--red);   }
+
+/* Stock indicators */
+.stock-low  { color: var(--yellow); font-weight: 600; }
+.stock-zero { color: var(--red);    font-weight: 600; }
+
+/* ── Inventory form bar ───────────────────────────────────────────────── */
+.form-bar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* ── Product select in capture modal ─────────────────────────────────── */
+select.input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+.field-optional { font-weight: 400; color: var(--text2); font-style: italic; }
+
+/* Product name line in mine log */
+.mine-product {
+  font-size: 12px;
+  color: var(--blue);
+  margin: 2px 0;
+}

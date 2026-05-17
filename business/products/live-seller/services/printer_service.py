@@ -18,12 +18,14 @@ def print_mine(
     mined_at: int,
     vid: int = 0x04B8,
     pid: int = 0x0202,
+    product_name: str = "",
 ) -> bool:
     """Print a mine label. Returns True on success (or virtual success), False on error."""
     ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mined_at))
 
     if not HAS_ESCPOS:
-        log.info("[VIRTUAL PRINT] %s @%s  PHP %.2f  %s", display_name, handle, price, ts)
+        log.info("[VIRTUAL PRINT] %s @%s  %s  PHP %.2f  %s",
+                 display_name, handle, product_name or "(no product)", price, ts)
         return True
 
     try:
@@ -32,6 +34,8 @@ def print_mine(
         p.text(f"{display_name}\n")
         p.set(align="center", bold=False, height=1, width=1)
         p.text(f"@{handle}\n")
+        if product_name:
+            p.text(f"{product_name}\n")
         p.set(align="center", bold=True, height=2, width=2)
         p.text(f"PHP {price:,.2f}\n")
         p.set(align="center", bold=False, height=1, width=1)

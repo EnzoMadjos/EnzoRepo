@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Miners — Mine Tracker</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-left">
+      <a href="/" class="btn btn-ghost btn-sm">← Back</a>
+      <span class="app-title">👥 Miners</span>
+    </div>
+    <div class="header-right">
+      <a href="/inventory" class="btn btn-ghost btn-sm">📦 Inventory</a>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>TikTok Name</th>
+          <th>Handle</th>
+          <th>Status</th>
+          <th>Total Mines</th>
+          <th>Last Seen</th>
+          <th style="width:140px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="miner-body">
+        <tr><td colspan="6" style="color:var(--text2);text-align:center;padding:24px">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="/static/js/miners.js"></script>
+</body>
+</html>

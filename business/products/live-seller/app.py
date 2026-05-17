@@ -71,6 +71,17 @@ async def dashboard(request: Request):
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
 
+@app.get("/inventory", response_class=HTMLResponse)
+async def inventory_page(request: Request):
+    return templates.TemplateResponse("inventory.html", {"request": request})
+
+
+@app.get("/miners", response_class=HTMLResponse)
+async def miners_page(request: Request):
+    return templates.TemplateResponse("miners.html", {"request": request})
+
+
+# Legacy redirect for old /buyers bookmarks
 @app.get("/buyers", response_class=HTMLResponse)
-async def buyers_page(request: Request):
-    return templates.TemplateResponse("buyers.html", {"request": request})
+async def buyers_redirect(request: Request):
+    return templates.TemplateResponse("miners.html", {"request": request})

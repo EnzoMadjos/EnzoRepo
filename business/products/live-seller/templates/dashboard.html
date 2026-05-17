@@ -16,7 +16,8 @@
     </div>
     <div class="header-right">
       <span id="session-info" class="session-info"></span>
-      <a href="/buyers" class="btn btn-ghost">👥 Buyers</a>
+      <a href="/inventory" class="btn btn-ghost btn-sm">📦 Inventory</a>
+      <a href="/miners" class="btn btn-ghost btn-sm">👥 Miners</a>
     </div>
   </header>
 
@@ -28,21 +29,12 @@
     <div style="width:1px;height:24px;background:var(--border);margin:0 4px"></div>
     <button class="btn btn-green" id="btn-start-session" onclick="startSession()">▶ Start Session</button>
     <button class="btn btn-red hidden" id="btn-end-session" onclick="endSession()">■ End Session</button>
+    <div style="width:1px;height:24px;background:var(--border);margin:0 4px"></div>
+    <button class="btn btn-primary" onclick="openManualCapture()">⛏ New Mine</button>
   </div>
 
-  <!-- Main layout -->
+  <!-- Main layout — single full-width mine log -->
   <div class="main-layout">
-
-    <!-- Comment feed -->
-    <div class="panel panel-feed">
-      <div class="panel-header">
-        <span>💬 Comments</span>
-        <span id="comment-count" class="badge">0</span>
-      </div>
-      <div id="comment-feed" class="feed-list"></div>
-    </div>
-
-    <!-- Mine log -->
     <div class="panel panel-log">
       <div class="panel-header">
         <span>⛏ Mines this session</span>
@@ -50,7 +42,6 @@
       </div>
       <div id="mine-log" class="mine-list"></div>
     </div>
-
   </div>
 
   <!-- Capture modal -->
@@ -66,11 +57,17 @@
       <div class="modal-body">
         <div class="field">
           <label>TikTok Name</label>
-          <input id="cap-name" type="text" class="input" readonly>
+          <input id="cap-name" type="text" class="input" placeholder="Display name">
         </div>
         <div class="field">
           <label>Handle</label>
-          <input id="cap-handle" type="text" class="input" readonly>
+          <input id="cap-handle" type="text" class="input" placeholder="@username">
+        </div>
+        <div class="field">
+          <label>Product <span class="field-optional">(optional)</span></label>
+          <select id="cap-product" class="input" onchange="onProductSelect()">
+            <option value="">— select product —</option>
+          </select>
         </div>
         <div class="field">
           <label>Price (PHP)</label>

@@ -4,6 +4,69 @@ from database import get_connection
 
 class MineService:
 
+    # ── Inventory ──────────────────────────────────────────────────────────
+
+    @staticmethod
+    def list_active_products() -> list[dict]:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM products WHERE active = 1 ORDER BY name ASC"
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    @staticmethod
+    def list_all_products() -> list[dict]:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM products ORDER BY name ASC"
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    @staticmethod
+    def create_product(name: str, price: float, stock: int) -> dict:
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO products (name, price, stock) VALUES (?, ?, ?)",
+                (name, price, stock),
+            )
+            row = conn.execute(
+                "SELECT * FROM products WHERE id = last_insert_rowid()"
+            ).fetchone()
+            return dict(row)
+
+    @staticmethod
+    def update_product(product_id: int, name: str, price: float, stock: int) -> None:
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE products SET name = ?, price = ?, stock = ? WHERE id = ?",
+                (name, price, stock, product_id),
+            )
+
+    @staticmethod
+    def toggle_product(product_id: int) -> dict:
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE products SET active = CASE WHEN active = 1 THEN 0 ELSE 1 END WHERE id = ?",
+                (product_id,),
+            )
+            row = conn.execute(
+                "SELECT * FROM products WHERE id = ?", (product_id,)
+            ).fetchone()
+            return dict(row)
+
+    @staticmethod
+    def delete_product(product_id: int) -> None:
+        with get_connection() as conn:
+            conn.execute("DELETE FROM products WHERE id = ?", (product_id,))
+
+    @staticmethod
+    def decrement_stock(product_id: int) -> None:
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE products SET stock = MAX(0, stock - 1) WHERE id = ?",
+                (product_id,),
+            )
+
     # ── Buyers ─────────────────────────────────────────────────────────────
 
     @staticmethod
@@ -81,7 +144,8 @@ class MineService:
 
     @staticmethod
     def create_mine(
-        session_id: int, buyer_id: int, price: float, raw_comment: str
+        session_id: int, buyer_id: int, price: float, raw_comment: str,
+        product_id: Optional[int] = None, product_name: str = "",
     ) -> dict:
         with get_connection() as conn:
             count_row = conn.execute(
@@ -92,10 +156,10 @@ class MineService:
 
             conn.execute(
                 """
-                INSERT INTO mines (session_id, buyer_id, price, session_mine_count, raw_comment)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO mines (session_id, buyer_id, price, session_mine_count, raw_comment, product_id, product_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (session_id, buyer_id, price, session_mine_count, raw_comment),
+                (session_id, buyer_id, price, session_mine_count, raw_comment, product_id, product_name),
             )
             mine_id = conn.execute(
                 "SELECT last_insert_rowid() AS id"
