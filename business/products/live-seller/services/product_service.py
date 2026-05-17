@@ -124,6 +124,18 @@ class ProductService:
             conn.close()
 
     @staticmethod
+    def update(product_id: int, name: str, base_price: float, description: str) -> None:
+        conn = get_connection()
+        try:
+            conn.execute(
+                "UPDATE products SET name=?, base_price=?, description=? WHERE id=?",
+                (name, base_price, description, product_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    @staticmethod
     def delete(product_id: int) -> None:
         conn = get_connection()
         try:
@@ -136,6 +148,18 @@ class ProductService:
             conn.execute("DELETE FROM orders WHERE product_id=?", (product_id,))
             conn.execute("DELETE FROM variants WHERE product_id=?", (product_id,))
             conn.execute("DELETE FROM products WHERE id=?", (product_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
+    @staticmethod
+    def delete_variant(variant_id: int) -> None:
+        conn = get_connection()
+        try:
+            # Nullify references instead of hard-deleting order history
+            conn.execute("UPDATE orders SET variant_id=NULL WHERE variant_id=?", (variant_id,))
+            conn.execute("UPDATE bid_sessions SET variant_id=NULL WHERE variant_id=?", (variant_id,))
+            conn.execute("DELETE FROM variants WHERE id=?", (variant_id,))
             conn.commit()
         finally:
             conn.close()
@@ -229,5 +253,16 @@ class SessionService:
                 "unique_buyers": buyers["cnt"] if buyers else 0,
                 "started_at": row["started_at"],
             }
+        finally:
+            conn.close()
+
+    @staticmethod
+    def list_all() -> list[dict]:
+        conn = get_connection()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM sessions ORDER BY started_at DESC"
+            ).fetchall()
+            return [dict(r) for r in rows]
         finally:
             conn.close()

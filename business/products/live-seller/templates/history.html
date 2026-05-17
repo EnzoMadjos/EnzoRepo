@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session History — Live Seller</title>
+<link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+<div class="status-bar">
+  <div class="status-left"><a href="/" class="app-name">← Live Seller</a></div>
+  <div class="status-center">📋 Session History</div>
+  <div class="status-right"></div>
+</div>
+
+<div class="inventory-page">
+  <div id="history-list"></div>
+</div>
+
+<!-- Orders Modal -->
+<div class="modal-overlay hidden" id="modal-orders">
+  <div class="modal" style="max-width:600px;width:95%">
+    <h3 id="modal-orders-title">Orders</h3>
+    <div id="modal-orders-body" style="max-height:60vh;overflow-y:auto;margin-top:12px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal('modal-orders')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/history.js"></script>
+</body>
+</html>

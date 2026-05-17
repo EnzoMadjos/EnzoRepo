@@ -10,7 +10,7 @@
 <div class="status-bar">
   <div class="status-left"><a href="/" class="app-name">← Live Seller</a></div>
   <div class="status-center">📦 Inventory Management</div>
-  <div class="status-right"></div>
+  <div class="status-right"><a href="/history" class="btn btn-sm btn-gray">📋 History</a></div>
 </div>
 
 <div class="inventory-page">
@@ -43,6 +43,21 @@
     <div class="modal-actions">
       <button class="btn btn-gray" onclick="closeModal('modal-add-product')">Cancel</button>
       <button class="btn btn-green" onclick="saveProduct()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Product Modal -->
+<div class="modal-overlay hidden" id="modal-edit-product">
+  <div class="modal">
+    <h3>Edit Product</h3>
+    <input type="hidden" id="ep-id">
+    <label>Name <input type="text" id="ep-name" placeholder="e.g. Blouse"></label>
+    <label>Base Price (₱) <input type="number" id="ep-price" min="1"></label>
+    <label>Description <input type="text" id="ep-desc" placeholder="Optional"></label>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal('modal-edit-product')">Cancel</button>
+      <button class="btn btn-green" onclick="saveEditProduct()">Save</button>
     </div>
   </div>
 </div>

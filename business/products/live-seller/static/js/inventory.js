@@ -40,6 +40,7 @@ function renderProducts() {
           </div>
         </td>
         <td>₱${(p.base_price + v.price_modifier).toLocaleString()}</td>
+        <td><button class="btn btn-sm btn-red" onclick="deleteVariant(${v.id}, '${v.label.replace(/'/g, "&#39;")}')">✕</button></td>
       </tr>
     `).join('');
     card.innerHTML = `
@@ -55,17 +56,45 @@ function renderProducts() {
       ${p.description ? `<p style="color:var(--text2);font-size:12px;margin-bottom:8px">${p.description}</p>` : ''}
       ${p.variants?.length ? `
         <table class="variants-table">
-          <thead><tr><th>Variant</th><th>Stock</th><th>Price</th></tr></thead>
+          <thead><tr><th>Variant</th><th>Stock</th><th>Price</th><th></th></tr></thead>
           <tbody>${variantsRows}</tbody>
         </table>
       ` : '<p style="color:var(--text2);font-size:12px">No variants</p>'}
       <div style="margin-top:8px;display:flex;gap:8px">
         <button class="btn btn-sm btn-gray" onclick="openAddVariant(${p.id})">+ Add Variant</button>
+        <button class="btn btn-sm btn-gray" onclick="openEditProduct(${p.id})">✏ Edit</button>
         <button class="btn btn-sm btn-red" onclick="deleteProduct(${p.id}, '${p.name.replace(/'/g, "&#39;")}')">🗑 Delete</button>
       </div>
     `;
     container.appendChild(card);
   });
+}
+
+async function deleteVariant(variantId, label) {
+  if (!confirm(`Delete variant "${label}"?`)) return;
+  await api('DELETE', `/api/products/variants/${variantId}`);
+  await loadProducts();
+}
+
+function openEditProduct(productId) {
+  const p = allProducts.find(x => x.id === productId);
+  if (!p) return;
+  document.getElementById('ep-id').value = p.id;
+  document.getElementById('ep-name').value = p.name;
+  document.getElementById('ep-price').value = p.base_price;
+  document.getElementById('ep-desc').value = p.description || '';
+  document.getElementById('modal-edit-product').classList.remove('hidden');
+}
+
+async function saveEditProduct() {
+  const id    = parseInt(document.getElementById('ep-id').value);
+  const name  = document.getElementById('ep-name').value.trim();
+  const price = parseFloat(document.getElementById('ep-price').value) || 0;
+  const desc  = document.getElementById('ep-desc').value.trim();
+  if (!name) { alert('Product name required'); return; }
+  await api('PATCH', `/api/products/${id}`, { name, base_price: price, description: desc });
+  closeModal('modal-edit-product');
+  await loadProducts();
 }
 
 async function deleteProduct(productId, name) {

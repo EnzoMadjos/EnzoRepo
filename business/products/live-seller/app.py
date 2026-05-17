@@ -157,6 +157,11 @@ async def inventory_page(request: Request):
     return templates.TemplateResponse("inventory.html", {"request": request})
 
 
+@app.get("/history", response_class=HTMLResponse)
+async def history_page(request: Request):
+    return templates.TemplateResponse("history.html", {"request": request})
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "port": settings.port}

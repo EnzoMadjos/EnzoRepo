@@ -26,6 +26,12 @@ class ProductCreate(BaseModel):
     description: str = ""
 
 
+class ProductUpdate(BaseModel):
+    name: str
+    base_price: float
+    description: str = ""
+
+
 class VariantCreate(BaseModel):
     label: str
     price_modifier: float = 0.0
@@ -62,6 +68,18 @@ def delete_product(product_id: int):
     return {"ok": True}
 
 
+@router.patch("/products/{product_id}")
+def update_product(product_id: int, body: ProductUpdate):
+    ProductService.update(product_id, body.name, body.base_price, body.description)
+    return {"ok": True}
+
+
+@router.delete("/products/variants/{variant_id}")
+def delete_variant(variant_id: int):
+    ProductService.delete_variant(variant_id)
+    return {"ok": True}
+
+
 class StockUpdate(BaseModel):
     delta: int
 
@@ -79,6 +97,11 @@ def update_stock(variant_id: int, body: StockUpdate):
 class SessionStart(BaseModel):
     title: str = ""
     platform: str = "manual"
+
+
+@router.get("/sessions")
+def list_sessions():
+    return SessionService.list_all()
 
 
 @router.post("/sessions/start")
