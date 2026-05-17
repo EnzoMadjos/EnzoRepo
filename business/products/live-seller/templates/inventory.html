@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory — Live Seller</title>
+<link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+<div class="status-bar">
+  <div class="status-left"><a href="/" class="app-name">← Live Seller</a></div>
+  <div class="status-center">📦 Inventory Management</div>
+  <div class="status-right"></div>
+</div>
+
+<div class="inventory-page">
+  <div class="inv-toolbar">
+    <button class="btn btn-green" onclick="openAddProduct()">+ Add Product</button>
+  </div>
+  <div id="products-list"></div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal-overlay hidden" id="modal-add-product">
+  <div class="modal">
+    <h3>Add Product</h3>
+    <label>Name <input type="text" id="p-name" placeholder="e.g. Blouse"></label>
+    <label>Base Price (₱) <input type="number" id="p-price" value="200" min="1"></label>
+    <label>Description <input type="text" id="p-desc" placeholder="Optional"></label>
+    <hr>
+    <h4>Variants (optional)</h4>
+    <div id="variants-input">
+      <div class="variant-row">
+        <input type="text" placeholder="Label (e.g. Red / M)" class="v-label">
+        <input type="number" placeholder="Stock" class="v-stock" value="0" min="0">
+        <input type="number" placeholder="+/- Price" class="v-price" value="0">
+      </div>
+    </div>
+    <button class="btn btn-sm btn-gray" onclick="addVariantRow()">+ Variant</button>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal('modal-add-product')">Cancel</button>
+      <button class="btn btn-green" onclick="saveProduct()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Seller Dashboard</title>
+<link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+<!-- ── Status Bar ────────────────────────────────────────────────── -->
+<div class="status-bar">
+  <div class="status-left">
+    <span class="app-name">🛍️ Live Seller</span>
+    <span class="status-dot" id="ws-status" title="Connection">●</span>
+  </div>
+  <div class="status-center" id="session-info">No active session</div>
+  <div class="status-right">
+    <span id="printer-status" class="chip chip-gray">🖨 Printer</span>
+    <button id="btn-start-session" class="btn btn-green" onclick="startSession()">▶ Start Live</button>
+    <button id="btn-end-session" class="btn btn-red hidden" onclick="endSession()">■ End Live</button>
+  </div>
+</div>
+
+<!-- ── Main Grid ─────────────────────────────────────────────────── -->
+<div class="main-grid">
+
+  <!-- LEFT: Comment Feed + Paste box -->
+  <div class="panel" id="panel-comments">
+    <div class="panel-header">
+      💬 Live Comments
+      <span class="badge" id="comments-count">0</span>
+    </div>
+    <div class="comment-feed" id="comment-feed"></div>
+    <div class="paste-area">
+      <textarea id="paste-box" placeholder="Paste comments here (Ctrl+V) — or clipboard listener auto-detects..." rows="3"></textarea>
+      <button class="btn btn-blue" onclick="pasteComments()">Send to AI →</button>
+    </div>
+  </div>
+
+  <!-- CENTER: Order Queue -->
+  <div class="panel" id="panel-orders">
+    <div class="panel-header">
+      📦 Order Queue
+      <span class="badge badge-yellow" id="pending-count">0</span>
+    </div>
+    <div class="order-list" id="order-list"></div>
+  </div>
+
+  <!-- RIGHT: Stats + Inventory + Bids -->
+  <div class="right-col">
+
+    <!-- Session Stats -->
+    <div class="panel panel-compact" id="panel-stats">
+      <div class="panel-header">📊 Session Stats</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-val" id="stat-orders">0</div><div class="stat-label">Orders</div></div>
+        <div class="stat-box"><div class="stat-val" id="stat-revenue">₱0</div><div class="stat-label">Revenue</div></div>
+        <div class="stat-box"><div class="stat-val" id="stat-buyers">0</div><div class="stat-label">Miners</div></div>
+      </div>
+    </div>
+
+    <!-- Active Bids -->
+    <div class="panel panel-compact" id="panel-bids">
+      <div class="panel-header">
+        🏷️ Active Bids
+        <button class="btn btn-sm btn-purple" onclick="openNewBidModal()">+ New Bid</button>
+      </div>
+      <div id="bids-container"></div>
+    </div>
+
+    <!-- Inventory Quick View -->
+    <div class="panel panel-compact" id="panel-inventory">
+      <div class="panel-header">
+        📦 Inventory
+        <a href="/inventory" class="btn btn-sm btn-gray">Manage</a>
+      </div>
+      <div id="inventory-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Start Session Modal ───────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="modal-start-session">
+  <div class="modal">
+    <h3>Start Live Session</h3>
+    <label>Session Title <input type="text" id="session-title" placeholder="e.g. Sunday Sale - June Arrivals"></label>
+    <label>Platform
+      <select id="session-platform">
+        <option value="manual">Manual / Clipboard</option>
+        <option value="tiktok">TikTok Live</option>
+        <option value="facebook">Facebook Live</option>
+      </select>
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal('modal-start-session')">Cancel</button>
+      <button class="btn btn-green" onclick="confirmStartSession()">Start ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Bid Modal ─────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="modal-new-bid">
+  <div class="modal">
+    <h3>🏷️ Open New Bid</h3>
+    <label>Item Title <input type="text" id="bid-title" placeholder="e.g. Preloved Bag — Red"></label>
+    <label>Product
+      <select id="bid-product"></select>
+    </label>
+    <label>Variant
+      <select id="bid-variant"><option value="">No variant</option></select>
+    </label>
+    <label>Starting Price (₱) <input type="number" id="bid-start" value="100" min="1"></label>
+    <label>Min Increment (₱) <input type="number" id="bid-increment" value="10" min="1"></label>
+    <label>Countdown (seconds) <input type="number" id="bid-countdown" value="60" min="10"></label>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal('modal-new-bid')">Cancel</button>
+      <button class="btn btn-purple" onclick="confirmOpenBid()">Open Bid 🏷️</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>
