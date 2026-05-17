@@ -123,6 +123,16 @@ class ProductService:
         finally:
             conn.close()
 
+    @staticmethod
+    def delete(product_id: int) -> None:
+        conn = get_connection()
+        try:
+            conn.execute("DELETE FROM variants WHERE product_id=?", (product_id,))
+            conn.execute("DELETE FROM products WHERE id=?", (product_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
 
 # ------------------------------------------------------------------ #
 # Session Service

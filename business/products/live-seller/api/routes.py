@@ -56,6 +56,12 @@ def toggle_product(product_id: int):
     return {"ok": True}
 
 
+@router.delete("/products/{product_id}")
+def delete_product(product_id: int):
+    ProductService.delete(product_id)
+    return {"ok": True}
+
+
 class StockUpdate(BaseModel):
     delta: int
 

@@ -59,12 +59,19 @@ function renderProducts() {
           <tbody>${variantsRows}</tbody>
         </table>
       ` : '<p style="color:var(--text2);font-size:12px">No variants</p>'}
-      <div style="margin-top:8px">
+      <div style="margin-top:8px;display:flex;gap:8px">
         <button class="btn btn-sm btn-gray" onclick="openAddVariant(${p.id})">+ Add Variant</button>
+        <button class="btn btn-sm btn-red" onclick="deleteProduct(${p.id}, '${p.name.replace(/'/g, "&#39;")}')">🗑 Delete</button>
       </div>
     `;
     container.appendChild(card);
   });
+}
+
+async function deleteProduct(productId, name) {
+  if (!confirm(`Delete "${name}" and all its variants? This cannot be undone.`)) return;
+  await api('DELETE', `/api/products/${productId}`);
+  await loadProducts();
 }
 
 async function adjustStock(variantId, delta) {
