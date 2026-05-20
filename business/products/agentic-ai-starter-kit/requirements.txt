@@ -1,0 +1,4 @@
+ollama
+openai
+anthropic
+requests

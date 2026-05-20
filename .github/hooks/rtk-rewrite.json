@@ -3,7 +3,7 @@
     "PreToolUse": [
       {
         "type": "command",
-        "command": "rtk hook copilot",
+        "command": "/home/enzo/.local/bin/rtk hook copilot",
         "cwd": ".",
         "timeout": 5
       }
